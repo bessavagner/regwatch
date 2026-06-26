@@ -1,0 +1,17 @@
+# Disposable spike/experiment area — never part of the package
+sandbox/
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+.env
+*.sqlite3
+
+# Node / frontend
+node_modules/
+dist/
+.svelte-kit/
+
+# OS / editor
+.DS_Store
