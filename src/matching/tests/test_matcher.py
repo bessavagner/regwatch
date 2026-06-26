@@ -51,3 +51,20 @@ def test_matcher_is_idempotent(watch):
     match_edition(edition)
     match_edition(edition)
     assert Match.objects.count() == 1
+
+
+@pytest.mark.django_db
+def test_section_filter(db):
+    """Watch.section must be honoured: only watches whose section matches the
+    edition's section (or whose section is empty) should produce matches."""
+    ws = Workspace.objects.create(name="SectWS")
+    client = Client.objects.create(workspace=ws, name="SectClient")
+    w_wrong = Watch.objects.create(client=client, terms=["sectterm"], section="2")
+    w_right = Watch.objects.create(client=client, terms=["sectterm"], section="1")
+    w_any   = Watch.objects.create(client=client, terms=["sectterm"], section="")
+    edition = _edition_with("Ato publicado por SECTTERM nesta data.")
+    matches = match_edition(edition)
+    matched_ids = {m.watch_id for m in matches}
+    assert w_wrong.pk not in matched_ids, "watch with wrong section must be skipped"
+    assert w_right.pk in matched_ids,    "watch with matching section must fire"
+    assert w_any.pk   in matched_ids,    "watch with empty section must fire on any section"

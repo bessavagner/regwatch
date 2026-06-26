@@ -23,6 +23,8 @@ def match_edition(edition: Edition) -> list[Match]:
     created: list[Match] = []
     acts = Act.objects.filter(edition=edition)
     for watch in Watch.objects.filter(active=True).select_related("client"):
+        if watch.section and watch.section != edition.section:
+            continue
         query = _query_for(watch)
         if query is None:
             continue
