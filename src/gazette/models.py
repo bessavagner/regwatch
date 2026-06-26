@@ -1,0 +1,31 @@
+from django.contrib.postgres.indexes import GinIndex
+from django.contrib.postgres.search import SearchVectorField
+from django.db import models
+
+
+class Edition(models.Model):
+    date = models.DateField()
+    section = models.CharField(max_length=20)
+    source_url = models.URLField()
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=["date", "section"], name="uq_edition_date_section"),
+        ]
+
+
+class Act(models.Model):
+    edition = models.ForeignKey(Edition, related_name="acts", on_delete=models.CASCADE)
+    identifier = models.CharField(max_length=200)
+    title = models.CharField(max_length=500)
+    agency = models.CharField(max_length=300, blank=True, default="")
+    raw_text = models.TextField()
+    search_text = models.TextField()
+    source_anchor = models.CharField(max_length=500, blank=True, default="")
+    search_vector = SearchVectorField(null=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=["edition", "identifier"], name="uq_act_edition_identifier"),
+        ]
+        indexes = [GinIndex(fields=["search_vector"])]
