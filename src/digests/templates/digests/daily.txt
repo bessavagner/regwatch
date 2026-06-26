@@ -1,0 +1,5 @@
+RegWatch — {{ client.name }} — {{ date }}
+
+{% for m in matches %}- [{{ m.category|default:"sem categoria" }}] {{ m.ai_summary|default:m.snippet }}
+  {{ m.act.title }} ({{ m.act.agency }})
+{% endfor %}
