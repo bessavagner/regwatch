@@ -1,10 +1,12 @@
 import datetime
+import io
 import re
+import zipfile
 from dataclasses import dataclass
 
 from lxml import etree, html
 
-from gazette.contracts import RawItem
+from gazette.contracts import RawEdition, RawItem
 
 _WS = re.compile(r"\s+")
 
@@ -69,3 +71,20 @@ def parse_article(xml_bytes: bytes) -> ParsedArticle:
     )
     pub_date_obj = datetime.datetime.strptime(pub_date, "%d/%m/%Y").date()
     return ParsedArticle(item=item, date=pub_date_obj, section=pub_name)
+
+
+def parse_section_zip(zip_bytes: bytes, *, source_url: str) -> RawEdition:
+    items = []
+    date = None
+    section = None
+    with zipfile.ZipFile(io.BytesIO(zip_bytes)) as zf:
+        for name in sorted(zf.namelist()):
+            if not name.lower().endswith(".xml"):
+                continue
+            parsed = parse_article(zf.read(name))
+            items.append(parsed.item)
+            date = parsed.date
+            section = parsed.section
+    return RawEdition(
+        date=date, section=section, source_url=source_url, items=tuple(items)
+    )

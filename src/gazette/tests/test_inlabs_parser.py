@@ -1,9 +1,12 @@
 import datetime
+import io
+import zipfile
 from pathlib import Path
 
 import pytest
 
-from gazette.inlabs.parser import ParsedArticle, parse_article
+from gazette.contracts import RawEdition
+from gazette.inlabs.parser import ParsedArticle, parse_article, parse_section_zip
 
 FIXTURES = Path(__file__).parent / "fixtures" / "dou"
 
@@ -75,3 +78,31 @@ def test_parse_article_raises_clear_error_on_missing_pubdate():
     )
     with pytest.raises(ValueError, match="pubDate"):
         parse_article(xml)
+
+
+def _zip_of(*names: str, extra: dict[str, bytes] | None = None) -> bytes:
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w") as zf:
+        for name in names:
+            zf.writestr(name, _fixture(name))
+        for fname, data in (extra or {}).items():
+            zf.writestr(fname, data)
+    return buf.getvalue()
+
+
+def test_parse_section_zip_builds_edition_skipping_non_xml():
+    zip_bytes = _zip_of(
+        "do1_portaria_50000041.xml",
+        "do1_retificacao_50004579.xml",
+        extra={"some_image.jpg": b"\xff\xd8\xff not xml"},
+    )
+    url = "https://inlabs.example/index.php?p=2026-06-26&dl=2026-06-26-DO1.zip"
+
+    edition = parse_section_zip(zip_bytes, source_url=url)
+
+    assert isinstance(edition, RawEdition)
+    assert edition.date == datetime.date(2026, 6, 26)
+    assert edition.section == "DO1"
+    assert edition.source_url == url
+    assert len(edition.items) == 2  # the .jpg member is ignored
+    assert {i.identifier for i in edition.items} == {"50000041", "50004579"}
