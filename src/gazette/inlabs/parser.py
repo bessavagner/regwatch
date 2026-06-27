@@ -32,7 +32,25 @@ def parse_article(xml_bytes: bytes) -> ParsedArticle:
     root = etree.fromstring(xml_bytes)
     article = root if root.tag == "article" else root.find("article")
 
+    # Validate required attributes
     article_id = article.get("id")
+    pub_date = article.get("pubDate")
+    pub_name = article.get("pubName")
+
+    missing = []
+    if not article_id:
+        missing.append("id")
+    if not pub_date:
+        missing.append("pubDate")
+    if not pub_name:
+        missing.append("pubName")
+
+    if missing:
+        article_id_info = f" (article id: {article_id})" if article_id else ""
+        raise ValueError(
+            f"DOU article missing required attribute(s): {', '.join(missing)}{article_id_info}"
+        )
+
     art_type = article.get("artType", "").strip()
 
     identifica_el = article.find("body/Identifica")
@@ -49,5 +67,5 @@ def parse_article(xml_bytes: bytes) -> ParsedArticle:
         raw_text=raw_text,
         source_anchor=article.get("pdfPage", ""),
     )
-    pub_date = datetime.datetime.strptime(article.get("pubDate"), "%d/%m/%Y").date()
-    return ParsedArticle(item=item, date=pub_date, section=article.get("pubName"))
+    pub_date_obj = datetime.datetime.strptime(pub_date, "%d/%m/%Y").date()
+    return ParsedArticle(item=item, date=pub_date_obj, section=pub_name)

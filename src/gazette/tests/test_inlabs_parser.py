@@ -1,6 +1,8 @@
 import datetime
 from pathlib import Path
 
+import pytest
+
 from gazette.inlabs.parser import ParsedArticle, parse_article
 
 FIXTURES = Path(__file__).parent / "fixtures" / "dou"
@@ -61,3 +63,15 @@ def test_parse_article_handles_retificacao_with_empty_ementa():
     assert parsed.item.identifier == "50004579"
     assert parsed.item.title == "RETIFICAÇÃO"
     assert "DECRETO LEGISLATIVO" in parsed.item.raw_text
+    assert parsed.section == "DO1"
+    assert parsed.date == datetime.date(2026, 6, 26)
+
+
+def test_parse_article_raises_clear_error_on_missing_pubdate():
+    xml = (
+        b'<xml><article id="123" pubName="DO1" artType="Portaria">'
+        b'<body><Identifica>X</Identifica>'
+        b'<Texto><![CDATA[<p>t</p>]]></Texto></body></article></xml>'
+    )
+    with pytest.raises(ValueError, match="pubDate"):
+        parse_article(xml)
