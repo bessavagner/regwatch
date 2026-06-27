@@ -28,8 +28,8 @@ def build_and_send_digests(date: datetime.date, sender: EmailSender) -> list[Dig
         digest, _ = Digest.objects.update_or_create(
             client=client, date=date, defaults={"body": body},
         )
-        if not digest.sent:
-            sender.send(to=f"{client.name}", subject=f"RegWatch — {date}", body=body)
+        if not digest.sent and client.email:
+            sender.send(to=client.email, subject=f"RegWatch — {date}", body=body)
             digest.sent = True
             digest.save(update_fields=["sent"])
         out.append(digest)

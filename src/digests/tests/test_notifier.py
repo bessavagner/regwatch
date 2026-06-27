@@ -15,7 +15,7 @@ DATE = datetime.date(2026, 6, 26)
 @pytest.fixture
 def matched(db):
     ws = Workspace.objects.create(name="Acme")
-    client = Client.objects.create(workspace=ws, name="Beta")
+    client = Client.objects.create(workspace=ws, name="Beta", email="beta@example.test")
     Watch.objects.create(client=client, terms=["beta corp"])
     edition = ingest_edition(RawEdition(
         date=DATE, section="1", source_url="https://x.test/s1",
@@ -37,6 +37,27 @@ def test_builds_one_digest_per_client_and_sends(matched):
 
 
 @pytest.mark.django_db
+def test_digest_sends_to_client_email(matched):
+    matched.email = "ops@betacorp.example"
+    matched.save()
+    sender = FakeEmailSender()
+    build_and_send_digests(DATE, sender)
+    assert len(sender.sent) == 1
+    assert sender.sent[0][0] == "ops@betacorp.example"   # (to, subject, body)
+
+
+@pytest.mark.django_db
+def test_digest_without_email_is_built_but_not_sent(matched):
+    matched.email = ""
+    matched.save()
+    sender = FakeEmailSender()
+    digests = build_and_send_digests(DATE, sender)
+    assert len(digests) == 1
+    assert digests[0].sent is False
+    assert sender.sent == []
+
+
+@pytest.mark.django_db
 def test_digests_are_idempotent(matched):
     sender = FakeEmailSender()
     build_and_send_digests(DATE, sender)
@@ -49,8 +70,8 @@ def test_two_clients_receive_separate_digests(db):
     """Each client gets exactly one digest containing only their own matches;
     two distinct emails are dispatched — exercising the by_client grouping loop."""
     ws = Workspace.objects.create(name="MultiWS")
-    client_a = Client.objects.create(workspace=ws, name="AlphaClient")
-    client_b = Client.objects.create(workspace=ws, name="GammaClient")
+    client_a = Client.objects.create(workspace=ws, name="AlphaClient", email="alpha@example.test")
+    client_b = Client.objects.create(workspace=ws, name="GammaClient", email="gamma@example.test")
     Watch.objects.create(client=client_a, terms=["alpha ltd"])
     Watch.objects.create(client=client_b, terms=["gamma corp"])
     edition = ingest_edition(RawEdition(

@@ -6,6 +6,7 @@ class Client(models.Model):
     workspace = models.ForeignKey(Workspace, related_name="clients", on_delete=models.CASCADE)
     name = models.CharField(max_length=200)
     is_house = models.BooleanField(default=False)
+    email = models.EmailField(blank=True, default="")   # digest recipient; "" = don't send
 
 
 class Watch(models.Model):
