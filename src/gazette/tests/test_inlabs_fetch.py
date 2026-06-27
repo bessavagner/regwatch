@@ -68,3 +68,70 @@ def test_fetch_editions_returns_empty_when_nothing_published():
         transport=httpx.MockTransport(handler),
     )
     assert fetch_editions(DATE, client=client) == []
+
+
+def test_fetch_editions_closes_self_constructed_client_even_on_error(monkeypatch):
+    """Verify that fetch_editions closes a client it creates, even when download fails."""
+
+    class FakeClient:
+        def __init__(self):
+            self.closed = False
+
+        def login(self):
+            pass
+
+        def section_url(self, date, section):
+            return f"https://fake.test/{date}/{section}"
+
+        def download_section(self, date, section):
+            raise RuntimeError("boom")
+
+        def close(self):
+            self.closed = True
+
+    fake = FakeClient()
+    monkeypatch.setattr(
+        "gazette.inlabs.fetch.InlabsClient.from_env",
+        classmethod(lambda cls, **kw: fake),
+    )
+
+    # Should raise RuntimeError from download_section
+    try:
+        fetch_editions(DATE)
+        assert False, "Expected RuntimeError to be raised"
+    except RuntimeError as e:
+        assert str(e) == "boom"
+
+    # But close() should still have been called due to try/finally
+    assert fake.closed is True
+
+
+def test_fetch_editions_does_not_close_injected_client(monkeypatch):
+    """Verify that fetch_editions does NOT close an injected client."""
+
+    close_call_count = [0]
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        if request.url.path == "/logar.php":
+            return httpx.Response(200, headers={"set-cookie": LOGIN_COOKIE})
+        return httpx.Response(404, text="Not Found")
+
+    client = InlabsClient(
+        "u", "p", base_url="https://inlabs.test",
+        transport=httpx.MockTransport(handler),
+    )
+
+    # Spy on close() to track calls
+    original_close = client.close
+    def tracked_close():
+        close_call_count[0] += 1
+        original_close()
+
+    monkeypatch.setattr(client, "close", tracked_close)
+
+    # Call fetch_editions with injected client (all-404 handler returns [])
+    result = fetch_editions(DATE, client=client)
+    assert result == []
+
+    # close() should never have been called
+    assert close_call_count[0] == 0
