@@ -17,11 +17,11 @@ class Edition(models.Model):
 class Act(models.Model):
     edition = models.ForeignKey(Edition, related_name="acts", on_delete=models.CASCADE)
     identifier = models.CharField(max_length=200)
-    title = models.CharField(max_length=500)
-    agency = models.CharField(max_length=300, blank=True, default="")
+    title = models.TextField()
+    agency = models.TextField(blank=True, default="")
     raw_text = models.TextField()
     search_text = models.TextField()
-    source_anchor = models.CharField(max_length=500, blank=True, default="")
+    source_anchor = models.TextField(blank=True, default="")
     search_vector = SearchVectorField(null=True)
 
     class Meta:
