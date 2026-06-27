@@ -12,7 +12,7 @@ from matching.models import Match
 @pytest.fixture
 def firm(db):
     ws = Workspace.objects.create(name="Acme Law")
-    client = Client.objects.create(workspace=ws, name="Beta Corp")
+    client = Client.objects.create(workspace=ws, name="Beta Corp", email="beta@example.test")
     Watch.objects.create(client=client, terms=["beta corp"])
     return client
 
@@ -39,3 +39,12 @@ def test_pipeline_is_idempotent(firm):
     run_pipeline([sample_edition()], llm, FakeEmailSender())
     assert Match.objects.count() == 1
     assert Digest.objects.filter(date=DATE).count() == 1
+
+
+@pytest.mark.django_db
+def test_run_pipeline_respects_max_enrich(firm):
+    # sample_edition has one matching act ("beta corp"); cap of 0 enriches nothing.
+    run_pipeline([sample_edition()], FakeLLMClient(Summary("x", "grant", 0.9)),
+                 FakeEmailSender(), max_enrich=0)
+    assert Match.objects.count() == 1
+    assert Match.objects.get().ai_summary is None     # capped out -> never enriched

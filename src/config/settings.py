@@ -38,3 +38,11 @@ DATABASES = {
 }
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 USE_TZ = True
+
+REGWATCH_LLM_CLIENT = os.environ.get(
+    "REGWATCH_LLM_CLIENT", "enrichment.anthropic_client.AnthropicLLMClient"
+)
+REGWATCH_EMAIL_SENDER = os.environ.get(
+    "REGWATCH_EMAIL_SENDER", "digests.resend.ResendEmailSender"
+)
+REGWATCH_MAX_ENRICH_PER_RUN = int(os.environ.get("REGWATCH_MAX_ENRICH_PER_RUN", "200"))
