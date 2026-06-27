@@ -71,7 +71,12 @@ def test_fetch_editions_returns_empty_when_nothing_published():
 
 
 def test_fetch_editions_closes_self_constructed_client_even_on_error(monkeypatch):
-    """Verify that fetch_editions closes a client it creates, even when download fails."""
+    """Verify that fetch_editions closes a client it creates, even when every section fails.
+
+    Per-section download errors are now logged and skipped (resilience), so the run
+    completes with no editions instead of propagating — but the self-constructed client
+    must still be closed via the try/finally.
+    """
 
     class FakeClient:
         def __init__(self):
@@ -95,15 +100,30 @@ def test_fetch_editions_closes_self_constructed_client_even_on_error(monkeypatch
         classmethod(lambda cls, **kw: fake),
     )
 
-    # Should raise RuntimeError from download_section
-    try:
-        fetch_editions(DATE)
-        assert False, "Expected RuntimeError to be raised"
-    except RuntimeError as e:
-        assert str(e) == "boom"
+    # Every section's download raises; resilience swallows each, so no exception escapes.
+    assert fetch_editions(DATE) == []
 
-    # But close() should still have been called due to try/finally
+    # And close() must still have been called due to try/finally.
     assert fake.closed is True
+
+
+def test_fetch_editions_skips_a_failing_section_and_returns_the_rest():
+    do2 = _zip_of("do2_portaria_49992072.xml")
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        if request.url.path == "/logar.php":
+            return httpx.Response(200, headers={"set-cookie": LOGIN_COOKIE})
+        dl = request.url.params["dl"]
+        if dl == "2026-06-26-DO1.zip":
+            return httpx.Response(500, text="boom")          # DO1 errors hard
+        if dl == "2026-06-26-DO2.zip":
+            return httpx.Response(200, content=do2)           # DO2 fine
+        return httpx.Response(404, text="Not Found")
+
+    client = InlabsClient("u", "p", base_url="https://inlabs.test",
+                          transport=httpx.MockTransport(handler))
+    editions = fetch_editions(DATE, client=client)
+    assert [e.section for e in editions] == ["DO2"]            # DO1's 500 didn't abort the run
 
 
 def test_fetch_editions_does_not_close_injected_client(monkeypatch):

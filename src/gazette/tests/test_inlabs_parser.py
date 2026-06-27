@@ -106,3 +106,12 @@ def test_parse_section_zip_builds_edition_skipping_non_xml():
     assert edition.source_url == url
     assert len(edition.items) == 2  # the .jpg member is ignored
     assert {i.identifier for i in edition.items} == {"50000041", "50004579"}
+
+
+def test_parse_section_zip_skips_unparseable_members():
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w") as zf:
+        zf.writestr("good.xml", _fixture("do1_portaria_50000041.xml"))
+        zf.writestr("bad.xml", b"<xml><article></article></xml>")  # missing required attrs -> raises
+    edition = parse_section_zip(buf.getvalue(), source_url="https://x/DO1.zip")
+    assert {i.identifier for i in edition.items} == {"50000041"}   # good item survives, bad skipped

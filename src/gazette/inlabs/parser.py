@@ -1,5 +1,6 @@
 import datetime
 import io
+import logging
 import re
 import zipfile
 from dataclasses import dataclass
@@ -7,6 +8,8 @@ from dataclasses import dataclass
 from lxml import etree, html
 
 from gazette.contracts import RawEdition, RawItem
+
+logger = logging.getLogger(__name__)
 
 _WS = re.compile(r"\s+")
 
@@ -81,7 +84,11 @@ def parse_section_zip(zip_bytes: bytes, *, source_url: str) -> RawEdition:
         for name in sorted(zf.namelist()):
             if not name.lower().endswith(".xml"):
                 continue
-            parsed = parse_article(zf.read(name))
+            try:
+                parsed = parse_article(zf.read(name))
+            except Exception:
+                logger.warning("skipping unparseable member %s in %s", name, source_url)
+                continue
             items.append(parsed.item)
             date = parsed.date
             section = parsed.section
