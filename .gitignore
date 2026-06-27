@@ -19,3 +19,7 @@ dist/
 # OS / editor
 .DS_Store
 .ipynb_checkpoints/
+
+# Local-only dev playground & session hand-off notes (not part of the package)
+src/playground.ipynb
+docs/superpowers/handoffs/
