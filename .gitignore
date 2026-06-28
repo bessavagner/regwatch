@@ -22,4 +22,8 @@ dist/
 
 # Local-only dev playground & session hand-off notes (not part of the package)
 src/playground.ipynb
-docs/superpowers/handoffs/
+
+# Local-only: planning/spec docs and agent tooling, kept out of the public repo
+docs/
+.claude/
+.omc/
