@@ -1,11 +1,23 @@
 import json
 import os
+import re
 
 import httpx
 
 from enrichment.llm import Summary
 
 CATEGORIES = {"grant", "penalty", "appointment", "tender", "regulation", "other"}
+
+_FENCE = re.compile(r"^```(?:json)?\s*|\s*```$", re.IGNORECASE)
+
+
+def _unwrap_json(text: str) -> str:
+    # claude-haiku tends to wrap its JSON reply in a ```json ... ``` fence
+    # despite the "JSON only" prompt; strip it before parsing.
+    text = text.strip()
+    if text.startswith("```"):
+        text = _FENCE.sub("", text).strip()
+    return text
 
 SYSTEM_PROMPT = (
     "Você resume atos do Diário Oficial da União para um sistema de monitoramento. "
@@ -55,7 +67,7 @@ class AnthropicLLMClient:
         )
         resp.raise_for_status()
         try:
-            text = resp.json()["content"][0]["text"]
+            text = _unwrap_json(resp.json()["content"][0]["text"])
             data = json.loads(text)
             summary = str(data["summary"])
             category = str(data["category"])

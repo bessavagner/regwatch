@@ -37,6 +37,24 @@ def test_summarize_parses_model_json_into_summary():
     assert captured["body"]["model"] == "claude-haiku-4-5-20251001"
 
 
+def test_summarize_unwraps_markdown_fenced_json():
+    # claude-haiku wraps its JSON reply in a ```json fence in practice (seen live);
+    # the parser must unwrap it before json.loads.
+    def handler(request):
+        reply = (
+            "```json\n"
+            '{"summary": "CVM autoriza entidade.", "category": "appointment", "confidence": 0.92}\n'
+            "```"
+        )
+        return _messages_response(reply)
+
+    client = AnthropicLLMClient("k", transport=httpx.MockTransport(handler))
+    result = client.summarize("Ato da CVM.", ["cvm"])
+    assert result.summary == "CVM autoriza entidade."
+    assert result.category == "appointment"
+    assert result.confidence == 0.92
+
+
 def test_summarize_coerces_unknown_category_to_other():
     def handler(request):
         reply = json.dumps({"summary": "x", "category": "banana", "confidence": 2})
