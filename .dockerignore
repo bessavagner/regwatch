@@ -1,0 +1,14 @@
+.git
+.venv
+docs
+sandbox
+.superpowers
+.claude
+.omc
+.github
+__pycache__
+*.pyc
+.pytest_cache
+.env
+*.ipynb
+deploy
