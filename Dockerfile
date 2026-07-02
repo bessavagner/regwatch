@@ -18,5 +18,5 @@ COPY src/ ./src/
 RUN useradd --create-home app && chown -R app /app
 USER app
 
-ENTRYPOINT ["uv", "run", "python", "manage.py"]
+ENTRYPOINT ["/app/.venv/bin/python", "manage.py"]
 CMD ["run_daily"]
