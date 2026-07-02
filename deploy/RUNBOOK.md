@@ -27,3 +27,7 @@
 - **run_daily failed** → a `regwatch-run-daily` execution exited non-zero (pipeline error; check logs).
 - **heartbeat failed** → no successful RunLog for today by 09:00 BRT (scheduler misfire, crash, or a
   failing run_daily). Check the morning execution and Cloud Scheduler.
+  Note: the heartbeat runs 09:00 BRT while the morning run fires 08:05 BRT. If a morning run
+  legitimately takes longer than ~55 min, move the `regwatch-heartbeat` scheduler later (e.g. 10:00)
+  to avoid a false "no successful run today" alert. The 13:00 sweep + idempotent re-runs already
+  cover the real gap.
