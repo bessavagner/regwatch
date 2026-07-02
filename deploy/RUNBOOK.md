@@ -6,6 +6,8 @@
    Cloud Run Jobs, the three schedulers, and the two alert policies. Add secret versions when prompted.
 3. Configure GitHub → GCP **Workload Identity Federation** (see `.github/workflows/deploy.yml` header),
    then push a tag `vX.Y.Z` to build and deploy the real image.
+4. Scheduler auth: per-job `roles/run.invoker` on `regwatch-run-daily` and `regwatch-heartbeat`;
+   triggers hit the Cloud Run Jobs **v2** `:run` endpoint.
 
 ## Database
 - Prod `DATABASE_URL` MUST be the Supabase **session pooler** URI (IPv4, port 5432,

@@ -61,11 +61,13 @@ for job in "regwatch-migrate:migrate" "regwatch-run-daily:run_daily" "regwatch-h
     --service-account="${RUNTIME_SA}" --args="${cmd}" ${SECRET_FLAGS} --max-retries=1
 done
 
-echo "== Scheduler may run jobs =="
-gcloud projects add-iam-policy-binding "${PROJECT_ID}" \
-  --member="serviceAccount:${SCHED_SA}" --role="roles/run.developer"
+echo "== Scheduler may invoke the scheduled jobs (least-privilege, per-job) =="
+for job in regwatch-run-daily regwatch-heartbeat; do
+  gcloud run jobs add-iam-policy-binding "${job}" --region="${REGION}" \
+    --member="serviceAccount:${SCHED_SA}" --role="roles/run.invoker"
+done
 
-run_uri() { echo "https://${REGION}-run.googleapis.com/apis/run.googleapis.com/v1/namespaces/${PROJECT_ID}/jobs/$1:run"; }
+run_uri() { echo "https://run.googleapis.com/v2/projects/${PROJECT_ID}/locations/${REGION}/jobs/$1:run"; }
 mk_sched() {  # name schedule job
   gcloud scheduler jobs create http "$1" --location="${REGION}" --schedule="$2" \
     --time-zone="America/Sao_Paulo" --uri="$(run_uri "$3")" --http-method=POST \
