@@ -1,0 +1,62 @@
+# .github/workflows/deploy.yml
+name: deploy
+on:
+  push:
+    tags: ["v*"]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: regwatch
+          POSTGRES_USER: regwatch
+          POSTGRES_PASSWORD: regwatch
+        ports: ["5434:5432"]
+        options: >-
+          --health-cmd pg_isready --health-interval 10s
+          --health-timeout 5s --health-retries 5
+    env:
+      DATABASE_URL: postgres://regwatch:regwatch@localhost:5434/regwatch
+      DJANGO_DEBUG: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v3
+      - run: uv sync
+      - run: uv run pytest -q
+
+  deploy:
+    needs: test
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write            # required for Workload Identity Federation
+    env:
+      REGION: ${{ secrets.GCP_REGION }}
+      PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: auth
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WIF_PROVIDER }}
+          service_account: ${{ secrets.GCP_DEPLOY_SA }}
+      - uses: google-github-actions/setup-gcloud@v2
+      - name: Configure Docker for Artifact Registry
+        run: gcloud auth configure-docker "${REGION}-docker.pkg.dev" --quiet
+      - name: Build & push image
+        run: |
+          IMAGE="${REGION}-docker.pkg.dev/${PROJECT_ID}/regwatch/regwatch:${GITHUB_REF_NAME}"
+          docker build -t "$IMAGE" .
+          docker push "$IMAGE"
+          echo "IMAGE=$IMAGE" >> "$GITHUB_ENV"
+      - name: Deploy jobs
+        run: |
+          for pair in regwatch-migrate:migrate regwatch-run-daily:run_daily regwatch-heartbeat:check_heartbeat; do
+            name="${pair%%:*}"; cmd="${pair##*:}"
+            gcloud run jobs update "$name" --image="$IMAGE" --region="$REGION" --args="$cmd"
+          done
+      - name: Run migrations
+        run: gcloud run jobs execute regwatch-migrate --region="$REGION" --wait
