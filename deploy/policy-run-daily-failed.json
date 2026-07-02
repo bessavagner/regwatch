@@ -1,0 +1,14 @@
+{
+  "displayName": "RegWatch run_daily execution failed",
+  "combiner": "OR",
+  "conditions": [{
+    "displayName": "regwatch-run-daily failed executions",
+    "conditionThreshold": {
+      "filter": "resource.type=\"cloud_run_job\" AND resource.labels.job_name=\"regwatch-run-daily\" AND metric.type=\"run.googleapis.com/job/completed_execution_count\" AND metric.labels.result=\"failed\"",
+      "comparison": "COMPARISON_GT",
+      "thresholdValue": 0,
+      "duration": "0s",
+      "aggregations": [{"alignmentPeriod": "600s", "perSeriesAligner": "ALIGN_SUM"}]
+    }
+  }]
+}
