@@ -17,7 +17,7 @@ dev = ["pytest>=8.0", "pytest-django>=4.8"]
 package = false
 
 [tool.pytest.ini_options]
-DJANGO_SETTINGS_MODULE = "config.settings"
+DJANGO_SETTINGS_MODULE = "config.settings_test"
 pythonpath = ["src"]
 python_files = ["test_*.py"]
 addopts = "-q"
