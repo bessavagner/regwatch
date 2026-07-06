@@ -1,7 +1,8 @@
 # RegWatch Ops Runbook (Plan 6)
 
 ## One-time setup
-1. `export PROJECT_ID=... REGION=southamerica-east1 ALERT_EMAIL=you@example.com`
+1. `export PROJECT_ID=... REGION=us-east4 ALERT_EMAIL=you@example.com`
+   REGION **must be co-located with the Supabase DB region** (see Database below).
 2. `bash deploy/provision.sh` — enables APIs, creates SAs, Artifact Registry, secrets, the three
    Cloud Run Jobs, the three schedulers, and the two alert policies. Add secret versions when prompted.
 3. Configure GitHub → GCP **Workload Identity Federation** (see `.github/workflows/deploy.yml` header),
@@ -13,6 +14,12 @@
 - Prod `DATABASE_URL` MUST be the Supabase **session pooler** URI (IPv4, port 5432,
   user `postgres.<project-ref>`), with `?sslmode=require`. The direct host `db.<ref>.supabase.co`
   is IPv6-only and unreachable from Cloud Run.
+- **Region co-location is mandatory.** Deploy Cloud Run in the GCP region nearest the
+  Supabase AWS region (e.g. `us-east4` for a Supabase in `aws us-east-2`). `run_daily`
+  does thousands of DB round-trips per day; cross-region RTT (~150 ms São Paulo→Ohio)
+  makes it exceed even a 1 h task timeout, while co-located (~10 ms) it finishes in ~10 min.
+- **Task timeout:** `regwatch-run-daily` needs `--task-timeout=3600 --cpu=2 --memory=2Gi`
+  (Cloud Run's 600 s default is far too short for a full DOU day). `provision.sh` sets this.
 - Restore: use Supabase dashboard → Database → Backups / PITR. Test a restore before real client data.
 
 ## Common operations
