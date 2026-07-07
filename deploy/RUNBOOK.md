@@ -46,13 +46,26 @@ same image as the batch Jobs. Deploy with `deploy/deploy-api.sh` (set PROJECT,
 IMAGE, RUNTIME_SA, ALLOWED_HOSTS, CSRF_ORIGINS). It overrides the container
 command to run gunicorn on `config.wsgi`; the Jobs are unaffected.
 
+A Cloud Run service answers on **two** hosts — the canonical
+`regwatch-api-<hash>-<regioncode>.a.run.app` and
+`regwatch-api-<projectnumber>.<region>.run.app`. Register **both** by passing
+comma-separated lists, e.g.
+`ALLOWED_HOSTS=hostA,hostB CSRF_ORIGINS=https://hostA,https://hostB`
+(the script uses gcloud's `^@^` delimiter so the commas survive).
+
 **First deploy order:** push the image → run the `migrate` Job once (creates
 `django_session`) → `deploy/deploy-api.sh` → provision a user with
-`invite_user`. Provision a user against the Service by running the
-`invite_user` command as a one-off Job execution, or via a `migrate`-style
-admin Job.
+`invite_user`. Provision a user by running `invite_user` as a one-off Job that
+mounts the `DATABASE_URL` secret; supply the password via a Secret Manager
+secret bound to `INVITE_USER_PASSWORD` (never `--password` on the Job, which
+persists in inspectable Job config).
 
-**Smoke (private Service, authenticated caller):**
-`TOKEN=$(gcloud auth print-identity-token)`; `POST /api/auth/login` with the
-seeded credentials returns the `me` payload; `GET /api/me` returns the
-workspace. A cross-workspace id returns 404.
+**Smoke (private Service, `--no-allow-unauthenticated`):** a user-credential
+`gcloud auth print-identity-token` is rejected (its audience is not the service
+URL). Either run `gcloud run services proxy regwatch-api --region=<region>` and
+curl `localhost`, or grant a service account `roles/run.invoker` on the service
+and invoke with an audience-scoped token:
+`gcloud auth print-identity-token --impersonate-service-account=<SA> --audiences=https://<host>`
+(the caller needs `serviceAccountTokenCreator` on that SA). Then `POST
+/api/auth/login` with the seeded credentials returns the `me` payload, `GET
+/api/me` returns the workspace, and a cross-workspace id returns 404.
