@@ -46,3 +46,21 @@ def test_me_returns_workspace_when_authenticated(user_in_workspace):
     resp = client.get("/api/me")
     assert resp.status_code == 200
     assert resp.data["workspace"]["id"] == ws.id
+
+
+@pytest.mark.django_db
+def test_logout_requires_authentication(db):
+    client = APIClient()
+    assert client.post("/api/auth/logout").status_code == 403
+
+
+@pytest.mark.django_db
+def test_logout_ends_session(user_in_workspace):
+    client = APIClient()
+    login = client.post(
+        "/api/auth/login", {"username": "a@firm.com", "password": "pw12345"}
+    )
+    assert login.status_code == 200
+    assert client.get("/api/me").status_code == 200
+    assert client.post("/api/auth/logout").status_code == 204
+    assert client.get("/api/me").status_code == 403
