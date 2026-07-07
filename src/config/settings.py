@@ -2,19 +2,26 @@ import os
 
 import dj_database_url
 
-from config.env import resolve_database_url, resolve_debug, resolve_secret_key
+from config.env import (
+    resolve_allowed_hosts,
+    resolve_csrf_trusted_origins,
+    resolve_database_url,
+    resolve_debug,
+    resolve_secret_key,
+)
 
 DEBUG = resolve_debug()
 SECRET_KEY = resolve_secret_key(debug=DEBUG)
 
-# Enforced ALLOWED_HOSTS / CSRF_TRUSTED_ORIGINS are deferred to Plan 7 (no HTTP
-# service is served in Plan 6 — this image only runs management commands).
-ALLOWED_HOSTS = ["*"]
+ALLOWED_HOSTS = resolve_allowed_hosts(debug=DEBUG)
+CSRF_TRUSTED_ORIGINS = resolve_csrf_trusted_origins()
 
 INSTALLED_APPS = [
     "django.contrib.auth",
     "django.contrib.contenttypes",
     "django.contrib.postgres",
+    "django.contrib.sessions",
+    "rest_framework",
     "accounts",
     "watches",
     "gazette",
@@ -23,7 +30,13 @@ INSTALLED_APPS = [
     "digests",
     "pipeline",
 ]
-MIDDLEWARE = ["django.middleware.security.SecurityMiddleware"]
+MIDDLEWARE = [
+    "django.middleware.security.SecurityMiddleware",
+    "django.contrib.sessions.middleware.SessionMiddleware",
+    "django.middleware.common.CommonMiddleware",
+    "django.middleware.csrf.CsrfViewMiddleware",
+    "django.contrib.auth.middleware.AuthenticationMiddleware",
+]
 ROOT_URLCONF = "config.urls"
 TEMPLATES = [{
     "BACKEND": "django.template.backends.django.DjangoTemplates",
@@ -51,6 +64,19 @@ LOGGING = {
     "formatters": {"json": {"()": "config.json_log.JSONFormatter"}},
     "handlers": {"console": {"class": "logging.StreamHandler", "formatter": "json"}},
     "root": {"handlers": ["console"], "level": "INFO"},
+}
+
+REST_FRAMEWORK = {
+    "DEFAULT_AUTHENTICATION_CLASSES": [
+        "rest_framework.authentication.SessionAuthentication",
+    ],
+    "DEFAULT_PERMISSION_CLASSES": [
+        "rest_framework.permissions.IsAuthenticated",
+    ],
+    "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination",
+    "PAGE_SIZE": 25,
+    "DEFAULT_THROTTLE_CLASSES": ["rest_framework.throttling.UserRateThrottle"],
+    "DEFAULT_THROTTLE_RATES": {"user": "1000/day", "anon": "20/hour"},
 }
 
 REGWATCH_LLM_CLIENT = os.environ.get(
