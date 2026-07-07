@@ -38,3 +38,21 @@
   legitimately takes longer than ~55 min, move the `regwatch-heartbeat` scheduler later (e.g. 10:00)
   to avoid a false "no successful run today" alert. The 13:00 sweep + idempotent re-runs already
   cover the real gap.
+
+## API Service (Plan 7)
+
+The API is an always-on Cloud Run **Service** (`regwatch-api`) built from the
+same image as the batch Jobs. Deploy with `deploy/deploy-api.sh` (set PROJECT,
+IMAGE, RUNTIME_SA, ALLOWED_HOSTS, CSRF_ORIGINS). It overrides the container
+command to run gunicorn on `config.wsgi`; the Jobs are unaffected.
+
+**First deploy order:** push the image → run the `migrate` Job once (creates
+`django_session`) → `deploy/deploy-api.sh` → provision a user with
+`invite_user`. Provision a user against the Service by running the
+`invite_user` command as a one-off Job execution, or via a `migrate`-style
+admin Job.
+
+**Smoke (private Service, authenticated caller):**
+`TOKEN=$(gcloud auth print-identity-token)`; `POST /api/auth/login` with the
+seeded credentials returns the `me` payload; `GET /api/me` returns the
+workspace. A cross-workspace id returns 404.
