@@ -22,3 +22,19 @@ def resolve_secret_key(*, debug: bool, env=os.environ) -> str:
 
 def resolve_database_url(env=os.environ) -> str:
     return env.get("DATABASE_URL") or env.get("SUPABASE_DB_URL") or LOCAL_DB_DEFAULT
+
+
+def resolve_allowed_hosts(*, debug: bool, env=os.environ) -> list[str]:
+    raw = env.get("DJANGO_ALLOWED_HOSTS", "").strip()
+    if raw:
+        return [h.strip() for h in raw.split(",") if h.strip()]
+    if debug:
+        return ["*"]
+    raise ImproperlyConfigured("DJANGO_ALLOWED_HOSTS must be set when DEBUG is False")
+
+
+def resolve_csrf_trusted_origins(env=os.environ) -> list[str]:
+    raw = env.get("DJANGO_CSRF_TRUSTED_ORIGINS", "").strip()
+    if not raw:
+        return []
+    return [o.strip() for o in raw.split(",") if o.strip()]
