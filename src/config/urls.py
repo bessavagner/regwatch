@@ -2,11 +2,13 @@ from django.urls import include, path
 from rest_framework.routers import DefaultRouter
 
 from accounts.api import LoginView, LogoutView, MeView
+from matching.api import MatchViewSet
 from watches.api import ClientViewSet, WatchViewSet
 
 router = DefaultRouter(trailing_slash=False)
 router.register("clients", ClientViewSet, basename="client")
 router.register("watches", WatchViewSet, basename="watch")
+router.register("matches", MatchViewSet, basename="match")
 
 urlpatterns = [
     path("api/auth/login", LoginView.as_view(), name="login"),
