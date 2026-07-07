@@ -1,4 +1,5 @@
 from rest_framework import serializers, viewsets
+from rest_framework.exceptions import PermissionDenied
 
 from accounts.permissions import WorkspaceScopedQuerysetMixin, workspace_ids_for
 from watches.models import Client, Watch
@@ -16,7 +17,10 @@ class ClientViewSet(WorkspaceScopedQuerysetMixin, viewsets.ModelViewSet):
     workspace_lookup = "workspace"
 
     def perform_create(self, serializer):
-        serializer.save(workspace=self._user_workspace())
+        workspace = self._user_workspace()
+        if workspace is None:
+            raise PermissionDenied("no workspace membership")
+        serializer.save(workspace=workspace)
 
 
 class WatchSerializer(serializers.ModelSerializer):
