@@ -1,3 +1,5 @@
+import os
+
 from django.contrib.auth import get_user_model
 from django.core.management.base import BaseCommand
 
@@ -20,8 +22,12 @@ class Command(BaseCommand):
         user, created = User.objects.get_or_create(
             username=email, defaults={"email": email}
         )
-        if options.get("password"):
-            user.set_password(options["password"])
+        # Prefer an explicit --password; fall back to INVITE_USER_PASSWORD so a
+        # password can be supplied via a Secret Manager-backed env var instead of
+        # the command line, which persists in inspectable Cloud Run Job config.
+        password = options.get("password") or os.environ.get("INVITE_USER_PASSWORD")
+        if password:
+            user.set_password(password)
             user.save(update_fields=["password"])
         Membership.objects.get_or_create(workspace=workspace, user=user)
         verb = "created" if created else "updated"
