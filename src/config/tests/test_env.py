@@ -43,11 +43,31 @@ def test_allowed_hosts_defaults_to_wildcard_in_debug():
     assert resolve_allowed_hosts(debug=True, env={}) == ["*"]
 
 
-def test_allowed_hosts_raises_when_unset_and_not_debug():
+def test_allowed_hosts_empty_when_unset_and_not_debug():
+    # Non-serving processes (batch Jobs) must boot with [] rather than crash.
     from config.env import resolve_allowed_hosts
 
+    assert resolve_allowed_hosts(debug=False, env={}) == []
+
+
+def test_require_allowed_hosts_raises_when_unset_and_not_debug():
+    from config.env import require_allowed_hosts
+
     with pytest.raises(ImproperlyConfigured):
-        resolve_allowed_hosts(debug=False, env={})
+        require_allowed_hosts(debug=False, env={})
+
+
+def test_require_allowed_hosts_returns_hosts_when_set():
+    from config.env import require_allowed_hosts
+
+    env = {"DJANGO_ALLOWED_HOSTS": "api.example.com"}
+    assert require_allowed_hosts(debug=False, env=env) == ["api.example.com"]
+
+
+def test_require_allowed_hosts_allows_empty_in_debug():
+    from config.env import require_allowed_hosts
+
+    assert require_allowed_hosts(debug=True, env={}) == ["*"]
 
 
 def test_csrf_trusted_origins_from_env():

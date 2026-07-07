@@ -30,7 +30,24 @@ def resolve_allowed_hosts(*, debug: bool, env=os.environ) -> list[str]:
         return [h.strip() for h in raw.split(",") if h.strip()]
     if debug:
         return ["*"]
-    raise ImproperlyConfigured("DJANGO_ALLOWED_HOSTS must be set when DEBUG is False")
+    # Non-serving processes (batch Jobs: migrate/run_daily/check_heartbeat) load
+    # settings but serve no HTTP, so an unset host is harmless for them: return
+    # Django's own default of []. The HTTP entrypoint enforces a real value via
+    # require_allowed_hosts() so a misconfigured Service still fails fast.
+    return []
+
+
+def require_allowed_hosts(*, debug: bool, env=os.environ) -> list[str]:
+    """Fail fast when the HTTP service has no ALLOWED_HOSTS in production.
+
+    Called from config/wsgi.py (loaded only by gunicorn), so the batch Jobs are
+    unaffected while a Service deployed without DJANGO_ALLOWED_HOSTS raises at
+    boot instead of silently rejecting every request with 400 DisallowedHost.
+    """
+    hosts = resolve_allowed_hosts(debug=debug, env=env)
+    if not debug and not hosts:
+        raise ImproperlyConfigured("DJANGO_ALLOWED_HOSTS must be set when DEBUG is False")
+    return hosts
 
 
 def resolve_csrf_trusted_origins(env=os.environ) -> list[str]:
