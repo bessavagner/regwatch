@@ -24,6 +24,9 @@
   <Router
     routes={{ '/login': login }}
     fallback={fallbackSnippet}
+    authed={auth.status === 'authed'}
+    isPublic={(p) => PUBLIC.has(p)}
+    login={login}
   />
 {/if}
 
