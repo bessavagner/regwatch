@@ -4,6 +4,7 @@
   import { auth, loadMe } from './lib/stores/auth.svelte';
   import Login from './routes/Login.svelte';
   import Feed from './routes/Feed.svelte';
+  import Watches from './routes/Watches.svelte';
 
   const PUBLIC = new Set(['/login']);
 
@@ -23,7 +24,7 @@
   <p class="p-6 text-muted">Loading…</p>
 {:else}
   <Router
-    routes={{ '/login': login, '/feed': feed }}
+    routes={{ '/login': login, '/feed': feed, '/watches': watchesRoute }}
     fallback={fallbackSnippet}
     authed={auth.status === 'authed'}
     isPublic={(p) => PUBLIC.has(p)}
@@ -37,6 +38,10 @@
 
 {#snippet feed()}
   <Feed />
+{/snippet}
+
+{#snippet watchesRoute()}
+  <Watches />
 {/snippet}
 
 {#snippet fallbackSnippet()}

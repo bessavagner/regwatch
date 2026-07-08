@@ -30,3 +30,14 @@ export const listDigests = (client?: string) =>
   api.get<Page<Digest>>(`/api/digests${qs({ client })}`);
 export const markRelevant = (id: number) => api.post<Match>(`/api/matches/${id}/relevant`);
 export const dismissMatch = (id: number) => api.post<Match>(`/api/matches/${id}/dismiss`);
+
+export interface WatchBody {
+  client: number;
+  terms: string[];
+  exclude: string[];
+  section: string;
+  active: boolean;
+}
+export const createWatch = (body: WatchBody) => api.post<Watch>('/api/watches', body);
+export const updateWatch = (id: number, body: Partial<WatchBody>) =>
+  api.patch<Watch>(`/api/watches/${id}`, body);
