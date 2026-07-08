@@ -4,11 +4,14 @@
   import { STATES, SECTIONS, CATEGORY_SEED } from '../lib/constants';
   import AsyncState from '../lib/ui/AsyncState.svelte';
   import MatchCard from '../lib/ui/MatchCard.svelte';
+  import Button from '../lib/ui/Button.svelte';
 
   let status = $state<'idle' | 'loading' | 'loaded' | 'empty' | 'error'>('idle');
   let matches = $state<Match[]>([]);
   let count = $state(0);
   let page = $state(1);
+  let hasNext = $state(false);
+  let hasPrev = $state(false);
   let clients = $state<Client[]>([]);
 
   let filters = $state<MatchParams>({ ordering: '' });
@@ -20,8 +23,12 @@
       matches = res.results;
       count = res.count;
       status = res.results.length ? 'loaded' : 'empty';
+      hasNext = res.next !== null;
+      hasPrev = res.previous !== null;
     } catch {
       status = 'error';
+      hasNext = false;
+      hasPrev = false;
     }
   }
 
@@ -95,4 +102,10 @@
     {#snippet empty()}<p class="p-4 text-muted">No matches for these filters.</p>{/snippet}
     {#snippet error()}<p role="alert" class="p-4 text-red-600">Could not load matches.</p>{/snippet}
   </AsyncState>
+
+  <div class="mt-4 flex items-center justify-between">
+    <Button variant="ghost" disabled={!hasPrev} onclick={() => (page -= 1)}>Prev</Button>
+    <span class="text-sm text-muted">Page {page}</span>
+    <Button variant="ghost" disabled={!hasNext} onclick={() => (page += 1)}>Next</Button>
+  </div>
 </section>

@@ -41,3 +41,13 @@ test('changing the state filter refetches with the state param', async () => {
     expect(spy).toHaveBeenLastCalledWith(expect.objectContaining({ state: 'relevant' })),
   );
 });
+
+test('Next button advances the page and refetches', async () => {
+  vi.spyOn(resources, 'listClients').mockResolvedValue({ count: 0, next: null, previous: null, results: [] });
+  const spy = vi.spyOn(resources, 'listMatches').mockResolvedValue({ count: 30, next: '/api/matches?page=2', previous: null, results: [m(1)] });
+  const user = userEvent.setup();
+  render(Feed);
+  await waitFor(() => expect(screen.getByText('snip-1')).toBeInTheDocument());
+  await user.click(screen.getByRole('button', { name: /next/i }));
+  await waitFor(() => expect(spy).toHaveBeenLastCalledWith(expect.objectContaining({ page: 2 })));
+});
