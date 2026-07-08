@@ -16,6 +16,8 @@ CSRF_ORIGINS="${CSRF_ORIGINS:?set CSRF_ORIGINS e.g. https://host1.a.run.app,http
 
 # `^@^` makes gcloud use "@" as the env-var separator so the commas inside a
 # multi-host ALLOWED_HOSTS / CSRF_ORIGINS list are not misread as new env vars.
+# App-gated public: Django invite-only session auth is the only gate; every
+# /api view is IsAuthenticated. The unauthenticated surface is login only.
 gcloud run deploy regwatch-api \
   --project="$PROJECT" --region="$REGION" \
   --image="$IMAGE" \
@@ -23,7 +25,7 @@ gcloud run deploy regwatch-api \
   --command="/app/.venv/bin/gunicorn" \
   --args="config.wsgi,--bind,0.0.0.0:8080,--workers,2,--timeout,60" \
   --port=8080 \
-  --no-allow-unauthenticated \
+  --allow-unauthenticated \
   --set-env-vars="^@^DJANGO_ALLOWED_HOSTS=${ALLOWED_HOSTS}@DJANGO_CSRF_TRUSTED_ORIGINS=${CSRF_ORIGINS}" \
   --set-secrets="SECRET_KEY=SECRET_KEY:latest,DATABASE_URL=DATABASE_URL:latest"
 

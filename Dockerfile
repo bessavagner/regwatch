@@ -1,4 +1,13 @@
 # Dockerfile
+# --- Stage 1: build the SPA ---
+FROM node:20-slim AS web
+WORKDIR /web
+COPY web/package.json web/package-lock.json ./
+RUN npm ci
+COPY web/ ./
+RUN npm run build
+
+# --- Stage 2: the Python app (unchanged runtime; now also carries web-dist) ---
 FROM python:3.12-slim
 
 ENV PYTHONUNBUFFERED=1 \
@@ -14,6 +23,7 @@ RUN uv sync --frozen --no-dev
 
 COPY manage.py ./
 COPY src/ ./src/
+COPY --from=web /web/dist ./web-dist
 
 RUN useradd --create-home app && chown -R app /app
 USER app

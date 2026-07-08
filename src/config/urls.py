@@ -1,7 +1,8 @@
-from django.urls import include, path
+from django.urls import include, path, re_path
 from rest_framework.routers import DefaultRouter
 
 from accounts.api import LoginView, LogoutView, MeView
+from config.spa import spa_index
 from digests.api import DigestViewSet
 from matching.api import MatchViewSet
 from watches.api import ClientViewSet, WatchViewSet
@@ -17,4 +18,5 @@ urlpatterns = [
     path("api/auth/logout", LogoutView.as_view(), name="logout"),
     path("api/me", MeView.as_view(), name="me"),
     path("api/", include(router.urls)),
+    re_path(r"^(?!api/).*$", spa_index, name="spa"),
 ]

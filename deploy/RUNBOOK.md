@@ -69,3 +69,17 @@ and invoke with an audience-scoped token:
 (the caller needs `serviceAccountTokenCreator` on that SA). Then `POST
 /api/auth/login` with the seeded credentials returns the `me` payload, `GET
 /api/me` returns the workspace, and a cross-workspace id returns 404.
+
+### Same-origin SPA + public access (Plan 8)
+
+The image is now multi-stage: a Node stage builds `web/` and the Python image
+carries the bundle at `/app/web-dist`. Django serves it same-origin with `/api`
+via WhiteNoise (assets + `/`) and a non-`/api` catch-all (`config.spa.spa_index`)
+for client-side routes. `SPA_DIST_DIR` overrides the bundle location (default
+`/app/web-dist`).
+
+The Service runs `--allow-unauthenticated`: **Django invite-only session auth is
+the only gate**; every `/api` view is `IsAuthenticated`, so the unauthenticated
+surface is the login form only. Confirm `DJANGO_ALLOWED_HOSTS` and
+`DJANGO_CSRF_TRUSTED_ORIGINS` include **both** Service hosts (see the two-host
+note above) before first browser use.
