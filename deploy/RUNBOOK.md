@@ -60,15 +60,13 @@ mounts the `DATABASE_URL` secret; supply the password via a Secret Manager
 secret bound to `INVITE_USER_PASSWORD` (never `--password` on the Job, which
 persists in inspectable Job config).
 
-**Smoke (private Service, `--no-allow-unauthenticated`):** a user-credential
-`gcloud auth print-identity-token` is rejected (its audience is not the service
-URL). Either run `gcloud run services proxy regwatch-api --region=<region>` and
-curl `localhost`, or grant a service account `roles/run.invoker` on the service
-and invoke with an audience-scoped token:
-`gcloud auth print-identity-token --impersonate-service-account=<SA> --audiences=https://<host>`
-(the caller needs `serviceAccountTokenCreator` on that SA). Then `POST
-/api/auth/login` with the seeded credentials returns the `me` payload, `GET
-/api/me` returns the workspace, and a cross-workspace id returns 404.
+**Smoke (public Service, `--allow-unauthenticated`, app-gated):** the Service
+itself accepts unauthenticated HTTP requests — there is no Cloud Run IAM/token
+gate to work around. `curl https://<host>/api/me` (no credentials) directly.
+Django invite-only session auth is the actual gate: `POST /api/auth/login`
+with the seeded credentials returns the `me` payload, `GET /api/me` returns
+the workspace, and a cross-workspace id returns 404. Any other `/api` route
+called without a valid session cookie returns 401/403.
 
 ### Same-origin SPA + public access (Plan 8)
 
@@ -83,3 +81,18 @@ the only gate**; every `/api` view is `IsAuthenticated`, so the unauthenticated
 surface is the login form only. Confirm `DJANGO_ALLOWED_HOSTS` and
 `DJANGO_CSRF_TRUSTED_ORIGINS` include **both** Service hosts (see the two-host
 note above) before first browser use.
+
+### Dashboard first-deploy (Plan 8)
+
+1. Build+push the multi-stage image (the Node stage builds `web/`; the bundle
+   ships at `/app/web-dist`).
+2. `migrate` Job once (django_session), if new.
+3. `deploy/deploy-api.sh` with **both** Service hosts in `ALLOWED_HOSTS`/`CSRF_ORIGINS`
+   (`--allow-unauthenticated`, app-gated).
+4. Seed the pilot user via the `invite_user` one-off Job (`INVITE_USER_PASSWORD` secret).
+5. Live smoke: `PLAYWRIGHT_BASE_URL=https://<host> E2E_USER=… E2E_PASS=… npm run e2e`.
+   Login → `/api/me` (csrf) → triage `relevant` (X-CSRFToken) must all pass over HTTPS.
+
+The unauthenticated surface is the login form only; every `/api` view is
+`IsAuthenticated`. If a write 403s, check `csrftoken` is set (GET `/api/me` first)
+and that `CSRF_TRUSTED_ORIGINS` includes the app origin.

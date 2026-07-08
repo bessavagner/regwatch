@@ -7,6 +7,10 @@ RUN npm ci
 COPY web/ ./
 RUN npm run build
 
+# Fail the build if the SPA bundle contains an api/ path that WhiteNoise would
+# serve unauthenticated, shadowing the DRF API (WhiteNoise resolves before URL routing).
+RUN test ! -e dist/api || (echo "ERROR: SPA build produced dist/api — would shadow the authenticated /api" && exit 1)
+
 # --- Stage 2: the Python app (unchanged runtime; now also carries web-dist) ---
 FROM python:3.12-slim
 

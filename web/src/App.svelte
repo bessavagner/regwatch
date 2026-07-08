@@ -25,11 +25,11 @@
   <p class="p-6 text-muted">Loading…</p>
 {:else}
   {#if auth.status === 'authed'}
-    <nav class="flex gap-3 border-b p-3 text-sm">
-      <a href="/feed" class="text-brand-600">Triage</a>
-      <a href="/watches" class="text-brand-600">Watches</a>
-      <a href="/digests" class="text-brand-600">Digests</a>
-      <button class="ml-auto text-muted" onclick={() => auth.logout().then(() => navigate('/login'))}>Log out</button>
+    <nav class="flex items-center gap-1 border-b p-2 text-sm">
+      <a href="/feed" class="rounded px-2 py-2.5 text-brand-600">Triage</a>
+      <a href="/watches" class="rounded px-2 py-2.5 text-brand-600">Watches</a>
+      <a href="/digests" class="rounded px-2 py-2.5 text-brand-600">Digests</a>
+      <button class="ml-auto rounded px-2 py-2.5 text-muted" onclick={() => auth.logout().then(() => navigate('/login'))}>Log out</button>
     </nav>
   {/if}
   <Router
