@@ -26,3 +26,15 @@ test('toggling active PATCHes the watch', async () => {
   await user.click(screen.getByRole('button', { name: /deactivate/i }));
   expect(spy).toHaveBeenCalledWith(1, { active: false });
 });
+
+test('a failed toggle surfaces an error instead of failing silently', async () => {
+  vi.spyOn(resources, 'listClients').mockResolvedValue({ count: 1, next: null, previous: null, results: clients });
+  vi.spyOn(resources, 'listWatches').mockResolvedValue({ count: 1, next: null, previous: null, results: [watch] });
+  vi.spyOn(resources, 'updateWatch').mockRejectedValue(new Error('boom'));
+  const user = userEvent.setup();
+  render(Watches);
+  await waitFor(() => expect(screen.getByRole('button', { name: /deactivate/i })).toBeInTheDocument());
+  await user.click(screen.getByRole('button', { name: /deactivate/i }));
+  await waitFor(() => expect(screen.getByRole('alert')).toBeInTheDocument());
+  expect(screen.getByRole('button', { name: /deactivate/i })).toBeInTheDocument();
+});

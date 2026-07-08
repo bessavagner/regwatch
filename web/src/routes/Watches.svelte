@@ -1,5 +1,6 @@
 <script lang="ts">
   import { listWatches, listClients, updateWatch } from '../lib/api/resources';
+  import { ApiError } from '../lib/api/client';
   import type { Client, Watch } from '../lib/api/types';
   import AsyncState from '../lib/ui/AsyncState.svelte';
   import Card from '../lib/ui/Card.svelte';
@@ -12,6 +13,7 @@
   let clients = $state<Client[]>([]);
   let showForm = $state(false);
   let editing = $state<Watch | undefined>(undefined);
+  let toggleError = $state('');
 
   async function load() {
     status = 'loading';
@@ -28,8 +30,13 @@
   $effect(() => { load(); });
 
   async function toggle(w: Watch) {
-    const updated = await updateWatch(w.id, { active: !w.active });
-    watches = watches.map((x) => (x.id === updated.id ? updated : x));
+    try {
+      const updated = await updateWatch(w.id, { active: !w.active });
+      watches = watches.map((x) => (x.id === updated.id ? updated : x));
+      toggleError = '';
+    } catch (err) {
+      toggleError = err instanceof ApiError ? err.detail : 'Could not update the watch';
+    }
   }
 
   function onsaved(w: Watch) {
@@ -52,6 +59,8 @@
       <WatchForm {clients} watch={editing} {onsaved} />
     </Card>
   {/if}
+
+  {#if toggleError}<p role="alert" class="mb-2 text-sm text-red-600">{toggleError}</p>{/if}
 
   <AsyncState state={status}>
     {#snippet loaded()}
