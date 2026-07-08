@@ -5,6 +5,7 @@
   import AsyncState from '../lib/ui/AsyncState.svelte';
   import MatchCard from '../lib/ui/MatchCard.svelte';
   import Button from '../lib/ui/Button.svelte';
+  import TriageActions from '../lib/ui/TriageActions.svelte';
 
   let status = $state<'idle' | 'loading' | 'loaded' | 'empty' | 'error'>('idle');
   let matches = $state<Match[]>([]);
@@ -13,8 +14,17 @@
   let hasNext = $state(false);
   let hasPrev = $state(false);
   let clients = $state<Client[]>([]);
+  let actionError = $state('');
 
   let filters = $state<MatchParams>({ ordering: '' });
+
+  function applyUpdate(updated: Match) {
+    matches = matches.map((m) => (m.id === updated.id ? updated : m));
+    // If a state filter is active and no longer matches, drop it from view.
+    if (filters.state && updated.state !== filters.state) {
+      matches = matches.filter((m) => m.id !== updated.id);
+    }
+  }
 
   async function load() {
     status = 'loading';
@@ -93,10 +103,20 @@
     </label>
   </div>
 
+  {#if actionError}<p role="alert" class="mb-2 text-sm text-red-600">{actionError}</p>{/if}
+
   <AsyncState state={status}>
     {#snippet loaded()}
       <ul class="space-y-3">
-        {#each matches as match (match.id)}<li><MatchCard {match} /></li>{/each}
+        {#each matches as match (match.id)}
+          <li>
+            <MatchCard {match}>
+              {#snippet children()}
+                <TriageActions {match} onchange={applyUpdate} onerror={(m) => (actionError = m)} />
+              {/snippet}
+            </MatchCard>
+          </li>
+        {/each}
       </ul>
     {/snippet}
     {#snippet empty()}<p class="p-4 text-muted">No matches for these filters.</p>{/snippet}

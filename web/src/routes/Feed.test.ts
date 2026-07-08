@@ -51,3 +51,14 @@ test('Next button advances the page and refetches', async () => {
   await user.click(screen.getByRole('button', { name: /next/i }));
   await waitFor(() => expect(spy).toHaveBeenLastCalledWith(expect.objectContaining({ page: 2 })));
 });
+
+test('marking a match relevant updates its card in place', async () => {
+  vi.spyOn(resources, 'listClients').mockResolvedValue({ count: 0, next: null, previous: null, results: [] });
+  vi.spyOn(resources, 'listMatches').mockResolvedValue(page([m(1)]));
+  vi.spyOn(resources, 'markRelevant').mockResolvedValue({ ...m(1), state: 'relevant' });
+  const user = userEvent.setup();
+  render(Feed);
+  await waitFor(() => expect(screen.getByText('snip-1')).toBeInTheDocument());
+  await user.click(screen.getByRole('button', { name: /relevant/i }));
+  await waitFor(() => expect(screen.getByText('relevant')).toBeInTheDocument());
+});

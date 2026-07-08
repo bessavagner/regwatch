@@ -28,3 +28,5 @@ export const listWatches = (client?: string) =>
   api.get<Page<Watch>>(`/api/watches${qs({ client })}`);
 export const listDigests = (client?: string) =>
   api.get<Page<Digest>>(`/api/digests${qs({ client })}`);
+export const markRelevant = (id: number) => api.post<Match>(`/api/matches/${id}/relevant`);
+export const dismissMatch = (id: number) => api.post<Match>(`/api/matches/${id}/dismiss`);
