@@ -1,4 +1,5 @@
 import os
+from pathlib import Path
 
 import dj_database_url
 
@@ -9,6 +10,9 @@ from config.env import (
     resolve_debug,
     resolve_secret_key,
 )
+
+BASE_DIR = Path(__file__).resolve().parent.parent.parent
+SPA_DIST_DIR = Path(os.environ.get("SPA_DIST_DIR", BASE_DIR / "web-dist"))
 
 DEBUG = resolve_debug()
 SECRET_KEY = resolve_secret_key(debug=DEBUG)
@@ -21,6 +25,7 @@ INSTALLED_APPS = [
     "django.contrib.contenttypes",
     "django.contrib.postgres",
     "django.contrib.sessions",
+    "django.contrib.staticfiles",
     "rest_framework",
     "accounts",
     "watches",
@@ -32,6 +37,7 @@ INSTALLED_APPS = [
 ]
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
+    "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
@@ -48,6 +54,17 @@ WSGI_APPLICATION = "config.wsgi.application"
 DATABASES = {"default": dj_database_url.parse(resolve_database_url(), conn_max_age=0)}
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 USE_TZ = True
+
+STATIC_URL = "/static/"
+STATIC_ROOT = BASE_DIR / "staticfiles"
+# Serve the built SPA assets (index.html + /assets/*) same-origin with /api.
+if SPA_DIST_DIR.is_dir():
+    WHITENOISE_ROOT = str(SPA_DIST_DIR)
+WHITENOISE_INDEX_FILE = True
+STORAGES = {
+    "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},
+    "staticfiles": {"BACKEND": "whitenoise.storage.CompressedStaticFilesStorage"},
+}
 
 # HTTPS/security hardening — inert for the job, correct once a service is served (Plan 7).
 SECURE_HSTS_SECONDS = 31536000
