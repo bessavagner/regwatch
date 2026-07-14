@@ -38,3 +38,11 @@ test('a failed toggle surfaces an error instead of failing silently', async () =
   await waitFor(() => expect(screen.getByRole('alert')).toBeInTheDocument());
   expect(screen.getByRole('button', { name: /deactivate/i })).toBeInTheDocument();
 });
+
+test('with zero clients, "New watch" is disabled with a link to Clients', async () => {
+  vi.spyOn(resources, 'listClients').mockResolvedValue({ count: 0, next: null, previous: null, results: [] });
+  vi.spyOn(resources, 'listWatches').mockResolvedValue({ count: 0, next: null, previous: null, results: [] });
+  render(Watches);
+  await waitFor(() => expect(screen.getByRole('button', { name: /new watch/i })).toBeDisabled());
+  expect(screen.getByRole('link', { name: /clients/i })).toHaveAttribute('href', '/clients');
+});

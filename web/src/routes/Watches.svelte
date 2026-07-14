@@ -2,6 +2,7 @@
   import { listWatches, listClients, updateWatch } from '../lib/api/resources';
   import { ApiError } from '../lib/api/client';
   import type { Client, Watch } from '../lib/api/types';
+  import { navigate } from '../lib/router/router.svelte';
   import AsyncState from '../lib/ui/AsyncState.svelte';
   import Card from '../lib/ui/Card.svelte';
   import Button from '../lib/ui/Button.svelte';
@@ -51,8 +52,15 @@
 <section class="mx-auto max-w-2xl p-4">
   <div class="mb-3 flex items-center justify-between">
     <h1 class="text-lg font-semibold">Watches</h1>
-    <Button onclick={() => { editing = undefined; showForm = true; }}>New watch</Button>
+    <Button disabled={clients.length === 0} onclick={() => { editing = undefined; showForm = true; }}>New watch</Button>
   </div>
+
+  {#if status !== 'idle' && status !== 'loading' && clients.length === 0}
+    <p class="mb-2 text-sm text-muted">
+      Add a client first —
+      <a href="/clients" class="text-brand-600 underline" onclick={(e) => { e.preventDefault(); navigate('/clients'); }}>Clients</a>.
+    </p>
+  {/if}
 
   {#if showForm}
     <Card>
