@@ -41,3 +41,12 @@ export interface WatchBody {
 export const createWatch = (body: WatchBody) => api.post<Watch>('/api/watches', body);
 export const updateWatch = (id: number, body: Partial<WatchBody>) =>
   api.patch<Watch>(`/api/watches/${id}`, body);
+
+export interface ClientBody {
+  name: string;
+  email: string;
+  is_house: boolean;
+}
+export const createClient = (body: ClientBody) => api.post<Client>('/api/clients', body);
+export const updateClient = (id: number, body: Partial<ClientBody>) =>
+  api.patch<Client>(`/api/clients/${id}`, body);
