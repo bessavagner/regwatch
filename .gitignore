@@ -1,6 +1,9 @@
 # Disposable spike/experiment area — never part of the package
 sandbox/
 
+# Local git worktrees for isolated task execution
+.worktrees/
+
 # SDD execution scratch (ledger, task briefs/reports)
 .superpowers/
 
