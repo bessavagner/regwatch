@@ -30,3 +30,7 @@ src/playground.ipynb
 docs/
 .claude/
 .omc/
+
+# Local-only: code-intelligence daemon cache and Playwright MCP scratch output
+.codegraph/
+.playwright-mcp/

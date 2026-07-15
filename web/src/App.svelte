@@ -2,6 +2,8 @@
   import Router from './lib/router/Router.svelte';
   import { route, navigate } from './lib/router/router.svelte';
   import { auth, loadMe } from './lib/stores/auth.svelte';
+  import CommandPalette from './lib/ui/CommandPalette.svelte';
+  import Button from './lib/ui/Button.svelte';
   import Login from './routes/Login.svelte';
   import Feed from './routes/Feed.svelte';
   import Watches from './routes/Watches.svelte';
@@ -9,6 +11,14 @@
   import Digests from './routes/Digests.svelte';
 
   const PUBLIC = new Set(['/login']);
+  const NAV_ROUTES = [
+    { path: '/feed', label: 'Triage' },
+    { path: '/watches', label: 'Watches' },
+    { path: '/clients', label: 'Clients' },
+    { path: '/digests', label: 'Digests' },
+  ];
+
+  let palette: CommandPalette | undefined = $state();
 
   // Bootstrap: try to resume a session (also seeds csrf) on first load.
   $effect(() => {
@@ -23,16 +33,29 @@
 </script>
 
 {#if auth.status === 'idle' || auth.status === 'loading'}
-  <p class="p-6 text-muted">Loading…</p>
+  <p class="p-6 text-sm text-muted">Loading…</p>
 {:else}
   {#if auth.status === 'authed'}
-    <nav class="flex items-center gap-1 border-b p-2 text-sm">
-      <a href="/feed" class="rounded px-2 py-2.5 text-brand-600">Triage</a>
-      <a href="/watches" class="rounded px-2 py-2.5 text-brand-600">Watches</a>
-      <a href="/clients" class="rounded px-2 py-2.5 text-brand-600">Clients</a>
-      <a href="/digests" class="rounded px-2 py-2.5 text-brand-600">Digests</a>
-      <button class="ml-auto rounded px-2 py-2.5 text-muted" onclick={() => auth.logout().then(() => navigate('/login'))}>Log out</button>
+    <nav class="nav">
+      <a href="/feed" class="wordmark shrink-0" onclick={(e) => { e.preventDefault(); navigate('/feed'); }}>RegWatch</a>
+      <div class="nav__links">
+        {#each NAV_ROUTES as r}
+          <a
+            href={r.path}
+            class="nav__link"
+            class:is-active={route.path === r.path}
+            onclick={(e) => { e.preventDefault(); navigate(r.path); }}
+          >{r.label}</a>
+        {/each}
+      </div>
+      <button type="button" class="cmdk-trigger ml-auto shrink-0" onclick={() => palette?.show()}>
+        <span class="cmdk-trigger__label">Jump to…</span><span>⌘K</span>
+      </button>
+      <div class="shrink-0">
+        <Button variant="ghost" onclick={() => auth.logout().then(() => navigate('/login'))}>Log out</Button>
+      </div>
     </nav>
+    <CommandPalette bind:this={palette} routes={NAV_ROUTES} />
   {/if}
   <Router
     routes={{ '/login': login, '/feed': feed, '/watches': watchesRoute, '/clients': clientsRoute, '/digests': digestsRoute }}

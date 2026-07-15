@@ -30,14 +30,14 @@
 
 <form onsubmit={save} class="space-y-2">
   <label class="block text-sm">Name
-    <input class="mt-1 w-full rounded border px-2 py-1" bind:value={name} />
+    <input class="mt-1 field" bind:value={name} />
   </label>
-  {#if fieldErrors.name}<p role="alert" class="text-sm text-red-600">{fieldErrors.name.join(' ')}</p>{/if}
+  {#if fieldErrors.name}<p role="alert" class="text-sm text-danger">{fieldErrors.name.join(' ')}</p>{/if}
   <label class="block text-sm">Email (digest recipient — blank = no digest)
-    <input class="mt-1 w-full rounded border px-2 py-1" bind:value={email} />
+    <input class="mt-1 field" bind:value={email} />
   </label>
-  {#if fieldErrors.email}<p role="alert" class="text-sm text-red-600">{fieldErrors.email.join(' ')}</p>{/if}
-  <label class="flex items-center gap-2 text-sm"><input type="checkbox" bind:checked={isHouse} /> House account</label>
-  {#if fieldErrors._}<p role="alert" class="text-sm text-red-600">{fieldErrors._.join(' ')}</p>{/if}
+  {#if fieldErrors.email}<p role="alert" class="text-sm text-danger">{fieldErrors.email.join(' ')}</p>{/if}
+  <label class="flex items-center gap-2 text-sm"><input type="checkbox" class="accent-accent" bind:checked={isHouse} /> House account</label>
+  {#if fieldErrors._}<p role="alert" class="text-sm text-danger">{fieldErrors._.join(' ')}</p>{/if}
   <Button type="submit">Save</Button>
 </form>

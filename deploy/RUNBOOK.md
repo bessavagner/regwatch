@@ -90,7 +90,7 @@ note above) before first browser use.
 3. `deploy/deploy-api.sh` with **both** Service hosts in `ALLOWED_HOSTS`/`CSRF_ORIGINS`
    (`--allow-unauthenticated`, app-gated).
 4. Seed the pilot user via the `invite_user` one-off Job (`INVITE_USER_PASSWORD` secret).
-5. Live smoke: `PLAYWRIGHT_BASE_URL=https://<host> E2E_USER=… E2E_PASS=… npm run e2e`.
+5. Live smoke: `PLAYWRIGHT_BASE_URL=https://<host> E2E_USER=… E2E_PASS=… pnpm run e2e`.
    Login → `/api/me` (csrf) → triage `relevant` (X-CSRFToken) must all pass over HTTPS.
 
 The unauthenticated surface is the login form only; every `/api` view is

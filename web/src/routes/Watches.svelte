@@ -51,48 +51,48 @@
 
 <section class="mx-auto max-w-2xl p-4">
   <div class="mb-3 flex items-center justify-between">
-    <h1 class="text-lg font-semibold">Watches</h1>
+    <h1 class="text-xl">Watches</h1>
     <Button disabled={clients.length === 0} onclick={() => { editing = undefined; showForm = true; }}>New watch</Button>
   </div>
 
   {#if status !== 'idle' && status !== 'loading' && clients.length === 0}
     <p class="mb-2 text-sm text-muted">
       Add a client first —
-      <a href="/clients" class="text-brand-600 underline" onclick={(e) => { e.preventDefault(); navigate('/clients'); }}>Clients</a>.
+      <a href="/clients" class="text-accent underline" onclick={(e) => { e.preventDefault(); navigate('/clients'); }}>Clients</a>.
     </p>
   {/if}
 
   {#if showForm}
-    <Card>
-      <WatchForm {clients} watch={editing} {onsaved} />
-    </Card>
+    <div class="mb-3">
+      <Card>
+        <WatchForm {clients} watch={editing} {onsaved} />
+      </Card>
+    </div>
   {/if}
 
-  {#if toggleError}<p role="alert" class="mb-2 text-sm text-red-600">{toggleError}</p>{/if}
+  {#if toggleError}<p role="alert" class="mb-2 text-sm text-danger">{toggleError}</p>{/if}
 
   <AsyncState state={status}>
     {#snippet loaded()}
-      <ul class="mt-3 space-y-2">
-        {#each watches as w (w.id)}
-          <li>
-            <Card>
-              <div class="flex items-center justify-between">
-                <div>
-                  <p class="text-sm font-medium">{w.terms.join(', ')}</p>
-                  <p class="text-xs text-muted">Seção {w.section}{w.exclude.length ? ` · excl: ${w.exclude.join(', ')}` : ''}</p>
-                </div>
-                <div class="flex items-center gap-2">
-                  <Badge label={w.active ? 'active' : 'inactive'} tone={w.active ? 'green' : 'gray'} />
-                  <Button variant="ghost" onclick={() => { editing = w; showForm = true; }}>Edit</Button>
-                  <Button variant="ghost" onclick={() => toggle(w)}>{w.active ? 'Deactivate' : 'Activate'}</Button>
-                </div>
+      <ul class="rows">
+        {#each watches as w, i (w.id)}
+          <li class="row reveal" style="--i: {i}">
+            <div class="flex items-center justify-between gap-2">
+              <div>
+                <p class="as-typed text-sm font-medium text-ink">{w.terms.join(', ')}</p>
+                <p class="mt-0.5 font-mono text-xs text-muted"><span class="as-typed">seção {w.section}{w.exclude.length ? ` · excl: ${w.exclude.join(', ')}` : ''}</span></p>
               </div>
-            </Card>
+              <div class="flex items-center gap-2">
+                <Badge label={w.active ? 'active' : 'inactive'} tone={w.active ? 'green' : 'gray'} />
+                <Button variant="ghost" onclick={() => { editing = w; showForm = true; }}>Edit</Button>
+                <Button variant="ghost" onclick={() => toggle(w)}>{w.active ? 'Deactivate' : 'Activate'}</Button>
+              </div>
+            </div>
           </li>
         {/each}
       </ul>
     {/snippet}
-    {#snippet empty()}<p class="p-4 text-muted">No watches yet — create one.</p>{/snippet}
-    {#snippet error()}<p role="alert" class="p-4 text-red-600">Could not load watches.</p>{/snippet}
+    {#snippet empty()}<p class="p-4 text-sm text-muted">No watches yet — create one.</p>{/snippet}
+    {#snippet error()}<p role="alert" class="p-4 text-sm text-danger">Could not load watches.</p>{/snippet}
   </AsyncState>
 </section>

@@ -1,11 +1,12 @@
 # Dockerfile
 # --- Stage 1: build the SPA ---
-FROM node:20-slim AS web
+FROM node:22-slim AS web
+RUN corepack enable
 WORKDIR /web
-COPY web/package.json web/package-lock.json ./
-RUN npm ci
+COPY web/package.json web/pnpm-lock.yaml web/pnpm-workspace.yaml ./
+RUN pnpm install --frozen-lockfile
 COPY web/ ./
-RUN npm run build
+RUN pnpm run build
 
 # Fail the build if the SPA bundle contains an api/ path that WhiteNoise would
 # serve unauthenticated, shadowing the DRF API (WhiteNoise resolves before URL routing).

@@ -60,5 +60,8 @@ test('marking a match relevant updates its card in place', async () => {
   render(Feed);
   await waitFor(() => expect(screen.getByText('snip-1')).toBeInTheDocument());
   await user.click(screen.getByRole('button', { name: /relevant/i }));
-  await waitFor(() => expect(screen.getByText('relevant')).toBeInTheDocument());
+  // Scoped to the badge <span> — the State filter's <option value="relevant"> also
+  // renders the literal text "relevant" now that its label is lowercased to match
+  // the app's typographic system, so an unscoped getByText is ambiguous.
+  await waitFor(() => expect(screen.getByText('relevant', { selector: 'span' })).toBeInTheDocument());
 });

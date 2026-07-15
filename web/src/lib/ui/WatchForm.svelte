@@ -41,24 +41,24 @@
 
 <form onsubmit={save} class="space-y-2">
   <label class="block text-sm">Client
-    <select class="mt-1 w-full rounded border px-2 py-1" bind:value={client}>
+    <select class="mt-1 field" bind:value={client}>
       {#each clients as c}<option value={c.id}>{c.name}</option>{/each}
     </select>
   </label>
   <label class="block text-sm">Terms (comma-separated)
-    <input class="mt-1 w-full rounded border px-2 py-1" bind:value={termsText} />
+    <input class="mt-1 field" bind:value={termsText} />
   </label>
-  {#if fieldErrors.terms}<p role="alert" class="text-sm text-red-600">{fieldErrors.terms.join(' ')}</p>{/if}
+  {#if fieldErrors.terms}<p role="alert" class="text-sm text-danger">{fieldErrors.terms.join(' ')}</p>{/if}
   <label class="block text-sm">Exclude (comma-separated)
-    <input class="mt-1 w-full rounded border px-2 py-1" bind:value={excludeText} />
+    <input class="mt-1 field" bind:value={excludeText} />
   </label>
   <label class="block text-sm">Section
-    <select class="mt-1 w-full rounded border px-2 py-1" bind:value={section}>
+    <select class="mt-1 field" bind:value={section}>
       {#each SECTIONS as s}<option value={s.value}>{s.label}</option>{/each}
     </select>
   </label>
-  <label class="flex items-center gap-2 text-sm"><input type="checkbox" bind:checked={active} /> Active</label>
-  {#if fieldErrors.client}<p role="alert" class="text-sm text-red-600">{fieldErrors.client.join(' ')}</p>{/if}
-  {#if fieldErrors._}<p role="alert" class="text-sm text-red-600">{fieldErrors._.join(' ')}</p>{/if}
+  <label class="flex items-center gap-2 text-sm"><input type="checkbox" class="accent-accent" bind:checked={active} /> Active</label>
+  {#if fieldErrors.client}<p role="alert" class="text-sm text-danger">{fieldErrors.client.join(' ')}</p>{/if}
+  {#if fieldErrors._}<p role="alert" class="text-sm text-danger">{fieldErrors._.join(' ')}</p>{/if}
   <Button type="submit">Save</Button>
 </form>

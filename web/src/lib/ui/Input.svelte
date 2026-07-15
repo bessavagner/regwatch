@@ -3,14 +3,9 @@
     value = $bindable(''),
     type = 'text',
     placeholder = '',
+    disabled = false,
     id,
-  }: { value?: string; type?: string; placeholder?: string; id?: string } = $props();
+  }: { value?: string; type?: string; placeholder?: string; disabled?: boolean; id?: string } = $props();
 </script>
 
-<input
-  {id}
-  {type}
-  {placeholder}
-  bind:value
-  class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none"
-/>
+<input {id} {type} {placeholder} {disabled} bind:value class="field" />

@@ -1,0 +1,30 @@
+[
+  {
+    "date": "2026-07-15",
+    "scope": "page",
+    "page": "Login",
+    "macrostructure": "Split Studio",
+    "theme": "Lumen",
+    "drop": "night",
+    "enrichment": "none (no apparatus/stat-row — no real data pre-auth)",
+    "brief": "RegWatch login/landing page · split diptych (brand statement left, sign-in form right), diversified from Workbench used on the app pages"
+  },
+  {
+    "date": "2026-07-15",
+    "scope": "app",
+    "macrostructure": "Workbench",
+    "theme": "Lumen",
+    "drop": "night",
+    "theme_axes": "dark / classical-serif-lowercase / warm (brass ~50°)",
+    "enrichment": "apparatus + three-stat row (Triage hero only)",
+    "brief": "RegWatch web dashboard · demo-focused redesign, genre swap modern-minimal→atmospheric after Cobalt read as too plain for a demo"
+  },
+  {
+    "date": "2026-07-14",
+    "scope": "app",
+    "macrostructure": "Workbench",
+    "theme": "Cobalt",
+    "enrichment": "none",
+    "brief": "RegWatch web dashboard · multi-page redesign (Triage, Watches, Clients, Digests, Login)"
+  }
+]

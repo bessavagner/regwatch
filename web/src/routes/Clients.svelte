@@ -36,38 +36,38 @@
 
 <section class="mx-auto max-w-2xl p-4">
   <div class="mb-3 flex items-center justify-between">
-    <h1 class="text-lg font-semibold">Clients</h1>
+    <h1 class="text-xl">Clients</h1>
     <Button onclick={() => { editing = undefined; showForm = true; }}>New client</Button>
   </div>
 
   {#if showForm}
-    <Card>
-      <ClientForm client={editing} {onsaved} />
-    </Card>
+    <div class="mb-3">
+      <Card>
+        <ClientForm client={editing} {onsaved} />
+      </Card>
+    </div>
   {/if}
 
   <AsyncState state={status}>
     {#snippet loaded()}
-      <ul class="mt-3 space-y-2">
-        {#each clients as c (c.id)}
-          <li>
-            <Card>
-              <div class="flex items-center justify-between">
-                <div>
-                  <p class="text-sm font-medium">{c.name}</p>
-                  <p class="text-xs text-muted">{c.email || 'no digest recipient'}</p>
-                </div>
-                <div class="flex items-center gap-2">
-                  {#if c.is_house}<Badge label="house" tone="blue" />{/if}
-                  <Button variant="ghost" onclick={() => { editing = c; showForm = true; }}>Edit</Button>
-                </div>
+      <ul class="rows">
+        {#each clients as c, i (c.id)}
+          <li class="row reveal" style="--i: {i}">
+            <div class="flex items-center justify-between gap-2">
+              <div>
+                <p class="as-typed text-sm font-medium text-ink">{c.name}</p>
+                <p class="as-typed mt-0.5 text-xs text-muted">{c.email || 'no digest recipient'}</p>
               </div>
-            </Card>
+              <div class="flex items-center gap-2">
+                {#if c.is_house}<Badge label="house" tone="blue" />{/if}
+                <Button variant="ghost" onclick={() => { editing = c; showForm = true; }}>Edit</Button>
+              </div>
+            </div>
           </li>
         {/each}
       </ul>
     {/snippet}
-    {#snippet empty()}<p class="p-4 text-muted">No clients yet — create one.</p>{/snippet}
-    {#snippet error()}<p role="alert" class="p-4 text-red-600">Could not load clients.</p>{/snippet}
+    {#snippet empty()}<p class="p-4 text-sm text-muted">No clients yet — create one.</p>{/snippet}
+    {#snippet error()}<p role="alert" class="p-4 text-sm text-danger">Could not load clients.</p>{/snippet}
   </AsyncState>
 </section>

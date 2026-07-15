@@ -19,3 +19,5 @@ htmlcov
 *.ipynb
 deploy
 **/tests
+**/node_modules
+web/dist
