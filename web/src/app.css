@@ -434,9 +434,10 @@ dialog.cmdk-dialog::backdrop { background: oklch(10% 0.01 265 / 0.55); }
   overflow: clip;
   min-height: 100dvh;
   display: grid;
-  grid-template-columns: 1.15fr 1fr;
+  grid-template-columns: minmax(0, 34ch) minmax(0, 24rem);
+  justify-content: center;
   align-items: center;
-  gap: var(--space-2xl);
+  gap: var(--space-xl);
   padding: var(--space-2xl);
   background:
     linear-gradient(var(--rule-blueprint) 1px, transparent 1px) 0 0 / 32px 32px,
@@ -449,10 +450,9 @@ dialog.cmdk-dialog::backdrop { background: oklch(10% 0.01 265 / 0.55); }
 }
 .auth__brand .hero__title {
   margin-top: var(--space-2xs);
-  font-size: clamp(1.75rem, 2.5vw + 1rem, 2.75rem);
+  font-size: clamp(2rem, 2.8vw + 1.3rem, 3.25rem);
 }
 .auth__form {
-  justify-self: center;
   width: 100%;
   max-width: 24rem;
 }
