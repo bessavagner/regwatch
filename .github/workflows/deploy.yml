@@ -3,6 +3,7 @@ name: deploy
 on:
   push:
     tags: ["v*"]
+  workflow_dispatch: {}
 
 jobs:
   test:
@@ -69,7 +70,11 @@ jobs:
         run: gcloud auth configure-docker "${REGION}-docker.pkg.dev" --quiet
       - name: Build & push image
         run: |
-          IMAGE="${REGION}-docker.pkg.dev/${PROJECT_ID}/regwatch/regwatch:${GITHUB_REF_NAME}"
+          TAG="${GITHUB_REF_NAME}"
+          if [ "${GITHUB_REF_TYPE}" != "tag" ]; then
+            TAG="$(git rev-parse --short HEAD)"
+          fi
+          IMAGE="${REGION}-docker.pkg.dev/${PROJECT_ID}/regwatch/regwatch:${TAG}"
           docker build -t "$IMAGE" .
           docker push "$IMAGE"
           echo "IMAGE=$IMAGE" >> "$GITHUB_ENV"
@@ -81,3 +86,5 @@ jobs:
           done
       - name: Run migrations
         run: gcloud run jobs execute regwatch-migrate --region="$REGION" --wait
+      - name: Deploy service
+        run: gcloud run services update regwatch-api --image="$IMAGE" --region="$REGION"
