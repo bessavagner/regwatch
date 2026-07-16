@@ -13,7 +13,7 @@
   let client = $state(untrack(() => watch?.client ?? clients[0]?.id ?? 0));
   let termsText = $state(untrack(() => (watch?.terms ?? []).join(', ')));
   let excludeText = $state(untrack(() => (watch?.exclude ?? []).join(', ')));
-  let section = $state(untrack(() => watch?.section ?? SECTIONS[0].value));
+  let section = $state(untrack(() => watch?.section ?? ''));
   let active = $state(untrack(() => watch?.active ?? true));
   let fieldErrors = $state<Record<string, string[]>>({});
 
@@ -54,6 +54,7 @@
   </label>
   <label class="block text-sm">Section
     <select class="mt-1 field" bind:value={section}>
+      <option value="">all sections</option>
       {#each SECTIONS as s}<option value={s.value}>{s.label}</option>{/each}
     </select>
   </label>
