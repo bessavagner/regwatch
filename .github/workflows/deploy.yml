@@ -2,7 +2,10 @@
 name: deploy
 on:
   push:
+    branches: ["main"]
     tags: ["v*"]
+  pull_request:
+    branches: ["main"]
   workflow_dispatch: {}
 
 jobs:
@@ -26,6 +29,11 @@ jobs:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v3
       - run: uv sync
+      # PYSEC-2026-2090/2091/2092: fixed in Django 5.2.16, which is not yet
+      # published on PyPI (only 6.0.7 carries the fix so far); upgrading to
+      # Django 6 is a major bump out of scope for this CI gate, so these are
+      # ignored pending the 5.2.16 release.
+      - run: uv run pip-audit --ignore-vuln PYSEC-2026-2090 --ignore-vuln PYSEC-2026-2091 --ignore-vuln PYSEC-2026-2092
       - run: uv run pytest -q
 
   frontend:
@@ -43,6 +51,8 @@ jobs:
       - working-directory: web
         run: pnpm install --frozen-lockfile
       - working-directory: web
+        run: pnpm audit --audit-level=high
+      - working-directory: web
         run: pnpm run lint
       - working-directory: web
         run: pnpm test
@@ -51,6 +61,7 @@ jobs:
 
   deploy:
     needs: [test, frontend]
+    if: github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/')
     runs-on: ubuntu-latest
     permissions:
       contents: read

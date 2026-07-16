@@ -96,3 +96,35 @@ note above) before first browser use.
 The unauthenticated surface is the login form only; every `/api` view is
 `IsAuthenticated`. If a write 403s, check `csrftoken` is set (GET `/api/me` first)
 and that `CSRF_TRUSTED_ORIGINS` includes the app origin.
+
+## Gate 1 evidence — live-deploy confirmation (pre-Phase-5)
+
+- Infra check (2026-07-15): `gcloud run jobs list` showed `regwatch-migrate`,
+  `regwatch-run-daily`, `regwatch-heartbeat` (plus `regwatch-invite-user`, a Plan 8
+  pilot-seeding leftover); `regwatch-api` Service printed its URL and `True`;
+  `gcloud scheduler jobs list` showed all three jobs (`regwatch-morning` `5 8 * * 1-5`,
+  `regwatch-midday` `0 13 * * 1-5`, `regwatch-heartbeat` `0 9 * * 1-5`, all
+  `America/Sao_Paulo`) `ENABLED`.
+- Unattended runs: 2026-07-15, both `regwatch-morning` (08:05 BRT) and `regwatch-midday`
+  (13:00 BRT) fired naturally before this check — `RunLog#12` (08:05 run) and `RunLog#13`
+  (13:00 run), both `status=success` (editions=3 acts=3425 matches=0 enriched=0 digests=0).
+  Noted, pre-dating this check and self-healed by the job's own retry policy:
+  `RunLog#11` recorded a 1-second `failed` row at 11:05:30 UTC immediately before `RunLog#12`
+  succeeded at 11:05:48 UTC — a transient retry, not an outage.
+- Digest sent: no `digests_digest` rows exist for 2026-07-15 or 2026-07-14 — expected, since
+  both days had `matches=0` (a zero-match day produces zero digest rows; this is a valid
+  `success` outcome, not a failure).
+- Alert A (run-failed): forced by rotating `INLABS_PASSWORD` to a bad value in Secret Manager,
+  then running `gcloud run jobs execute regwatch-run-daily --args=run_daily,--date=2026-07-15
+  --wait` (safe replay of an already-successful date — `fetch_editions` fails before any
+  `Edition`/`Act` write). Execution failed as expected; secret reverted to the real value
+  immediately after. Post-hoc check confirmed idempotency held: `RunLog#14`/`#15` (both
+  `failed`, ~21:17 UTC) were appended, while the pre-existing `RunLog#12`/`#13` success rows for
+  2026-07-15 were untouched. "RegWatch run_daily execution failed" email confirmed received at
+  `bessavagner@gmail.com` (the project's sole notification channel) within the alert policy's
+  aggregation window.
+- Alert B (heartbeat-failed): forced via `gcloud run jobs execute regwatch-heartbeat
+  --args=check_heartbeat,--date=2026-07-12 --wait` (a past Sunday with no successful `RunLog`,
+  no revert needed — read-only check). Execution failed as expected (`CommandError: heartbeat:
+  no successful RunLog for 2026-07-12`). "RegWatch heartbeat failed (no successful run today)"
+  email confirmed received at `bessavagner@gmail.com`.

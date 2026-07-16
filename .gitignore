@@ -27,7 +27,9 @@ dist/
 src/playground.ipynb
 
 # Local-only: planning/spec docs and agent tooling, kept out of the public repo
-docs/
+docs/*
+!docs/compliance/
+!docs/compliance/**
 .claude/
 .omc/
 
