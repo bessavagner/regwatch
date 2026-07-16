@@ -151,3 +151,30 @@ and that `CSRF_TRUSTED_ORIGINS` includes the app origin.
   no revert needed — read-only check). Execution failed as expected (`CommandError: heartbeat:
   no successful RunLog for 2026-07-12`). "RegWatch heartbeat failed (no successful run today)"
   email confirmed received at the `$ALERT_EMAIL` notification channel.
+
+## Gate 3 evidence — backup/restore test (pre-Phase-5)
+
+- Checked 2026-07-16 via `GET /v1/projects/{ref}/database/backups` (Supabase Management API):
+  **PITR not enabled** (`pitr_enabled: false`, `backups: []`) — this project is on the Free
+  plan, with neither Point-in-Time Recovery nor automated daily backups.
+- Logical restore drill performed instead: `pg_dump` (via a `postgres:17` container — the host's
+  `pg_dump` 16 cannot read a Postgres 17 server, which is what Supabase runs) against the
+  session pooler → restored into a scratch local Postgres 17 container → row counts verified to
+  match exactly between prod and the restored copy: `pipeline_runlog` (13/13), `watches_watch`
+  (2/2). The only restore errors were expected/harmless (`supabase_vault` extension and
+  `vault.secrets` table don't exist outside Supabase's managed Postgres — irrelevant to
+  application tables). Scratch container and dump file torn down immediately after verification.
+- **This is not a substitute for a true PITR test** — flagged as a follow-up once the project
+  upgrades to Supabase Pro + the PITR add-on, before real client data lands (tracked in
+  `docs/sprints/backlog.md`'s cross-cutting section).
+- Restore procedure (repeat before every future plan-tier change, or periodically once real
+  client data is in prod):
+  1. `pg_dump` via the session pooler (`SUPABASE_DB_URL`) using a `pg_dump` binary matching the
+     server's major version (currently 17) — `--no-owner --no-privileges`, output to a local
+     scratch file that is deleted immediately after use, never committed.
+  2. `docker run --rm -d -e POSTGRES_PASSWORD=<throwaway> -p <free-port>:5432 postgres:17`.
+  3. `psql` the dump into the scratch container.
+  4. Compare `SELECT count(*)` on the app's core tables (`pipeline_runlog`, `watches_watch`, plus
+     any tables added since) between prod and the restored copy.
+  5. `docker rm -f` the scratch container and delete the local dump file — the dump contains
+     real (if only dev/test) data and must not persist on disk or be committed.
