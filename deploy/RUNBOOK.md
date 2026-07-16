@@ -10,6 +10,30 @@
 4. Scheduler auth: per-job `roles/run.invoker` on `regwatch-run-daily` and `regwatch-heartbeat`;
    triggers hit the Cloud Run Jobs **v2** `:run` endpoint.
 
+## CI dependency vulnerability scan (Gate 2, pre-Phase-5)
+
+- `test` job: `uv run pip-audit` after `uv sync` — fails the build on any known Python
+  dependency vulnerability (pip-audit's exit code cannot be globally suppressed;
+  per-CVE/GHSA exceptions go through `--ignore-vuln <ID>` with a comment explaining why).
+- `frontend` job: `pnpm audit --audit-level=high` after `pnpm install` — fails the build on
+  high/critical web dependency vulnerabilities only (low/moderate transitive build-tooling
+  findings are noise at this project's scale).
+- Both run on every push to `main` and every PR (`on.push.branches`/`on.pull_request`), not
+  just on a version tag. The `deploy` job is unaffected — it still only runs on a `v*` tag
+  push or `workflow_dispatch`, gated by `if: github.event_name == 'workflow_dispatch' ||
+  startsWith(github.ref, 'refs/tags/')`. Verified live 2026-07-16: push to `main` (run
+  [29497619356]) ran `test`+`frontend` (both green, including the two new audit steps) while
+  `deploy` showed skipped, not failed.
+- **Current exemption (revisit when Django 5.2.16 ships):** `django` `5.2.15` carries three
+  known CVEs (`PYSEC-2026-2090`, `PYSEC-2026-2091`, `PYSEC-2026-2092`) with no in-range fix —
+  the fix version `5.2.16` isn't published on PyPI yet; only the major-version `6.0.7` carries
+  it, and this repo pins `django>=5.0,<6.0` deliberately. None of the three affected code paths
+  (`cache_page`/`UpdateCacheMiddleware`, `GDALRaster`, `DomainNameValidator`) are used in this
+  codebase. Exempted via `--ignore-vuln` in the `test` job (see the comment above that step in
+  `.github/workflows/deploy.yml`). Once `5.2.16` is published, `uv lock` will pick it up
+  automatically (constraint is already `<6.0`) — remove the three `--ignore-vuln` flags and
+  their comment at that point.
+
 ## Database
 - Prod `DATABASE_URL` MUST be the Supabase **session pooler** URI (IPv4, port 5432,
   user `postgres.<project-ref>`), with `?sslmode=require`. The direct host `db.<ref>.supabase.co`
