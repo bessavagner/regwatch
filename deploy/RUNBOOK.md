@@ -121,10 +121,9 @@ and that `CSRF_TRUSTED_ORIGINS` includes the app origin.
   immediately after. Post-hoc check confirmed idempotency held: `RunLog#14`/`#15` (both
   `failed`, ~21:17 UTC) were appended, while the pre-existing `RunLog#12`/`#13` success rows for
   2026-07-15 were untouched. "RegWatch run_daily execution failed" email confirmed received at
-  `bessavagner@gmail.com` (the project's sole notification channel) within the alert policy's
-  aggregation window.
+  the `$ALERT_EMAIL` notification channel within the alert policy's aggregation window.
 - Alert B (heartbeat-failed): forced via `gcloud run jobs execute regwatch-heartbeat
   --args=check_heartbeat,--date=2026-07-12 --wait` (a past Sunday with no successful `RunLog`,
   no revert needed — read-only check). Execution failed as expected (`CommandError: heartbeat:
   no successful RunLog for 2026-07-12`). "RegWatch heartbeat failed (no successful run today)"
-  email confirmed received at `bessavagner@gmail.com`.
+  email confirmed received at the `$ALERT_EMAIL` notification channel.
