@@ -19,7 +19,17 @@
   let watchesCount = $state(0);
   let actionError = $state('');
 
-  let filters = $state<MatchParams>({ ordering: '' });
+  function initialFilters(): MatchParams {
+    const params = new URLSearchParams(window.location.search);
+    const seeded: MatchParams = { ordering: '' };
+    for (const key of ['client', 'state', 'section', 'category', 'date_from', 'date_to'] as const) {
+      const value = params.get(key);
+      if (value) seeded[key] = value;
+    }
+    return seeded;
+  }
+
+  let filters = $state<MatchParams>(initialFilters());
 
   function applyUpdate(updated: Match) {
     matches = matches.map((m) => (m.id === updated.id ? updated : m));

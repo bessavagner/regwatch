@@ -5,7 +5,10 @@ import Feed from './Feed.svelte';
 import * as resources from '../lib/api/resources';
 import type { Match, Page } from '../lib/api/types';
 
-afterEach(() => vi.restoreAllMocks());
+afterEach(() => {
+  vi.restoreAllMocks();
+  window.history.pushState({}, '', '/feed');
+});
 
 function page(results: Match[], count = results.length): Page<Match> {
   return { count, next: null, previous: null, results };
@@ -28,6 +31,18 @@ test('shows the empty state when there are no matches', async () => {
   vi.spyOn(resources, 'listMatches').mockResolvedValue(page([]));
   render(Feed);
   await waitFor(() => expect(screen.getByText(/no matches/i)).toBeInTheDocument());
+});
+
+test('seeds filters from the URL query string on mount', async () => {
+  window.history.pushState({}, '', '/feed?client=3&date_from=2026-07-01&date_to=2026-07-01');
+  vi.spyOn(resources, 'listClients').mockResolvedValue({ count: 0, next: null, previous: null, results: [] });
+  const spy = vi.spyOn(resources, 'listMatches').mockResolvedValue(page([]));
+  render(Feed);
+  await waitFor(() =>
+    expect(spy).toHaveBeenCalledWith(
+      expect.objectContaining({ client: '3', date_from: '2026-07-01', date_to: '2026-07-01' }),
+    ),
+  );
 });
 
 test('changing the state filter refetches with the state param', async () => {
