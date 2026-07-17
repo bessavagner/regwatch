@@ -1,10 +1,12 @@
 export const route = $state({ path: window.location.pathname });
 
 export function navigate(to: string): void {
-  if (to !== window.location.pathname) {
+  const path = to.split('?')[0];
+  const current = window.location.pathname + window.location.search;
+  if (to !== current) {
     window.history.pushState({}, '', to);
   }
-  route.path = to;
+  route.path = path;
 }
 
 window.addEventListener('popstate', () => {
