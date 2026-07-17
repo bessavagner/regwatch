@@ -64,3 +64,9 @@ export interface ClientBody {
 export const createClient = (body: ClientBody) => api.post<Client>('/api/clients', body);
 export const updateClient = (id: number, body: Partial<ClientBody>) =>
   api.patch<Client>(`/api/clients/${id}`, body);
+
+export interface SendDigestBody {
+  client: number;
+  date: string;
+}
+export const sendDigest = (body: SendDigestBody) => api.post<Digest>('/api/digests/send', body);

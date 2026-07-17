@@ -80,3 +80,34 @@ test('marking a match relevant updates its card in place', async () => {
   // the app's typographic system, so an unscoped getByText is ambiguous.
   await waitFor(() => expect(screen.getByText('relevant', { selector: 'span' })).toBeInTheDocument());
 });
+
+test('the Send digest action is hidden unless exactly one client and one exact date are selected', async () => {
+  vi.spyOn(resources, 'listClients').mockResolvedValue({
+    count: 1, next: null, previous: null, results: [{ id: 3, name: 'Beta', is_house: false, email: '' }],
+  });
+  vi.spyOn(resources, 'listMatches').mockResolvedValue(page([m(1)]));
+  render(Feed);
+  await waitFor(() => expect(screen.getByText('snip-1')).toBeInTheDocument());
+  expect(screen.queryByRole('button', { name: /send digest/i })).not.toBeInTheDocument();
+});
+
+test('shows the Send digest action when filtered to one client and one exact date, and sends it', async () => {
+  vi.spyOn(resources, 'listClients').mockResolvedValue({
+    count: 1, next: null, previous: null, results: [{ id: 3, name: 'Beta', is_house: false, email: '' }],
+  });
+  vi.spyOn(resources, 'listMatches').mockResolvedValue(page([m(1)]));
+  const sendSpy = vi.spyOn(resources, 'sendDigest').mockResolvedValue({ id: 9, client: 3, date: '2026-07-01', body: 'x', sent: true });
+  const user = userEvent.setup();
+  render(Feed);
+  await waitFor(() => expect(screen.getByText('snip-1')).toBeInTheDocument());
+
+  await user.selectOptions(screen.getByLabelText(/client/i), '3');
+  await user.type(screen.getByLabelText(/^from$/i), '2026-07-01');
+  await user.type(screen.getByLabelText(/^to$/i), '2026-07-01');
+
+  await waitFor(() => expect(screen.getByRole('button', { name: /send digest/i })).toBeInTheDocument());
+  await user.click(screen.getByRole('button', { name: /send digest/i }));
+
+  expect(sendSpy).toHaveBeenCalledWith({ client: 3, date: '2026-07-01' });
+  await waitFor(() => expect(screen.getByRole('button', { name: /digest sent/i })).toBeInTheDocument());
+});

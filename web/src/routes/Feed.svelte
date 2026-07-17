@@ -1,6 +1,7 @@
 <script lang="ts">
-  import { listMatches, listClients, listWatches, type MatchParams } from '../lib/api/resources';
+  import { listMatches, listClients, listWatches, sendDigest, type MatchParams } from '../lib/api/resources';
   import type { Client, Match } from '../lib/api/types';
+  import { ApiError } from '../lib/api/client';
   import { STATES, SECTIONS, CATEGORY_SEED } from '../lib/constants';
   import AsyncState from '../lib/ui/AsyncState.svelte';
   import MatchCard from '../lib/ui/MatchCard.svelte';
@@ -18,6 +19,7 @@
   let clientsCount = $state(0);
   let watchesCount = $state(0);
   let actionError = $state('');
+  let digestStatus = $state<'idle' | 'sending' | 'sent' | 'error'>('idle');
 
   function initialFilters(): MatchParams {
     const params = new URLSearchParams(window.location.search);
@@ -67,9 +69,26 @@
     load();
   });
 
+  let canSendDigest = $derived(
+    !!filters.client && !!filters.date_from && filters.date_from === filters.date_to,
+  );
+
+  async function sendDigestForDate() {
+    if (!filters.client || !filters.date_from) return;
+    digestStatus = 'sending';
+    try {
+      await sendDigest({ client: Number(filters.client), date: filters.date_from });
+      digestStatus = 'sent';
+    } catch (err) {
+      digestStatus = 'error';
+      actionError = err instanceof ApiError ? err.detail : 'Could not send digest';
+    }
+  }
+
   function setFilter<K extends keyof MatchParams>(key: K, value: MatchParams[K]) {
     filters = { ...filters, [key]: value };
     page = 1;
+    digestStatus = 'idle';
   }
 </script>
 
@@ -142,6 +161,14 @@
   </div>
 
   {#if actionError}<p role="alert" class="mb-2 text-sm text-danger">{actionError}</p>{/if}
+
+  {#if canSendDigest}
+    <div class="mb-3">
+      <Button variant="ghost" disabled={digestStatus === 'sending'} onclick={sendDigestForDate}>
+        {digestStatus === 'sent' ? 'Digest sent' : 'Send digest for this date'}
+      </Button>
+    </div>
+  {/if}
 
   <AsyncState state={status}>
     {#snippet loaded()}
