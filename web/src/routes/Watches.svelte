@@ -8,12 +8,14 @@
   import Button from '../lib/ui/Button.svelte';
   import Badge from '../lib/ui/Badge.svelte';
   import WatchForm from '../lib/ui/WatchForm.svelte';
+  import BackfillForm from '../lib/ui/BackfillForm.svelte';
 
   let status = $state<'idle' | 'loading' | 'loaded' | 'empty' | 'error'>('idle');
   let watches = $state<Watch[]>([]);
   let clients = $state<Client[]>([]);
   let showForm = $state(false);
   let editing = $state<Watch | undefined>(undefined);
+  let backfillingWatch = $state<Watch | undefined>(undefined);
   let toggleError = $state('');
 
   async function load() {
@@ -86,8 +88,14 @@
                 <Badge label={w.active ? 'active' : 'inactive'} tone={w.active ? 'green' : 'gray'} />
                 <Button variant="ghost" onclick={() => { editing = w; showForm = true; }}>Edit</Button>
                 <Button variant="ghost" onclick={() => toggle(w)}>{w.active ? 'Deactivate' : 'Activate'}</Button>
+                <Button variant="ghost" onclick={() => (backfillingWatch = backfillingWatch === w ? undefined : w)}>Run on past editions</Button>
               </div>
             </div>
+            {#if backfillingWatch === w}
+              <div class="mt-2">
+                <BackfillForm watch={w} oncancel={() => (backfillingWatch = undefined)} />
+              </div>
+            {/if}
           </li>
         {/each}
       </ul>

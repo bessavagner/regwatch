@@ -39,6 +39,16 @@ test('a failed toggle surfaces an error instead of failing silently', async () =
   expect(screen.getByRole('button', { name: /deactivate/i })).toBeInTheDocument();
 });
 
+test('clicking "Run on past editions" reveals the backfill form', async () => {
+  vi.spyOn(resources, 'listClients').mockResolvedValue({ count: 1, next: null, previous: null, results: clients });
+  vi.spyOn(resources, 'listWatches').mockResolvedValue({ count: 1, next: null, previous: null, results: [watch] });
+  const user = userEvent.setup();
+  render(Watches);
+  await waitFor(() => expect(screen.getByRole('button', { name: /run on past editions/i })).toBeInTheDocument());
+  await user.click(screen.getByRole('button', { name: /run on past editions/i }));
+  expect(screen.getByLabelText(/from/i)).toBeInTheDocument();
+});
+
 test('with zero clients, "New watch" is disabled with a link to Clients', async () => {
   vi.spyOn(resources, 'listClients').mockResolvedValue({ count: 0, next: null, previous: null, results: [] });
   vi.spyOn(resources, 'listWatches').mockResolvedValue({ count: 0, next: null, previous: null, results: [] });

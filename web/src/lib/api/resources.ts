@@ -42,6 +42,20 @@ export const createWatch = (body: WatchBody) => api.post<Watch>('/api/watches', 
 export const updateWatch = (id: number, body: Partial<WatchBody>) =>
   api.patch<Watch>(`/api/watches/${id}`, body);
 
+export interface BackfillBody {
+  date_from: string;
+  date_to: string;
+}
+export interface BackfillResult {
+  editions: number;
+  acts: number;
+  matches: number;
+  enriched: number;
+  skipped_dates: string[];
+}
+export const backfillWatch = (id: number, body: BackfillBody) =>
+  api.post<BackfillResult>(`/api/watches/${id}/backfill`, body);
+
 export interface ClientBody {
   name: string;
   email: string;
