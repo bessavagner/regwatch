@@ -25,11 +25,12 @@ def backfill_watch(
     date_from: datetime.date,
     date_to: datetime.date,
     llm: LLMClient,
+    client_id: int,
     *,
     max_enrich: int | None = None,
 ) -> BackfillResult:
     result = BackfillResult()
-    enriched = 0
+    enriched_total = 0
     date = date_from
     while date <= date_to:
         editions = list(Edition.objects.filter(date=date))
@@ -51,12 +52,17 @@ def backfill_watch(
             result.editions += 1
             result.acts += edition.acts.count()
             for match in match_edition(edition):
-                result.matches += 1
-                if max_enrich is not None and enriched >= max_enrich:
+                is_caller_match = match.watch.client_id == client_id
+                if is_caller_match:
+                    result.matches += 1
+                # max_enrich is a shared, cross-workspace budget (mirrors run_daily) —
+                # only the *reported* matches/enriched counts are scoped to the caller's client.
+                if max_enrich is not None and enriched_total >= max_enrich:
                     continue
                 enrich_match(match, llm)
-                enriched += 1
-                result.enriched += 1
+                enriched_total += 1
+                if is_caller_match:
+                    result.enriched += 1
 
         date += datetime.timedelta(days=1)
 

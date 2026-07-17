@@ -75,7 +75,7 @@ class WatchViewSet(WorkspaceScopedQuerysetMixin, viewsets.ModelViewSet):
 
     @action(detail=True, methods=["post"])
     def backfill(self, request, pk=None):
-        self.get_object()  # 404 when the watch is outside the caller's workspace
+        watch = self.get_object()  # 404 when the watch is outside the caller's workspace
         serializer = BackfillRequestSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         date_from = serializer.validated_data["date_from"]
@@ -84,7 +84,7 @@ class WatchViewSet(WorkspaceScopedQuerysetMixin, viewsets.ModelViewSet):
         log = RunLog.objects.create(date=date_to, status="running", trigger="backfill")
         try:
             result = backfill_watch(
-                date_from, date_to, get_llm_client(),
+                date_from, date_to, get_llm_client(), watch.client_id,
                 max_enrich=settings.REGWATCH_MAX_ENRICH_PER_RUN,
             )
         except Exception:

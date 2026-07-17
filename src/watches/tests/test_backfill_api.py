@@ -188,3 +188,31 @@ def test_backfill_is_idempotent_across_requests(firm_a, monkeypatch):
     assert first.data["matches"] == 1
     assert second.data["matches"] == 0
     assert Match.objects.count() == 1
+
+
+@pytest.mark.django_db
+def test_backfill_response_does_not_reveal_other_workspaces_match_counts(firm_a, firm_b, monkeypatch):
+    ws_a, user_a = firm_a
+    ws_b, _ = firm_b
+    client_a = WatchClient.objects.create(workspace=ws_a, name="Beta")
+    watch_a = Watch.objects.create(client=client_a, terms=["beta corp"])
+    # A watch in a DIFFERENT workspace that also matches — match_edition() matches
+    # every active watch system-wide, so this incidentally matches too. The response
+    # must not reveal that to the calling user.
+    client_b = WatchClient.objects.create(workspace=ws_b, name="Gamma")
+    Watch.objects.create(client=client_b, terms=["beta corp"])
+    monkeypatch.setattr("pipeline.backfill.fetch_editions", lambda date: [_raw_edition(date)])
+    monkeypatch.setattr("watches.api.get_llm_client", lambda: FakeLLMClient(Summary("ok", "grant", 0.9)))
+
+    api = APIClient()
+    api.force_authenticate(user=user_a)
+    resp = api.post(
+        f"/api/watches/{watch_a.id}/backfill",
+        {"date_from": "2026-06-26", "date_to": "2026-06-26"},
+        format="json",
+    )
+
+    assert resp.status_code == 200
+    assert resp.data["matches"] == 1     # only firm A's watch is counted, not firm B's
+    assert resp.data["enriched"] == 1
+    assert Match.objects.count() == 2    # firm B's watch still matched too, just not reported
