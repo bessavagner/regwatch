@@ -10,12 +10,14 @@ DATE = datetime.date(2026, 6, 26)
 LOGIN_COOKIE = "inlabs_session_cookie=sess-abc; Path=/"
 
 
-def _client(handler) -> InlabsClient:
+def _client(handler, **kwargs) -> InlabsClient:
     return InlabsClient(
         "user@example.com",
         "secret",
         base_url="https://inlabs.test",
         transport=httpx.MockTransport(handler),
+        sleep=kwargs.pop("sleep", lambda seconds: None),
+        **kwargs,
     )
 
 
@@ -39,6 +41,90 @@ def test_login_raises_when_cookie_missing():
 
     with pytest.raises(RuntimeError):
         _client(handler).login()
+
+
+def test_login_retries_on_transient_status_and_succeeds():
+    calls = {"n": 0}
+    sleeps = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        calls["n"] += 1
+        if calls["n"] < 3:
+            return httpx.Response(502)
+        return httpx.Response(200, headers={"set-cookie": LOGIN_COOKIE})
+
+    client = _client(handler, sleep=sleeps.append)
+    client.login()
+    assert calls["n"] == 3
+    assert sleeps == [1.0, 2.0]
+
+
+def test_login_retries_on_connection_error_and_succeeds():
+    calls = {"n": 0}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        calls["n"] += 1
+        if calls["n"] < 2:
+            raise httpx.RemoteProtocolError("Server disconnected without sending a response.")
+        return httpx.Response(200, headers={"set-cookie": LOGIN_COOKIE})
+
+    client = _client(handler)
+    client.login()
+    assert calls["n"] == 2
+
+
+def test_login_gives_up_after_max_attempts_on_persistent_transient_status():
+    calls = {"n": 0}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        calls["n"] += 1
+        return httpx.Response(503)
+
+    client = _client(handler)
+    with pytest.raises(RuntimeError):
+        client.login()
+    assert calls["n"] == 3
+
+
+def test_login_gives_up_after_max_attempts_on_persistent_connection_error():
+    def handler(request: httpx.Request) -> httpx.Response:
+        raise httpx.ConnectError("connection refused")
+
+    client = _client(handler)
+    with pytest.raises(httpx.ConnectError):
+        client.login()
+
+
+def test_login_does_not_retry_on_non_transient_failure():
+    calls = {"n": 0}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        calls["n"] += 1
+        return httpx.Response(200)  # no Set-Cookie: bad credentials, not transient
+
+    client = _client(handler)
+    with pytest.raises(RuntimeError):
+        client.login()
+    assert calls["n"] == 1
+
+
+def test_download_section_retries_zip_get_on_transient_status():
+    calls = {"login": 0, "download": 0}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        if request.url.path == "/logar.php":
+            calls["login"] += 1
+            return httpx.Response(200, headers={"set-cookie": LOGIN_COOKIE})
+        calls["download"] += 1
+        if calls["download"] < 2:
+            return httpx.Response(503)
+        return httpx.Response(200, content=b"PK\x03\x04ok")
+
+    client = _client(handler)
+    client.login()
+    assert client.download_section(DATE, "DO1") == b"PK\x03\x04ok"
+    assert calls["download"] == 2
+    assert calls["login"] == 1  # 503 is not a re-login trigger, unlike 401/403
 
 
 def test_download_section_returns_zip_bytes():
