@@ -2,8 +2,11 @@ from django.db import models
 
 
 class RunLog(models.Model):
+    TRIGGER_CHOICES = [("scheduled", "scheduled"), ("backfill", "backfill")]
+
     date = models.DateField()
     status = models.CharField(max_length=20, default="running")  # running|success|partial|failed
+    trigger = models.CharField(max_length=20, choices=TRIGGER_CHOICES, default="scheduled")
     editions = models.IntegerField(default=0)
     acts = models.IntegerField(default=0)
     matches = models.IntegerField(default=0)
