@@ -26,3 +26,10 @@ def test_heartbeat_fails_when_only_non_success_runlog():
     RunLog.objects.create(date=DATE, status="failed")
     with pytest.raises(CommandError):
         call_command("check_heartbeat", date="2026-06-26")
+
+
+@pytest.mark.django_db
+def test_heartbeat_fails_when_only_a_backfill_runlog_exists_for_the_date():
+    RunLog.objects.create(date=DATE, status="success", trigger="backfill")
+    with pytest.raises(CommandError):
+        call_command("check_heartbeat", date="2026-06-26")

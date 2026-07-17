@@ -20,6 +20,6 @@ class Command(BaseCommand):
         else:
             date = datetime.datetime.now(SAO_PAULO).date()
 
-        if not RunLog.objects.filter(date=date, status="success").exists():
+        if not RunLog.objects.filter(date=date, status="success", trigger="scheduled").exists():
             raise CommandError(f"heartbeat: no successful RunLog for {date}")
         self.stdout.write(f"heartbeat OK: successful RunLog for {date}")
