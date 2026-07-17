@@ -27,6 +27,6 @@ gcloud run deploy regwatch-api \
   --port=8080 \
   --allow-unauthenticated \
   --set-env-vars="^@^DJANGO_ALLOWED_HOSTS=${ALLOWED_HOSTS}@DJANGO_CSRF_TRUSTED_ORIGINS=${CSRF_ORIGINS}" \
-  --set-secrets="SECRET_KEY=SECRET_KEY:latest,DATABASE_URL=DATABASE_URL:latest"
+  --set-secrets="SECRET_KEY=SECRET_KEY:latest,DATABASE_URL=DATABASE_URL:latest,ANTHROPIC_API_KEY=ANTHROPIC_API_KEY:latest,RESEND_API_KEY=RESEND_API_KEY:latest,RESEND_FROM=RESEND_FROM:latest"
 
 echo "Deployed. Run the 'migrate' Job once (creates django_session) before first use."

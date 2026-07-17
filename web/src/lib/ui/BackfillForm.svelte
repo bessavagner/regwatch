@@ -1,6 +1,6 @@
 <script lang="ts">
   import type { Watch } from '../api/types';
-  import { backfillWatch, type BackfillBody } from '../api/resources';
+  import { backfillWatch, type BackfillBody, type BackfillResult } from '../api/resources';
   import { ApiError } from '../api/client';
   import { navigate } from '../router/router.svelte';
   import Button from './Button.svelte';
@@ -12,6 +12,8 @@
   let dateFrom = $state('');
   let dateTo = $state('');
   let fieldErrors = $state<Record<string, string[]>>({});
+  let running = $state(false);
+  let result = $state<BackfillResult | undefined>(undefined);
 
   function maxDateTo(): string {
     if (!dateFrom) return today;
@@ -29,13 +31,20 @@
       return;
     }
     const body: BackfillBody = { date_from: dateFrom, date_to: dateTo };
+    running = true;
+    result = undefined;
     try {
-      await backfillWatch(watch.id, body);
-      navigate(`/feed?client=${watch.client}&date_from=${dateFrom}&date_to=${dateTo}`);
+      result = await backfillWatch(watch.id, body);
     } catch (err) {
       if (err instanceof ApiError && Object.keys(err.fields).length) fieldErrors = err.fields;
       else fieldErrors = { _: [err instanceof ApiError ? err.detail : 'backfill failed'] };
+    } finally {
+      running = false;
     }
+  }
+
+  function viewInFeed() {
+    navigate(`/feed?client=${watch.client}&date_from=${dateFrom}&date_to=${dateTo}`);
   }
 </script>
 
@@ -50,8 +59,18 @@
   {#if fieldErrors.date_to}<p role="alert" class="text-sm text-danger">{fieldErrors.date_to.join(' ')}</p>{/if}
   {#if fieldErrors.non_field_errors}<p role="alert" class="text-sm text-danger">{fieldErrors.non_field_errors.join(' ')}</p>{/if}
   {#if fieldErrors._}<p role="alert" class="text-sm text-danger">{fieldErrors._.join(' ')}</p>{/if}
+  {#if result}
+    <p class="text-sm text-ink-2">
+      {result.editions} editions, {result.acts} acts, {result.matches} matches, {result.enriched} enriched.
+      {#if result.skipped_dates.length}Skipped: {result.skipped_dates.join(', ')}.{/if}
+    </p>
+  {/if}
   <div class="flex gap-2">
-    <Button type="submit">Run</Button>
+    {#if result}
+      <Button onclick={viewInFeed}>View in feed</Button>
+    {:else}
+      <Button type="submit" loading={running}>Run</Button>
+    {/if}
     <Button variant="ghost" onclick={oncancel}>Cancel</Button>
   </div>
 </form>
