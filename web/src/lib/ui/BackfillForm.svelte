@@ -24,6 +24,10 @@
   async function run(e: SubmitEvent) {
     e.preventDefault();
     fieldErrors = {};
+    if (!dateFrom || !dateTo) {
+      fieldErrors = { _: ['Both dates are required.'] };
+      return;
+    }
     const body: BackfillBody = { date_from: dateFrom, date_to: dateTo };
     try {
       await backfillWatch(watch.id, body);

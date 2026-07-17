@@ -40,6 +40,19 @@ test('a 400 range error is shown as a non-field error', async () => {
   expect(await screen.findByText(/must not exceed 7 days/i)).toBeInTheDocument();
 });
 
+test('submitting with both dates empty does not call the API', async () => {
+  vi.spyOn(resources, 'backfillWatch').mockResolvedValue({
+    editions: 1, acts: 1, matches: 1, enriched: 1, skipped_dates: [],
+  });
+  const user = userEvent.setup();
+  render(BackfillForm, { props: { watch, oncancel: () => {} } });
+
+  await user.click(screen.getByRole('button', { name: /^run$/i }));
+
+  expect(await screen.findByText(/both dates are required/i)).toBeInTheDocument();
+  expect(resources.backfillWatch).not.toHaveBeenCalled();
+});
+
 test('clicking Cancel invokes oncancel', async () => {
   const oncancel = vi.fn();
   const user = userEvent.setup();
