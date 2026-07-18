@@ -85,7 +85,7 @@ class WatchViewSet(WorkspaceScopedQuerysetMixin, viewsets.ModelViewSet):
         try:
             result = backfill_watch(
                 date_from, date_to, get_llm_client(), watch.client_id,
-                max_enrich=settings.REGWATCH_MAX_ENRICH_PER_RUN,
+                max_enrich=settings.REGWATCH_MAX_ENRICH_PER_BACKFILL,
             )
         except Exception:
             log.status = "failed"

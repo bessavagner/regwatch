@@ -155,7 +155,32 @@ def test_backfill_respects_the_enrich_cap(firm_a, monkeypatch, settings):
     ws, user = firm_a
     client = WatchClient.objects.create(workspace=ws, name="Beta")
     watch = Watch.objects.create(client=client, terms=["beta corp"])
-    settings.REGWATCH_MAX_ENRICH_PER_RUN = 0
+    settings.REGWATCH_MAX_ENRICH_PER_BACKFILL = 0
+    monkeypatch.setattr("pipeline.backfill.fetch_editions", lambda date: [_raw_edition(date)])
+    monkeypatch.setattr("watches.api.get_llm_client", lambda: FakeLLMClient(Summary("ok", "grant", 0.9)))
+
+    api = APIClient()
+    api.force_authenticate(user=user)
+    resp = api.post(
+        f"/api/watches/{watch.id}/backfill",
+        {"date_from": "2026-06-26", "date_to": "2026-06-26"},
+        format="json",
+    )
+
+    assert resp.data["matches"] == 1
+    assert resp.data["enriched"] == 0
+
+
+@pytest.mark.django_db
+def test_backfill_uses_the_backfill_specific_enrich_cap_not_the_run_daily_one(firm_a, monkeypatch, settings):
+    ws, user = firm_a
+    client = WatchClient.objects.create(workspace=ws, name="Beta")
+    watch = Watch.objects.create(client=client, terms=["beta corp"])
+    # run_daily's budget stays generous (no HTTP timeout pressure); the interactive
+    # backfill endpoint must use its own, much smaller budget so a real request
+    # can't run long enough to hit gunicorn's worker timeout.
+    settings.REGWATCH_MAX_ENRICH_PER_RUN = 200
+    settings.REGWATCH_MAX_ENRICH_PER_BACKFILL = 0
     monkeypatch.setattr("pipeline.backfill.fetch_editions", lambda date: [_raw_edition(date)])
     monkeypatch.setattr("watches.api.get_llm_client", lambda: FakeLLMClient(Summary("ok", "grant", 0.9)))
 

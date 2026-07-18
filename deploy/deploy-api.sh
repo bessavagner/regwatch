@@ -23,8 +23,9 @@ gcloud run deploy regwatch-api \
   --image="$IMAGE" \
   --service-account="$RUNTIME_SA" \
   --command="/app/.venv/bin/gunicorn" \
-  --args="config.wsgi,--bind,0.0.0.0:8080,--workers,2,--timeout,60" \
+  --args="config.wsgi,--bind,0.0.0.0:8080,--workers,2,--timeout,240" \
   --port=8080 \
+  --timeout=300 \
   --allow-unauthenticated \
   --set-env-vars="^@^DJANGO_ALLOWED_HOSTS=${ALLOWED_HOSTS}@DJANGO_CSRF_TRUSTED_ORIGINS=${CSRF_ORIGINS}" \
   --set-secrets="SECRET_KEY=SECRET_KEY:latest,DATABASE_URL=DATABASE_URL:latest,ANTHROPIC_API_KEY=ANTHROPIC_API_KEY:latest,RESEND_API_KEY=RESEND_API_KEY:latest,RESEND_FROM=RESEND_FROM:latest"

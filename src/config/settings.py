@@ -103,3 +103,8 @@ REGWATCH_EMAIL_SENDER = os.environ.get(
     "REGWATCH_EMAIL_SENDER", "digests.resend.ResendEmailSender"
 )
 REGWATCH_MAX_ENRICH_PER_RUN = int(os.environ.get("REGWATCH_MAX_ENRICH_PER_RUN", "200"))
+# The interactive backfill endpoint runs inline in an HTTP request behind gunicorn's
+# worker timeout, unlike run_daily which executes as a Cloud Run Job with no such
+# limit — so it needs a much smaller enrichment budget to avoid the worker being
+# SIGABRT-killed mid-request while it's still enriching sequentially.
+REGWATCH_MAX_ENRICH_PER_BACKFILL = int(os.environ.get("REGWATCH_MAX_ENRICH_PER_BACKFILL", "20"))
