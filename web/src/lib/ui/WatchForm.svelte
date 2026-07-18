@@ -13,6 +13,7 @@
   let client = $state(untrack(() => watch?.client ?? clients[0]?.id ?? 0));
   let termsText = $state(untrack(() => (watch?.terms ?? []).join(', ')));
   let excludeText = $state(untrack(() => (watch?.exclude ?? []).join(', ')));
+  let matchMode = $state<'all' | 'any'>(untrack(() => watch?.match_mode ?? 'all'));
   let section = $state(untrack(() => watch?.section ?? ''));
   let active = $state(untrack(() => watch?.active ?? true));
   let fieldErrors = $state<Record<string, string[]>>({});
@@ -26,6 +27,7 @@
       client: Number(client),
       terms: split(termsText),
       exclude: split(excludeText),
+      match_mode: matchMode,
       section,
       active,
     };
@@ -49,6 +51,13 @@
     <input class="mt-1 field" bind:value={termsText} />
   </label>
   {#if fieldErrors.terms}<p role="alert" class="text-sm text-danger">{fieldErrors.terms.join(' ')}</p>{/if}
+  <label class="block text-sm">Match
+    <select class="mt-1 field" bind:value={matchMode}>
+      <option value="all">all terms must appear</option>
+      <option value="any">any term may appear</option>
+    </select>
+  </label>
+  {#if fieldErrors.match_mode}<p role="alert" class="text-sm text-danger">{fieldErrors.match_mode.join(' ')}</p>{/if}
   <label class="block text-sm">Exclude (comma-separated)
     <input class="mt-1 field" bind:value={excludeText} />
   </label>

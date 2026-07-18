@@ -22,6 +22,7 @@ export interface Watch {
   client: number;
   terms: string[];
   exclude: string[];
+  match_mode: 'all' | 'any';
   section: string;
   active: boolean;
 }

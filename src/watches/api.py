@@ -39,7 +39,7 @@ class ClientViewSet(WorkspaceScopedQuerysetMixin, viewsets.ModelViewSet):
 class WatchSerializer(serializers.ModelSerializer):
     class Meta:
         model = Watch
-        fields = ["id", "client", "terms", "exclude", "section", "active"]
+        fields = ["id", "client", "terms", "exclude", "match_mode", "section", "active"]
 
     def validate_terms(self, value):
         if not value:

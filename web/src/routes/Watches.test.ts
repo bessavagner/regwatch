@@ -7,7 +7,7 @@ import type { Client, Watch } from '../lib/api/types';
 
 afterEach(() => vi.restoreAllMocks());
 const clients: Client[] = [{ id: 3, name: 'Beta', is_house: false, email: '' }];
-const watch: Watch = { id: 1, client: 3, terms: ['x'], exclude: [], section: '1', active: true };
+const watch: Watch = { id: 1, client: 3, terms: ['x'], exclude: [], match_mode: 'all', section: '1', active: true };
 
 test('lists existing watches', async () => {
   vi.spyOn(resources, 'listClients').mockResolvedValue({ count: 1, next: null, previous: null, results: clients });

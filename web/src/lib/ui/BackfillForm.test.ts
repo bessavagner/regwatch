@@ -7,7 +7,7 @@ import * as routerModule from '../router/router.svelte';
 import type { Watch } from '../api/types';
 
 afterEach(() => vi.restoreAllMocks());
-const watch: Watch = { id: 1, client: 3, terms: ['x'], exclude: [], section: '1', active: true };
+const watch: Watch = { id: 1, client: 3, terms: ['x'], exclude: [], match_mode: 'all', section: '1', active: true };
 
 test('submitting shows a pending state, then a result summary with a link to the feed', async () => {
   let resolveBackfill: (v: resources.BackfillResult) => void;

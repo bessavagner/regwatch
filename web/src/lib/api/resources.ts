@@ -35,6 +35,7 @@ export interface WatchBody {
   client: number;
   terms: string[];
   exclude: string[];
+  match_mode: 'all' | 'any';
   section: string;
   active: boolean;
 }

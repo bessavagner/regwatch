@@ -54,6 +54,26 @@ def test_matcher_is_idempotent(watch):
 
 
 @pytest.mark.django_db
+def test_all_mode_requires_every_term_present(db):
+    ws = Workspace.objects.create(name="AllWS")
+    client = Client.objects.create(workspace=ws, name="AllClient")
+    Watch.objects.create(client=client, terms=["alfa", "beta"], match_mode="all")
+    edition = _edition_with("Ato que menciona apenas ALFA nesta data.")
+    assert match_edition(edition) == []
+
+
+@pytest.mark.django_db
+def test_any_mode_matches_when_only_one_term_present(db):
+    ws = Workspace.objects.create(name="AnyWS")
+    client = Client.objects.create(workspace=ws, name="AnyClient")
+    watch = Watch.objects.create(client=client, terms=["alfa", "beta"], match_mode="any")
+    edition = _edition_with("Ato que menciona apenas ALFA nesta data.")
+    matches = match_edition(edition)
+    assert len(matches) == 1
+    assert matches[0].watch == watch
+
+
+@pytest.mark.django_db
 def test_section_filter(db):
     """Watch.section must be honoured: only watches whose section matches the
     edition's section (or whose section is empty) should produce matches."""

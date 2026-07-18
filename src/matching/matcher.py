@@ -1,5 +1,5 @@
 from functools import reduce
-from operator import and_
+from operator import and_, or_
 from django.contrib.postgres.search import SearchQuery, SearchRank, SearchVector
 from gazette.models import Act, Edition
 from gazette.normalize import normalize_text
@@ -11,7 +11,8 @@ def _query_for(watch: Watch) -> SearchQuery | None:
     terms = [normalize_text(t) for t in watch.terms if t.strip()]
     if not terms:
         return None
-    query = reduce(and_, (SearchQuery(t, config="simple", search_type="phrase") for t in terms))
+    combine = or_ if watch.match_mode == Watch.MATCH_MODE_ANY else and_
+    query = reduce(combine, (SearchQuery(t, config="simple", search_type="phrase") for t in terms))
     for ex in watch.exclude:
         ex = normalize_text(ex)
         if ex:

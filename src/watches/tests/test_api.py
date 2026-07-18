@@ -95,6 +95,42 @@ def test_watch_requires_non_empty_terms(firm_a):
 
 
 @pytest.mark.django_db
+def test_watch_defaults_to_match_mode_all(firm_a):
+    ws, user = firm_a
+    c = WatchClient.objects.create(workspace=ws, name="Beta")
+    api = APIClient()
+    api.force_authenticate(user=user)
+    resp = api.post("/api/watches", {"client": c.id, "terms": ["x"]}, format="json")
+    assert resp.status_code == 201
+    assert resp.data["match_mode"] == "all"
+
+
+@pytest.mark.django_db
+def test_watch_can_be_created_with_match_mode_any(firm_a):
+    ws, user = firm_a
+    c = WatchClient.objects.create(workspace=ws, name="Beta")
+    api = APIClient()
+    api.force_authenticate(user=user)
+    resp = api.post(
+        "/api/watches", {"client": c.id, "terms": ["x"], "match_mode": "any"}, format="json"
+    )
+    assert resp.status_code == 201
+    assert resp.data["match_mode"] == "any"
+
+
+@pytest.mark.django_db
+def test_watch_rejects_an_invalid_match_mode(firm_a):
+    ws, user = firm_a
+    c = WatchClient.objects.create(workspace=ws, name="Beta")
+    api = APIClient()
+    api.force_authenticate(user=user)
+    resp = api.post(
+        "/api/watches", {"client": c.id, "terms": ["x"], "match_mode": "bogus"}, format="json"
+    )
+    assert resp.status_code == 400
+
+
+@pytest.mark.django_db
 def test_watch_cannot_attach_to_other_workspace_client(firm_a, firm_b):
     ws_a, user_a = firm_a
     ws_b, _ = firm_b
