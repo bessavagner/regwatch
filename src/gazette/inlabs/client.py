@@ -1,9 +1,12 @@
 # src/gazette/inlabs/client.py
 import datetime
+import logging
 import os
 import time
 
 import httpx
+
+logger = logging.getLogger(__name__)
 
 DEFAULT_BASE_URL = "https://inlabs.in.gov.br"
 TRANSIENT_STATUS_CODES = {502, 503, 504}
@@ -66,12 +69,20 @@ class InlabsClient:
             return response
 
     def login(self) -> None:
-        self._request_with_retry(
+        response = self._request_with_retry(
             "POST",
             "/logar.php",
             data={"email": self._username, "password": self._password},
         )
         if "inlabs_session_cookie" not in self._http.cookies:
+            # Never log credentials here — only response metadata, to distinguish an
+            # upstream outage (e.g. a "Sistema em Manutenção" 502 page) from a rejected
+            # login (redirected back to the login page) without needing manual repro.
+            logger.error(
+                "INlabs login failed: status=%s body_preview=%r",
+                response.status_code,
+                response.text[:300],
+            )
             raise RuntimeError("INlabs login failed: session cookie not set")
 
     def section_url(self, date: datetime.date, section: str) -> str:

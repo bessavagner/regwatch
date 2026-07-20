@@ -108,6 +108,21 @@ def test_login_does_not_retry_on_non_transient_failure():
     assert calls["n"] == 1
 
 
+def test_login_failure_logs_diagnostics_without_leaking_credentials(caplog):
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(502, text="Sistema em Manutenção")
+
+    with caplog.at_level("ERROR", logger="gazette.inlabs.client"):
+        with pytest.raises(RuntimeError):
+            _client(handler).login()
+
+    assert len(caplog.records) == 1
+    message = caplog.records[0].getMessage()
+    assert "502" in message
+    assert "Manuten" in message
+    assert "secret" not in message  # the password used by _client() above
+
+
 def test_download_section_retries_zip_get_on_transient_status():
     calls = {"login": 0, "download": 0}
 
