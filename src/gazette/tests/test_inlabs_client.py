@@ -56,7 +56,7 @@ def test_login_retries_on_transient_status_and_succeeds():
     client = _client(handler, sleep=sleeps.append)
     client.login()
     assert calls["n"] == 3
-    assert sleeps == [1.0, 2.0]
+    assert sleeps == [2.0, 4.0]
 
 
 def test_login_retries_on_connection_error_and_succeeds():
@@ -83,7 +83,37 @@ def test_login_gives_up_after_max_attempts_on_persistent_transient_status():
     client = _client(handler)
     with pytest.raises(RuntimeError):
         client.login()
-    assert calls["n"] == 3
+    assert calls["n"] == 7
+
+
+def test_transient_retries_back_off_exponentially_up_to_a_cap():
+    # A short "connection blip" backoff (~3s total) is useless against an INlabs
+    # maintenance window, which serves 502s for minutes. Back off exponentially,
+    # capped so a single retry never stalls the job for an unbounded time.
+    sleeps = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(502)
+
+    client = _client(handler, sleep=sleeps.append)
+    with pytest.raises(RuntimeError):
+        client.login()
+
+    assert sleeps == [2.0, 4.0, 8.0, 16.0, 32.0, 60.0]
+
+
+def test_transient_retry_window_spans_at_least_two_minutes():
+    # Regression guard for 2026-07-21: INlabs served "Sistema em Manutenção"
+    # 502s and the whole day's run aborted after ~3 seconds of retrying.
+    sleeps = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(502)
+
+    with pytest.raises(RuntimeError):
+        _client(handler, sleep=sleeps.append).login()
+
+    assert sum(sleeps) >= 120.0
 
 
 def test_login_gives_up_after_max_attempts_on_persistent_connection_error():

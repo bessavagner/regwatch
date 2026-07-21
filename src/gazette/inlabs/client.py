@@ -10,8 +10,12 @@ logger = logging.getLogger(__name__)
 
 DEFAULT_BASE_URL = "https://inlabs.in.gov.br"
 TRANSIENT_STATUS_CODES = {502, 503, 504}
-DEFAULT_MAX_ATTEMPTS = 3
-DEFAULT_BACKOFF_SECONDS = 1.0
+# INlabs takes scheduled maintenance windows that serve 502s for minutes at a
+# time, not seconds. These values give a ~2 min retry window (2+4+8+16+32+60),
+# which rides out a short window without stalling the job for an unbounded time.
+DEFAULT_MAX_ATTEMPTS = 7
+DEFAULT_BACKOFF_SECONDS = 2.0
+DEFAULT_MAX_BACKOFF_SECONDS = 60.0
 
 
 class InlabsClient:
@@ -24,6 +28,7 @@ class InlabsClient:
         transport: httpx.BaseTransport | None = None,
         max_attempts: int = DEFAULT_MAX_ATTEMPTS,
         backoff_seconds: float = DEFAULT_BACKOFF_SECONDS,
+        max_backoff_seconds: float = DEFAULT_MAX_BACKOFF_SECONDS,
         sleep=time.sleep,
     ):
         self._username = username
@@ -37,7 +42,11 @@ class InlabsClient:
         )
         self._max_attempts = max_attempts
         self._backoff_seconds = backoff_seconds
+        self._max_backoff_seconds = max_backoff_seconds
         self._sleep = sleep
+
+    def _backoff_for(self, attempt: int) -> float:
+        return min(self._backoff_seconds * 2 ** (attempt - 1), self._max_backoff_seconds)
 
     @classmethod
     def from_env(cls, **kwargs) -> "InlabsClient":
@@ -61,10 +70,10 @@ class InlabsClient:
             except httpx.TransportError:
                 if attempt == self._max_attempts:
                     raise
-                self._sleep(self._backoff_seconds * attempt)
+                self._sleep(self._backoff_for(attempt))
                 continue
             if response.status_code in TRANSIENT_STATUS_CODES and attempt < self._max_attempts:
-                self._sleep(self._backoff_seconds * attempt)
+                self._sleep(self._backoff_for(attempt))
                 continue
             return response
 
