@@ -93,7 +93,10 @@ mk_sched() {  # name schedule job
 echo "== Cloud Scheduler triggers (BRT, Mon-Fri) =="
 mk_sched regwatch-morning   "5 8 * * 1-5"  regwatch-run-daily
 mk_sched regwatch-midday    "0 13 * * 1-5" regwatch-run-daily
-mk_sched regwatch-heartbeat "0 9 * * 1-5"  regwatch-heartbeat
+# Heartbeat runs AFTER the 13:00 midday sweep, not between the two run_daily
+# triggers: the midday run is the real safety net for a failed morning run, so
+# alerting at 09:00 paged on days that then self-healed at 13:00.
+mk_sched regwatch-heartbeat "0 14 * * 1-5" regwatch-heartbeat
 
 echo "== Alerting: email channel + two policies =="
 CHANNEL=$(gcloud beta monitoring channels create --display-name="RegWatch alerts" \

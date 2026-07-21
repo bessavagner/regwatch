@@ -56,12 +56,12 @@
 
 ## Alerts
 - **run_daily failed** → a `regwatch-run-daily` execution exited non-zero (pipeline error; check logs).
-- **heartbeat failed** → no successful RunLog for today by 09:00 BRT (scheduler misfire, crash, or a
-  failing run_daily). Check the morning execution and Cloud Scheduler.
-  Note: the heartbeat runs 09:00 BRT while the morning run fires 08:05 BRT. If a morning run
-  legitimately takes longer than ~55 min, move the `regwatch-heartbeat` scheduler later (e.g. 10:00)
-  to avoid a false "no successful run today" alert. The 13:00 sweep + idempotent re-runs already
-  cover the real gap.
+- **heartbeat failed** → no successful RunLog for today by 14:00 BRT (scheduler misfire, crash, or a
+  failing run_daily). Check the morning and midday executions and Cloud Scheduler.
+  The heartbeat deliberately fires at 14:00 BRT — *after* the 13:00 midday sweep, which is the real
+  safety net for a failed 08:05 morning run. It used to run at 09:00 BRT, which paged on every
+  morning-run blip even when the 13:00 sweep recovered the day (e.g. 2026-07-17). A heartbeat alert
+  now means both run_daily triggers failed, which is worth waking up for.
 
 ## API Service (Plan 7)
 
