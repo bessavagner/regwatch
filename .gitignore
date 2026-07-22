@@ -30,6 +30,7 @@ src/playground.ipynb
 docs/*
 !docs/compliance/
 !docs/compliance/**
+!docs/runbook.md
 .claude/
 .omc/
 
