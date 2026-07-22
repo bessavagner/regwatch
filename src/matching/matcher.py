@@ -6,8 +6,8 @@ from django.contrib.postgres.search import SearchQuery, SearchRank, SearchVector
 from django.db.models import Q
 
 from gazette.models import Act, Edition
-from gazette.normalize import normalize_text
-from watches.grouping import iter_terms, term_texts
+from gazette.normalize import normalize_pt, normalize_text
+from watches.grouping import KIND_CONCEPT, iter_terms, term_texts
 from watches.models import Watch
 from matching.models import Match
 
@@ -19,8 +19,9 @@ def _fts(text: str) -> SearchQuery:
 
 
 def _term_q(text: str, kind: str) -> Q:
-    # Phase 1: both kinds resolve to the same simple-config phrase match. Kind is
-    # recorded but not yet honoured, so this deploy changes only AND/OR structure.
+    if kind == KIND_CONCEPT:
+        return Q(search_vector_pt=SearchQuery(
+            normalize_pt(text), config="portuguese", search_type="phrase"))
     return Q(search_vector=_fts(text))
 
 

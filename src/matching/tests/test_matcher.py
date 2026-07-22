@@ -139,3 +139,23 @@ def test_non_string_exclude_entry_is_skipped_not_crashed():
     matches = match_edition(_edition_with("BETA CORP citada nesta data."))
     assert len(matches) == 1
     assert matches[0].watch == watch
+
+
+@pytest.mark.django_db
+def test_concept_term_matches_a_plural_in_the_gazette():
+    _watch(_group("contrato", kind="concept"))
+    assert len(match_edition(_edition_with("extrato de contratos firmados"))) == 1
+
+
+@pytest.mark.django_db
+def test_concept_term_matches_an_accented_plural():
+    _watch(_group("licitação", kind="concept"))
+    assert len(match_edition(_edition_with("avisos de licitações do órgão"))) == 1
+
+
+@pytest.mark.django_db
+def test_entity_term_does_not_stem():
+    # 'licitacao' is not a substring of 'licitacoes' either, so this keeps
+    # holding when entity terms move to substring matching in phase 3.
+    _watch(_group("licitação", kind="entity"))
+    assert match_edition(_edition_with("avisos de licitações do órgão")) == []
