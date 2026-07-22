@@ -23,7 +23,7 @@ def _group(*texts, kind="entity"):
 def _watch(*groups, name="Beta", **kwargs):
     ws = Workspace.objects.create(name=f"WS-{name}")
     client = Client.objects.create(workspace=ws, name=name)
-    return Watch.objects.create(client=client, terms=[], groups=list(groups), **kwargs)
+    return Watch.objects.create(client=client, groups=list(groups), **kwargs)
 
 
 @pytest.mark.django_db
@@ -93,9 +93,9 @@ def test_matcher_is_idempotent():
 def test_section_filter():
     ws = Workspace.objects.create(name="SecWS")
     client = Client.objects.create(workspace=ws, name="Sec")
-    w_wrong = Watch.objects.create(client=client, terms=[], groups=[_group("sectterm")], section="2")
-    w_right = Watch.objects.create(client=client, terms=[], groups=[_group("sectterm")], section="1")
-    w_any = Watch.objects.create(client=client, terms=[], groups=[_group("sectterm")], section="")
+    w_wrong = Watch.objects.create(client=client, groups=[_group("sectterm")], section="2")
+    w_right = Watch.objects.create(client=client, groups=[_group("sectterm")], section="1")
+    w_any = Watch.objects.create(client=client, groups=[_group("sectterm")], section="")
     matches = match_edition(_edition_with("sectterm presente", section="1"))
     matched_ids = {m.watch_id for m in matches}
     assert w_wrong.pk not in matched_ids

@@ -10,17 +10,8 @@ class Client(models.Model):
 
 
 class Watch(models.Model):
-    MATCH_MODE_ALL = "all"
-    MATCH_MODE_ANY = "any"
-    MATCH_MODE_CHOICES = [
-        (MATCH_MODE_ALL, "All terms must appear"),
-        (MATCH_MODE_ANY, "Any term may appear"),
-    ]
-
     client = models.ForeignKey(Client, related_name="watches", on_delete=models.CASCADE)
-    terms = models.JSONField(default=list)       # legacy; removed in 0006
     groups = models.JSONField(default=list)      # [{"terms": [{"text", "kind"}]}]; ANDed
     exclude = models.JSONField(default=list)      # excluded terms
-    match_mode = models.CharField(max_length=3, choices=MATCH_MODE_CHOICES, default=MATCH_MODE_ALL)
     section = models.CharField(max_length=20, blank=True, default="")  # "" = all
     active = models.BooleanField(default=True)

@@ -83,7 +83,7 @@ def test_cannot_read_other_workspace_watch(firm_a, firm_b):
     ws_a, user_a = firm_a
     ws_b, _ = firm_b
     b_client = WatchClient.objects.create(workspace=ws_b, name="B-client")
-    b_watch = Watch.objects.create(client=b_client, terms=["x"])
+    b_watch = Watch.objects.create(client=b_client, groups=[{"terms": [{"text": "x", "kind": "entity"}]}])
     api = APIClient()
     api.force_authenticate(user=user_a)
     assert api.get(f"/api/watches/{b_watch.id}").status_code == 404

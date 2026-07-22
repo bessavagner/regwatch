@@ -54,7 +54,7 @@ class _RecordingLLM:
 def test_enricher_passes_every_group_term_to_the_llm():
     ws = Workspace.objects.create(name="EnrWS")
     client = Client.objects.create(workspace=ws, name="Enr")
-    watch = Watch.objects.create(client=client, terms=[], groups=[
+    watch = Watch.objects.create(client=client, groups=[
         {"terms": [{"text": "sebrae", "kind": "entity"}]},
         {"terms": [{"text": "contrato", "kind": "concept"}]},
     ])
