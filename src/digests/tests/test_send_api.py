@@ -38,7 +38,7 @@ def firm_b(db):
 def matched_client(firm_a):
     ws, user = firm_a
     client = WatchClient.objects.create(workspace=ws, name="Beta", email="beta@example.test")
-    Watch.objects.create(client=client, terms=["beta corp"])
+    Watch.objects.create(client=client, groups=[{"terms": [{"text": "beta corp", "kind": "entity"}]}])
     edition = ingest_edition(RawEdition(
         date=DATE, section="DO1", source_url="https://x.test/s1",
         items=(RawItem("a1", "Portaria 1", "Org", "Licença à BETA CORP.", "#a1"),),

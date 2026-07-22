@@ -16,7 +16,7 @@ DATE = datetime.date(2026, 6, 26)
 def matched(db):
     ws = Workspace.objects.create(name="Acme")
     client = Client.objects.create(workspace=ws, name="Beta", email="beta@example.test")
-    Watch.objects.create(client=client, terms=["beta corp"])
+    Watch.objects.create(client=client, groups=[{"terms": [{"text": "beta corp", "kind": "entity"}]}])
     edition = ingest_edition(RawEdition(
         date=DATE, section="1", source_url="https://x.test/s1",
         items=(RawItem("a1", "Portaria 12", "Org", "Licença à BETA CORP.", "#a1"),),
@@ -72,8 +72,8 @@ def test_two_clients_receive_separate_digests(db):
     ws = Workspace.objects.create(name="MultiWS")
     client_a = Client.objects.create(workspace=ws, name="AlphaClient", email="alpha@example.test")
     client_b = Client.objects.create(workspace=ws, name="GammaClient", email="gamma@example.test")
-    Watch.objects.create(client=client_a, terms=["alpha ltd"])
-    Watch.objects.create(client=client_b, terms=["gamma corp"])
+    Watch.objects.create(client=client_a, groups=[{"terms": [{"text": "alpha ltd", "kind": "entity"}]}])
+    Watch.objects.create(client=client_b, groups=[{"terms": [{"text": "gamma corp", "kind": "entity"}]}])
     edition = ingest_edition(RawEdition(
         date=DATE, section="1", source_url="https://x.test/multi",
         items=(
@@ -103,8 +103,8 @@ def test_client_filter_limits_digests_to_one_client(db):
     ws = Workspace.objects.create(name="MultiWS2")
     client_a = Client.objects.create(workspace=ws, name="AlphaClient", email="alpha@example.test")
     client_b = Client.objects.create(workspace=ws, name="GammaClient", email="gamma@example.test")
-    Watch.objects.create(client=client_a, terms=["alpha ltd"])
-    Watch.objects.create(client=client_b, terms=["gamma corp"])
+    Watch.objects.create(client=client_a, groups=[{"terms": [{"text": "alpha ltd", "kind": "entity"}]}])
+    Watch.objects.create(client=client_b, groups=[{"terms": [{"text": "gamma corp", "kind": "entity"}]}])
     edition = ingest_edition(RawEdition(
         date=DATE, section="1", source_url="https://x.test/filter",
         items=(

@@ -23,7 +23,7 @@ def _edition():
 def firm(db):
     ws = Workspace.objects.create(name="Acme")
     c = Client.objects.create(workspace=ws, name="Beta", email="beta@example.test")
-    Watch.objects.create(client=c, terms=["beta corp"])
+    Watch.objects.create(client=c, groups=[{"terms": [{"text": "beta corp", "kind": "entity"}]}])
     return c
 
 

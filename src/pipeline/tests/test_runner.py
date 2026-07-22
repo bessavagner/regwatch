@@ -13,7 +13,7 @@ from matching.models import Match
 def firm(db):
     ws = Workspace.objects.create(name="Acme Law")
     client = Client.objects.create(workspace=ws, name="Beta Corp", email="beta@example.test")
-    Watch.objects.create(client=client, terms=["beta corp"])
+    Watch.objects.create(client=client, groups=[{"terms": [{"text": "beta corp", "kind": "entity"}]}])
     return client
 
 

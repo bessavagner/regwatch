@@ -27,7 +27,7 @@ def _raw_edition(date, identifier="a1", text="Licença à BETA CORP."):
 def firm(db):
     ws = Workspace.objects.create(name="Acme")
     client = Client.objects.create(workspace=ws, name="Beta", email="beta@example.test")
-    Watch.objects.create(client=client, terms=["beta corp"])
+    Watch.objects.create(client=client, groups=[{"terms": [{"text": "beta corp", "kind": "entity"}]}])
     return client
 
 
@@ -51,7 +51,7 @@ def test_backfill_reuses_an_already_ingested_date_without_refetching(firm, monke
     ingest_edition(_raw_edition(DATE))  # simulate the day already having been run
     # a NEW watch, created after that date was originally processed
     other_client = Client.objects.create(workspace=firm.workspace, name="Gamma")
-    Watch.objects.create(client=other_client, terms=["beta corp"])
+    Watch.objects.create(client=other_client, groups=[{"terms": [{"text": "beta corp", "kind": "entity"}]}])
 
     def boom(date):
         raise AssertionError("fetch_editions must not be called for an already-ingested date")
@@ -138,7 +138,7 @@ def test_backfill_response_counts_are_scoped_to_the_callers_client(firm, monkeyp
     # the calling client's own matches — other clients' matches are still created (and
     # still enriched, subject to the shared cap) but never surfaced in this response.
     other_client = Client.objects.create(workspace=firm.workspace, name="Gamma")
-    Watch.objects.create(client=other_client, terms=["beta corp"])
+    Watch.objects.create(client=other_client, groups=[{"terms": [{"text": "beta corp", "kind": "entity"}]}])
     monkeypatch.setattr("pipeline.backfill.fetch_editions", lambda date: [_raw_edition(date)])
 
     result = backfill_watch(DATE, DATE, FakeLLMClient(Summary("ok", "grant", 0.9)), firm.id, max_enrich=10)
@@ -154,7 +154,7 @@ def test_backfill_enrich_cap_is_shared_across_all_clients_not_per_caller(firm, m
     # The enrichment cap is a shared, cross-workspace budget (mirrors run_daily's
     # existing behavior) — it is not reset or duplicated per calling client.
     other_client = Client.objects.create(workspace=firm.workspace, name="Gamma")
-    Watch.objects.create(client=other_client, terms=["beta corp"])
+    Watch.objects.create(client=other_client, groups=[{"terms": [{"text": "beta corp", "kind": "entity"}]}])
     monkeypatch.setattr("pipeline.backfill.fetch_editions", lambda date: [_raw_edition(date)])
 
     backfill_watch(DATE, DATE, FakeLLMClient(Summary("ok", "grant", 0.9)), firm.id, max_enrich=1)

@@ -13,7 +13,7 @@ from enrichment.enricher import enrich_match
 def a_match(db):
     ws = Workspace.objects.create(name="Acme")
     client = Client.objects.create(workspace=ws, name="Beta")
-    Watch.objects.create(client=client, terms=["beta corp"])
+    Watch.objects.create(client=client, groups=[{"terms": [{"text": "beta corp", "kind": "entity"}]}])
     edition = ingest_edition(RawEdition(
         date=datetime.date(2026, 6, 26), section="1", source_url="https://x.test/s1",
         items=(RawItem("a1", "Ato", "Org", "Licença à BETA CORP.", "#a1"),),
