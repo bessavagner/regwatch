@@ -2,6 +2,9 @@ import { render, screen, fireEvent } from '@testing-library/svelte';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import WatchForm from './WatchForm.svelte';
 import * as resources from '../api/resources';
+import { ApiError } from '../api/client';
+import { SECTIONS } from '../constants';
+import type { Watch } from '../api/types';
 
 const clients = [{ id: 1, name: 'Acme', is_house: false, email: '' }];
 
@@ -39,5 +42,43 @@ describe('WatchForm groups', () => {
       } as never,
     });
     expect(screen.getByLabelText(/aliases for group 1/i)).toHaveValue('sebrae');
+  });
+});
+
+describe('WatchForm', () => {
+  it('section options match the real pipeline edition codes', () => {
+    render(WatchForm, { clients, onsaved: () => {} });
+    const values = screen.getAllByRole('option', { name: /seção/i }).map((o) => (o as HTMLOptionElement).value);
+    expect(values).toEqual(SECTIONS.map((s) => s.value));
+    expect(values).toEqual(['DO1', 'DO2', 'DO3', 'DO1E', 'DO2E', 'DO3E']);
+  });
+
+  it('defaults a new watch to "all sections" and posts it that way untouched', async () => {
+    const created: Watch = {
+      id: 9,
+      client: 3,
+      groups: [{ terms: [{ text: 'a', kind: 'entity' }] }],
+      exclude: [],
+      section: '',
+      active: true,
+    };
+    vi.spyOn(resources, 'createWatch').mockResolvedValue(created);
+    render(WatchForm, { clients, onsaved: () => {} });
+
+    expect(screen.getByLabelText(/section/i)).toHaveValue('');
+    await fireEvent.input(screen.getByLabelText(/aliases for group 1/i), { target: { value: 'a' } });
+    await fireEvent.click(screen.getByRole('button', { name: /save/i }));
+
+    expect(resources.createWatch).toHaveBeenCalledWith(expect.objectContaining({ section: '' }));
+  });
+
+  it('a 400 field error is shown', async () => {
+    vi.spyOn(resources, 'createWatch').mockRejectedValue(
+      new ApiError(400, 'request failed', { groups: ['must not be empty'] }),
+    );
+    render(WatchForm, { clients, onsaved: () => {} });
+    await fireEvent.change(screen.getByLabelText(/client/i), { target: { value: '1' } });
+    await fireEvent.click(screen.getByRole('button', { name: /save/i }));
+    expect(await screen.findByText(/must not be empty/i)).toBeInTheDocument();
   });
 });
