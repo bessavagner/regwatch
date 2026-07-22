@@ -159,3 +159,33 @@ def test_entity_term_does_not_stem():
     # holding when entity terms move to substring matching in phase 3.
     _watch(_group("licitação", kind="entity"))
     assert match_edition(_edition_with("avisos de licitações do órgão")) == []
+
+
+@pytest.mark.django_db
+def test_entity_term_matches_a_slash_compound():
+    # Real 2026-07-21 miss: Postgres parses 'sebrae/mg' as a file-path token, so
+    # the word 'sebrae' never matched it under full-text search.
+    body = ("apoio as micro e pequenas empresas de minas gerais - sebrae/mg. "
+            "objeto: a cooperacao tecnica")
+    _watch(_group("sebrae"))
+    assert len(match_edition(_edition_with(body))) == 1
+
+
+@pytest.mark.django_db
+def test_entity_term_folds_accents():
+    _watch(_group("JUBILATO SOLUÇÕES"))
+    assert len(match_edition(_edition_with("a empresa jubilato solucoes ltda"))) == 1
+
+
+@pytest.mark.django_db
+def test_short_entity_term_does_not_match_inside_a_longer_word():
+    # 'ifc' is under MIN_SUBSTRING_LEN, so it falls back to whole-word matching
+    # and must not match 'ifce'.
+    _watch(_group("ifc"))
+    assert match_edition(_edition_with("convenio com o ifce nesta data")) == []
+
+
+@pytest.mark.django_db
+def test_short_entity_term_still_matches_as_a_whole_word():
+    _watch(_group("ifc"))
+    assert len(match_edition(_edition_with("convenio com o ifc nesta data"))) == 1

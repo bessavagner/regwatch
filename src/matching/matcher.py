@@ -7,7 +7,7 @@ from django.db.models import Q
 
 from gazette.models import Act, Edition
 from gazette.normalize import normalize_pt, normalize_text
-from watches.grouping import KIND_CONCEPT, iter_terms, term_texts
+from watches.grouping import KIND_CONCEPT, KIND_ENTITY, MIN_SUBSTRING_LEN, iter_terms, term_texts
 from watches.models import Watch
 from matching.models import Match
 
@@ -22,7 +22,11 @@ def _term_q(text: str, kind: str) -> Q:
     if kind == KIND_CONCEPT:
         return Q(search_vector_pt=SearchQuery(
             normalize_pt(text), config="portuguese", search_type="phrase"))
-    return Q(search_vector=_fts(text))
+    folded = normalize_text(text)
+    if len(folded) < MIN_SUBSTRING_LEN:
+        # Too short to substring safely: 'ifc' would match inside 'ifce'.
+        return Q(search_vector=_fts(text))
+    return Q(search_text__icontains=folded)
 
 
 def _group_q(group) -> Q | None:
@@ -57,7 +61,7 @@ def _watch_q(watch: Watch) -> Q | None:
             continue
         ex = ex.strip()
         if ex:
-            query &= ~Q(search_vector=_fts(ex))
+            query &= ~_term_q(ex, KIND_ENTITY)
     return query
 
 
