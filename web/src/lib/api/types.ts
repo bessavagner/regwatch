@@ -17,12 +17,22 @@ export interface Client {
   email: string;
 }
 
+export type WatchTermKind = 'entity' | 'concept';
+
+export interface WatchTerm {
+  text: string;
+  kind: WatchTermKind;
+}
+
+export interface WatchGroup {
+  terms: WatchTerm[];
+}
+
 export interface Watch {
   id: number;
   client: number;
-  terms: string[];
+  groups: WatchGroup[];
   exclude: string[];
-  match_mode: 'all' | 'any';
   section: string;
   active: boolean;
 }

@@ -81,7 +81,7 @@
           <li class="row reveal" style="--i: {i}">
             <div class="flex items-center justify-between gap-2">
               <div>
-                <p class="as-typed text-sm font-medium text-ink">{w.terms.join(', ')}</p>
+                <p class="as-typed text-sm font-medium text-ink">{w.groups.map((g) => g.terms.map((t) => t.text).join(' / ')).join(' + ')}</p>
                 <p class="mt-0.5 font-mono text-xs text-muted"><span class="as-typed">seção {w.section}{w.exclude.length ? ` · excl: ${w.exclude.join(', ')}` : ''}</span></p>
               </div>
               <div class="flex items-center gap-2">
