@@ -1,3 +1,4 @@
+import logging
 from functools import reduce
 from operator import or_
 
@@ -9,6 +10,8 @@ from gazette.normalize import normalize_text
 from watches.grouping import iter_terms, term_texts
 from watches.models import Watch
 from matching.models import Match
+
+logger = logging.getLogger(__name__)
 
 
 def _fts(text: str) -> SearchQuery:
@@ -69,6 +72,10 @@ def match_edition(edition: Edition) -> list[Match]:
             continue
         query = _watch_q(watch)
         if query is None:
+            logger.warning(
+                "watch %s (client %s) has no usable term groups; it will match nothing",
+                watch.pk, watch.client.name,
+            )
             continue
         hits = acts.annotate(
             rank=SearchRank(SearchVector("search_text", config="simple"), _rank_query(watch))

@@ -7,7 +7,10 @@ class Match(models.Model):
     watch = models.ForeignKey(Watch, related_name="matches", on_delete=models.CASCADE)
     act = models.ForeignKey(Act, related_name="matches", on_delete=models.CASCADE)
     snippet = models.TextField(blank=True, default="")
-    rank = models.FloatField(default=0.0)
+    rank = models.FloatField(
+        default=0.0,
+        help_text="Advisory only: used to order results, not a guarantee of relevance.",
+    )
     ai_summary = models.TextField(null=True, blank=True)
     category = models.CharField(max_length=50, blank=True, default="")
     confidence = models.FloatField(null=True, blank=True)
