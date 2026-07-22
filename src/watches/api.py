@@ -49,7 +49,9 @@ class WatchSerializer(serializers.ModelSerializer):
         fields = ["id", "client", "groups", "exclude", "section", "active"]
 
     def validate_groups(self, value):
-        if not isinstance(value, list) or not value:
+        if not isinstance(value, list):
+            raise serializers.ValidationError("groups must be a list")
+        if not value:
             raise serializers.ValidationError("groups must not be empty")
         normalized = []
         for group in value:
@@ -62,9 +64,10 @@ class WatchSerializer(serializers.ModelSerializer):
             for term in terms:
                 if not isinstance(term, dict):
                     raise serializers.ValidationError("each term must be an object")
-                text = (term.get("text") or "").strip()
-                if not text:
+                text = term.get("text")
+                if not isinstance(text, str) or not text.strip():
                     raise serializers.ValidationError("term text must not be empty")
+                text = text.strip()
                 kind = term.get("kind") or KIND_ENTITY
                 if kind not in VALID_KINDS:
                     raise serializers.ValidationError(
