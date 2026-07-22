@@ -1,7 +1,9 @@
 from django.contrib.postgres.search import SearchVector
 from django.core.management.base import BaseCommand
+from django.db.models import F
 
 from gazette.models import Act
+from gazette.normalize import NormalizeNFC
 
 
 class Command(BaseCommand):
@@ -25,7 +27,9 @@ class Command(BaseCommand):
         for start in range(0, total, batch_size):
             chunk = ids[start:start + batch_size]
             Act.objects.filter(pk__in=chunk).update(
-                search_vector_pt=SearchVector("title", "raw_text", config="portuguese")
+                search_vector_pt=SearchVector(
+                    NormalizeNFC(F("title")), NormalizeNFC(F("raw_text")), config="portuguese"
+                )
             )
             done += len(chunk)
             self.stdout.write(f"reindexed {done}/{total}")

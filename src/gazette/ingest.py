@@ -1,7 +1,8 @@
 from django.contrib.postgres.search import SearchVector
+from django.db.models import F
 from gazette.contracts import RawEdition
 from gazette.models import Edition, Act
-from gazette.normalize import normalize_text
+from gazette.normalize import NormalizeNFC, normalize_text
 
 
 def ingest_edition(raw: RawEdition) -> Edition:
@@ -24,7 +25,12 @@ def ingest_edition(raw: RawEdition) -> Edition:
         search_vector=SearchVector("search_text", config="simple"),
         # Built from the raw fields, not from search_text: to_tsvector case-folds
         # on its own, and search_text has already had its accents stripped, which
-        # would defeat the stemmer.
-        search_vector_pt=SearchVector("title", "raw_text", config="portuguese"),
+        # would defeat the stemmer. NFC-normalised so it agrees with the
+        # NFC-normalised queries the matcher issues (gazette.normalize.normalize_pt);
+        # some upstream text arrives NFD-decomposed, which would otherwise stem
+        # differently and silently miss.
+        search_vector_pt=SearchVector(
+            NormalizeNFC(F("title")), NormalizeNFC(F("raw_text")), config="portuguese"
+        ),
     )
     return edition

@@ -1,6 +1,24 @@
 import re
 import unicodedata
 
+from django.db.models import Func, TextField
+
+
+class NormalizeNFC(Func):
+    """Postgres normalize(x, NFC) (PG13+).
+
+    NFC is a keyword there, not a string literal, so a plain Func call
+    would quote it wrong — hence the custom template. Used to build
+    Act.search_vector_pt so the index agrees with normalize_pt(), which
+    NFC-normalises queries: some upstream gazette text arrives NFD
+    (accents as combining characters), and an un-normalised index
+    silently fails to match text that is actually present.
+    """
+
+    function = "NORMALIZE"
+    template = "%(function)s(%(expressions)s, NFC)"
+    output_field = TextField()
+
 
 def normalize_text(s: str) -> str:
     s = s.lower()

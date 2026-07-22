@@ -1,9 +1,11 @@
 import datetime
+import unicodedata
 import pytest
 from django.contrib.postgres.search import SearchQuery
 from gazette.contracts import RawEdition, RawItem
 from gazette.models import Edition, Act
 from gazette.ingest import ingest_edition
+from gazette.normalize import normalize_pt
 
 
 def _raw():
@@ -49,3 +51,22 @@ def test_ingest_populates_the_portuguese_vector():
     assert Act.objects.filter(
         pk=act.pk, search_vector_pt=SearchQuery("contrato", config="portuguese", search_type="phrase")
     ).exists()
+
+
+@pytest.mark.django_db
+def test_ingest_matches_nfd_decomposed_raw_text_against_an_nfc_query():
+    # 'licitações' with the cedilla+tilde built as combining characters
+    # (NFD), the way some upstream gazette sources actually deliver text.
+    nfd_word = unicodedata.normalize("NFD", "licitações")
+    assert nfd_word != "licitações"  # sanity: this really is decomposed
+
+    edition = ingest_edition(RawEdition(
+        date=datetime.date(2026, 6, 26), section="1",
+        source_url="https://example.test/s1",
+        items=(RawItem("a1", "Aviso", "Org", f"extrato de {nfd_word} abertas", "#a1"),),
+    ))
+    act = Act.objects.get(edition=edition, identifier="a1")
+
+    # The matcher builds its query the same way for a concept term.
+    query = SearchQuery(normalize_pt("licitação"), config="portuguese", search_type="phrase")
+    assert Act.objects.filter(pk=act.pk, search_vector_pt=query).exists()
