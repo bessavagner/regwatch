@@ -15,12 +15,13 @@ gcloud run jobs execute regwatch-migrate \
   --args=reindex_search,--batch-size,500 --wait
 ```
 
-Prints one line per batch and a final total:
+Prints one line per batch and a final total (counts are illustrative — the real
+total is however many acts still have a null vector):
 
 ```
-reindexed 500/22068
+reindexed 500/25495
 ...
-reindex_search: 22068 acts
+reindex_search: 25495 acts
 ```
 
 Common failure: the job times out on a large backlog. Re-run it. The command
