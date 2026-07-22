@@ -1,12 +1,13 @@
 import logging
 from matching.models import Match
 from enrichment.llm import LLMClient
+from watches.grouping import term_texts
 
 logger = logging.getLogger(__name__)
 
 
 def enrich_match(match: Match, client: LLMClient) -> None:
-    terms = list(match.watch.terms)
+    terms = term_texts(match.watch.groups)
     try:
         result = client.summarize(match.act.raw_text, terms)
     except Exception:
