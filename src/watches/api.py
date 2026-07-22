@@ -13,6 +13,7 @@ from accounts.permissions import WorkspaceScopedQuerysetMixin, workspace_ids_for
 from pipeline.adapters import get_llm_client
 from pipeline.backfill import backfill_watch
 from pipeline.models import RunLog
+from watches.grouping import KIND_ENTITY, VALID_KINDS
 from watches.models import Client, Watch
 
 SAO_PAULO = ZoneInfo("America/Sao_Paulo")
@@ -37,14 +38,41 @@ class ClientViewSet(WorkspaceScopedQuerysetMixin, viewsets.ModelViewSet):
 
 
 class WatchSerializer(serializers.ModelSerializer):
+    # Declared explicitly: Watch.groups has a model-level default([]), so the
+    # auto-generated ModelSerializer field would be required=False and skip
+    # validate_groups entirely when the key is omitted, letting a watch with
+    # groups=[] through silently — the exact bug this task closes.
+    groups = serializers.JSONField()
+
     class Meta:
         model = Watch
-        fields = ["id", "client", "terms", "exclude", "match_mode", "section", "active"]
+        fields = ["id", "client", "groups", "exclude", "section", "active"]
 
-    def validate_terms(self, value):
-        if not value:
-            raise serializers.ValidationError("terms must not be empty")
-        return value
+    def validate_groups(self, value):
+        if not isinstance(value, list) or not value:
+            raise serializers.ValidationError("groups must not be empty")
+        normalized = []
+        for group in value:
+            if not isinstance(group, dict):
+                raise serializers.ValidationError("each group must be an object")
+            terms = group.get("terms")
+            if not isinstance(terms, list) or not terms:
+                raise serializers.ValidationError("each group must have at least one term")
+            normalized_terms = []
+            for term in terms:
+                if not isinstance(term, dict):
+                    raise serializers.ValidationError("each term must be an object")
+                text = (term.get("text") or "").strip()
+                if not text:
+                    raise serializers.ValidationError("term text must not be empty")
+                kind = term.get("kind") or KIND_ENTITY
+                if kind not in VALID_KINDS:
+                    raise serializers.ValidationError(
+                        f"kind must be one of {', '.join(VALID_KINDS)}"
+                    )
+                normalized_terms.append({"text": text, "kind": kind})
+            normalized.append({"terms": normalized_terms})
+        return normalized
 
     def validate_client(self, value):
         user = self.context["request"].user
