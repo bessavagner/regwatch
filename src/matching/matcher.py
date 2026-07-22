@@ -52,7 +52,9 @@ def _watch_q(watch: Watch) -> Q | None:
             return None
         query &= group_q
     for ex in watch.exclude or []:
-        ex = (ex or "").strip()
+        if not isinstance(ex, str):
+            continue
+        ex = ex.strip()
         if ex:
             query &= ~Q(search_vector=_fts(ex))
     return query

@@ -102,13 +102,13 @@ def test_create_client_without_membership_is_forbidden(db):
 
 
 @pytest.mark.django_db
-def test_watch_requires_non_empty_terms(firm_a):
-    ws, user = firm_a
-    c = WatchClient.objects.create(workspace=ws, name="Beta")
-    api = APIClient()
-    api.force_authenticate(user=user)
-    resp = api.post("/api/watches", {"client": c.id, "terms": []}, format="json")
+def test_watch_requires_groups(firm_a):
+    c = _client_for(firm_a)
+    api = _api_for(firm_a)
+    resp = api.post("/api/watches", {"client": c.id}, format="json")
     assert resp.status_code == 400
+    assert "groups" in resp.data
+    assert Watch.objects.count() == 0
 
 
 @pytest.mark.django_db
@@ -164,6 +164,16 @@ def test_watch_rejects_an_invalid_kind(firm_a):
 
 
 @pytest.mark.django_db
+def test_watch_rejects_non_string_term_text(firm_a):
+    c = _client_for(firm_a)
+    api = _api_for(firm_a)
+    resp = api.post("/api/watches", {
+        "client": c.id, "groups": [{"terms": [{"text": 123, "kind": "entity"}]}],
+    }, format="json")
+    assert resp.status_code == 400
+
+
+@pytest.mark.django_db
 def test_watch_created_via_api_actually_matches(firm_a):
     # Regression guard for the 2026-07-21 production bug: a watch created through
     # the live API must produce real matches, not just accept the POST. Before this
@@ -194,7 +204,9 @@ def test_watch_cannot_attach_to_other_workspace_client(firm_a, firm_b):
     b_client = WatchClient.objects.create(workspace=ws_b, name="B-client")
     api = APIClient()
     api.force_authenticate(user=user_a)
-    resp = api.post(
-        "/api/watches", {"client": b_client.id, "terms": ["x"]}, format="json"
-    )
+    resp = api.post("/api/watches", {
+        "client": b_client.id,
+        "groups": [{"terms": [{"text": "x", "kind": "entity"}]}],
+    }, format="json")
     assert resp.status_code == 400
+    assert "client" in resp.data

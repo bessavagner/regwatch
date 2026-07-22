@@ -129,3 +129,13 @@ def test_one_malformed_group_disables_the_whole_watch():
 def test_non_dict_group_disables_the_whole_watch():
     _watch(_group("alfa"), "lixo")
     assert match_edition(_edition_with("alfa presente aqui")) == []
+
+
+@pytest.mark.django_db
+def test_non_string_exclude_entry_is_skipped_not_crashed():
+    watch = _watch(_group("beta corp"), name="ExBad")
+    watch.exclude = [1]
+    watch.save()
+    matches = match_edition(_edition_with("BETA CORP citada nesta data."))
+    assert len(matches) == 1
+    assert matches[0].watch == watch
