@@ -32,4 +32,9 @@ class Act(models.Model):
         indexes = [
             GinIndex(fields=["search_vector"]),
             GinIndex(fields=["search_vector_pt"], name="gazette_act_search_pt_gin"),
+            GinIndex(
+                name="gazette_act_search_text_trgm",
+                fields=["search_text"],
+                opclasses=["gin_trgm_ops"],
+            ),
         ]
