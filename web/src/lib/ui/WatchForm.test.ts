@@ -43,6 +43,67 @@ describe('WatchForm groups', () => {
     });
     expect(screen.getByLabelText(/aliases for group 1/i)).toHaveValue('sebrae');
   });
+
+  const mixedWatch: Watch = {
+    id: 8, client: 1, exclude: [], section: '', active: true,
+    groups: [{ terms: [{ text: 'sebrae', kind: 'entity' }, { text: 'contrato', kind: 'concept' }] }],
+  } as never;
+
+  it('keeps each term\'s original kind when the row selector is left untouched', async () => {
+    const updateWatch = vi.spyOn(resources, 'updateWatch').mockResolvedValue({} as never);
+    render(WatchForm, { clients, onsaved: () => {}, watch: mixedWatch });
+
+    await fireEvent.change(screen.getByLabelText(/section/i), { target: { value: 'DO1' } });
+    await fireEvent.click(screen.getByRole('button', { name: /save/i }));
+
+    expect(updateWatch).toHaveBeenCalledWith(8, expect.objectContaining({
+      groups: [{ terms: [{ text: 'sebrae', kind: 'entity' }, { text: 'contrato', kind: 'concept' }] }],
+    }));
+  });
+
+  it('applies the chosen kind to every term when the row selector is changed', async () => {
+    const updateWatch = vi.spyOn(resources, 'updateWatch').mockResolvedValue({} as never);
+    render(WatchForm, { clients, onsaved: () => {}, watch: mixedWatch });
+
+    await fireEvent.change(screen.getByLabelText(/match kind for group 1/i), { target: { value: 'concept' } });
+    await fireEvent.click(screen.getByRole('button', { name: /save/i }));
+
+    expect(updateWatch).toHaveBeenCalledWith(8, expect.objectContaining({
+      groups: [{ terms: [{ text: 'sebrae', kind: 'concept' }, { text: 'contrato', kind: 'concept' }] }],
+    }));
+  });
+
+  it('gives a newly typed alias the row\'s displayed kind while pre-existing aliases keep theirs', async () => {
+    const updateWatch = vi.spyOn(resources, 'updateWatch').mockResolvedValue({} as never);
+    render(WatchForm, { clients, onsaved: () => {}, watch: mixedWatch });
+
+    await fireEvent.input(screen.getByLabelText(/aliases for group 1/i),
+      { target: { value: 'sebrae, contrato, sebrae/mg' } });
+    await fireEvent.click(screen.getByRole('button', { name: /save/i }));
+
+    expect(updateWatch).toHaveBeenCalledWith(8, expect.objectContaining({
+      groups: [{
+        terms: [
+          { text: 'sebrae', kind: 'entity' },
+          { text: 'contrato', kind: 'concept' },
+          { text: 'sebrae/mg', kind: 'entity' },
+        ],
+      }],
+    }));
+  });
+
+  it('assigns the row kind to every term on a brand-new watch (no prior kinds to preserve)', async () => {
+    const createWatch = vi.spyOn(resources, 'createWatch').mockResolvedValue({} as never);
+    render(WatchForm, { clients, onsaved: () => {} });
+
+    await fireEvent.input(screen.getByLabelText(/aliases for group 1/i),
+      { target: { value: 'sebrae, contrato' } });
+    await fireEvent.click(screen.getByRole('button', { name: /save/i }));
+
+    expect(createWatch).toHaveBeenCalledWith(expect.objectContaining({
+      groups: [{ terms: [{ text: 'sebrae', kind: 'entity' }, { text: 'contrato', kind: 'entity' }] }],
+    }));
+  });
 });
 
 describe('WatchForm', () => {

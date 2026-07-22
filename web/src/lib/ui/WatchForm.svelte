@@ -8,14 +8,21 @@
 
   let { clients, watch, onsaved }: { clients: Client[]; watch?: Watch; onsaved: (w: Watch) => void } = $props();
 
-  type Row = { aliases: string; kind: WatchTermKind };
+  // kindTouched tracks whether the user has changed this row's kind selector;
+  // originalKinds remembers each pre-existing alias's kind so an untouched
+  // selector doesn't silently coerce mixed-kind groups on save (see toRows/save).
+  type Row = { aliases: string; kind: WatchTermKind; kindTouched: boolean; originalKinds: Map<string, WatchTermKind> };
+
+  const newRow = (): Row => ({ aliases: '', kind: 'entity', kindTouched: false, originalKinds: new Map() });
 
   const toRows = (groups: WatchGroup[] | undefined): Row[] => {
     const rows = (groups ?? []).map((g) => ({
       aliases: g.terms.map((t) => t.text).join(', '),
       kind: (g.terms[0]?.kind ?? 'entity') as WatchTermKind,
+      kindTouched: false,
+      originalKinds: new Map(g.terms.map((t) => [t.text, t.kind])),
     }));
-    return rows.length ? rows : [{ aliases: '', kind: 'entity' }];
+    return rows.length ? rows : [newRow()];
   };
 
   // Local editable copy seeded once from props; intentionally not kept in sync
@@ -29,14 +36,19 @@
 
   const split = (s: string) => s.split(',').map((t) => t.trim()).filter(Boolean);
 
-  const addGroup = () => { rows = [...rows, { aliases: '', kind: 'entity' }]; };
+  const addGroup = () => { rows = [...rows, newRow()]; };
   const removeGroup = (i: number) => { rows = rows.filter((_, n) => n !== i); };
 
   async function save(e: SubmitEvent) {
     e.preventDefault();
     fieldErrors = {};
     const groups: WatchGroup[] = rows
-      .map((r) => ({ terms: split(r.aliases).map((text) => ({ text, kind: r.kind })) }))
+      .map((r) => ({
+        terms: split(r.aliases).map((text) => ({
+          text,
+          kind: r.kindTouched ? r.kind : (r.originalKinds.get(text) ?? r.kind),
+        })),
+      }))
       .filter((g) => g.terms.length > 0);
     const body: WatchBody = {
       client: Number(client),
@@ -69,7 +81,7 @@
         <input class="mt-1 field" bind:value={row.aliases} />
       </label>
       <label class="block text-sm">Match kind for group {i + 1}
-        <select class="mt-1 field" bind:value={row.kind}>
+        <select class="mt-1 field" bind:value={row.kind} onchange={() => { row.kindTouched = true; }}>
           <option value="entity">name (exact)</option>
           <option value="concept">word (stemmed)</option>
         </select>
