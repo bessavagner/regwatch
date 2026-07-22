@@ -59,8 +59,11 @@ def _watch_q(watch: Watch) -> Q | None:
 
 
 def _rank_query(watch: Watch) -> SearchQuery:
-    # Advisory only. Ranking cannot span a mix of ILIKE and full-text predicates,
-    # so this ORs every term as a full-text query purely to order results.
+    # Advisory only. It ORs every term across all groups as a full-text query
+    # purely to order results, so it no longer reflects the AND/OR group
+    # structure used to decide whether a watch matches. It will also need to
+    # change once entity terms gain trigram/ILIKE substring matching, since
+    # ranking cannot span a mix of ILIKE and full-text predicates.
     return reduce(or_, (_fts(t) for t in term_texts(watch.groups)))
 
 

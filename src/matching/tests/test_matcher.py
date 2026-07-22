@@ -74,9 +74,10 @@ def test_group_with_no_terms_matches_nothing():
 
 @pytest.mark.django_db
 def test_exclude_term_suppresses_match():
-    _watch(_group("beta corp"), name="Ex")
-    Watch.objects.update(exclude=["revogado"])
-    assert match_edition(_edition_with("BETA CORP revogado nesta data.")) == []
+    watch = _watch(_group("beta corp"), name="Ex")
+    watch.exclude = ["revogado"]
+    watch.save()
+    assert match_edition(_edition_with("BETA CORP REVOGADO nesta data.")) == []
 
 
 @pytest.mark.django_db
@@ -105,10 +106,26 @@ def test_section_filter():
 @pytest.mark.django_db
 def test_regression_2026_07_21_seven_term_watch():
     # The real production watch ANDed seven terms, so its intersection was empty
-    # every day. Regrouped as aliases of one concept, it matches.
+    # every day. Regrouped as aliases of one concept, it matches: only the terms
+    # actually present in the body are needed, not all seven.
     body = (
         "Convenio com o SEBRAE para o polo de inovacao, com recursos "
         "EMBRAPII/SEBRAE aprovados nesta data."
     )
-    _watch(_group("sebrae", "embrapii", "pólo de inovação", "JUBILATO SOLUÇÕES"))
+    _watch(_group(
+        "sebrae", "embrapii", "pólo de inovação", "JUBILATO SOLUÇÕES",
+        "SEBRAE Nacional", "EMBRAPII Unidade", "consórcio JUBILATO",
+    ))
     assert len(match_edition(_edition_with(body))) == 1
+
+
+@pytest.mark.django_db
+def test_one_malformed_group_disables_the_whole_watch():
+    _watch(_group("alfa"), {"terms": []})
+    assert match_edition(_edition_with("alfa presente aqui")) == []
+
+
+@pytest.mark.django_db
+def test_non_dict_group_disables_the_whole_watch():
+    _watch(_group("alfa"), "lixo")
+    assert match_edition(_edition_with("alfa presente aqui")) == []
