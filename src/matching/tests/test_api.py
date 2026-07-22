@@ -25,7 +25,7 @@ def _member(name, email):
 def _match(ws, *, section="1", date, category="", state="new", rank=0.0):
     n = next(_seq)
     client = WatchClient.objects.create(workspace=ws, name="C")
-    watch = Watch.objects.create(client=client, terms=["x"])
+    watch = Watch.objects.create(client=client, groups=[{"terms": [{"text": "x", "kind": "entity"}]}])
     edition, _ = Edition.objects.get_or_create(
         date=date, section=section, defaults={"source_url": "https://e.test"}
     )

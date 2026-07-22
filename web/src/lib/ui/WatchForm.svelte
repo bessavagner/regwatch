@@ -1,6 +1,6 @@
 <script lang="ts">
   import { untrack } from 'svelte';
-  import type { Client, Watch } from '../api/types';
+  import type { Client, Watch, WatchGroup, WatchTermKind } from '../api/types';
   import { createWatch, updateWatch, type WatchBody } from '../api/resources';
   import { ApiError } from '../api/client';
   import { SECTIONS } from '../constants';
@@ -8,26 +8,52 @@
 
   let { clients, watch, onsaved }: { clients: Client[]; watch?: Watch; onsaved: (w: Watch) => void } = $props();
 
+  // kindTouched tracks whether the user has changed this row's kind selector;
+  // originalKinds remembers each pre-existing alias's kind so an untouched
+  // selector doesn't silently coerce mixed-kind groups on save (see toRows/save).
+  type Row = { aliases: string; kind: WatchTermKind; kindTouched: boolean; originalKinds: Map<string, WatchTermKind> };
+
+  const newRow = (): Row => ({ aliases: '', kind: 'entity', kindTouched: false, originalKinds: new Map() });
+
+  const toRows = (groups: WatchGroup[] | undefined): Row[] => {
+    const rows = (groups ?? []).map((g) => ({
+      aliases: g.terms.map((t) => t.text).join(', '),
+      kind: (g.terms[0]?.kind ?? 'entity') as WatchTermKind,
+      kindTouched: false,
+      originalKinds: new Map(g.terms.map((t) => [t.text, t.kind])),
+    }));
+    return rows.length ? rows : [newRow()];
+  };
+
   // Local editable copy seeded once from props; intentionally not kept in sync
   // with prop changes (this is a one-shot form default, not a live mirror).
   let client = $state(untrack(() => watch?.client ?? clients[0]?.id ?? 0));
-  let termsText = $state(untrack(() => (watch?.terms ?? []).join(', ')));
+  let rows = $state<Row[]>(untrack(() => toRows(watch?.groups)));
   let excludeText = $state(untrack(() => (watch?.exclude ?? []).join(', ')));
-  let matchMode = $state<'all' | 'any'>(untrack(() => watch?.match_mode ?? 'all'));
   let section = $state(untrack(() => watch?.section ?? ''));
   let active = $state(untrack(() => watch?.active ?? true));
   let fieldErrors = $state<Record<string, string[]>>({});
 
   const split = (s: string) => s.split(',').map((t) => t.trim()).filter(Boolean);
 
+  const addGroup = () => { rows = [...rows, newRow()]; };
+  const removeGroup = (i: number) => { rows = rows.filter((_, n) => n !== i); };
+
   async function save(e: SubmitEvent) {
     e.preventDefault();
     fieldErrors = {};
+    const groups: WatchGroup[] = rows
+      .map((r) => ({
+        terms: split(r.aliases).map((text) => ({
+          text,
+          kind: r.kindTouched ? r.kind : (r.originalKinds.get(text) ?? r.kind),
+        })),
+      }))
+      .filter((g) => g.terms.length > 0);
     const body: WatchBody = {
       client: Number(client),
-      terms: split(termsText),
+      groups,
       exclude: split(excludeText),
-      match_mode: matchMode,
       section,
       active,
     };
@@ -47,17 +73,27 @@
       {#each clients as c}<option value={c.id}>{c.name}</option>{/each}
     </select>
   </label>
-  <label class="block text-sm">Terms (comma-separated)
-    <input class="mt-1 field" bind:value={termsText} />
-  </label>
-  {#if fieldErrors.terms}<p role="alert" class="text-sm text-danger">{fieldErrors.terms.join(' ')}</p>{/if}
-  <label class="block text-sm">Match
-    <select class="mt-1 field" bind:value={matchMode}>
-      <option value="all">all terms must appear</option>
-      <option value="any">any term may appear</option>
-    </select>
-  </label>
-  {#if fieldErrors.match_mode}<p role="alert" class="text-sm text-danger">{fieldErrors.match_mode.join(' ')}</p>{/if}
+
+  <p class="text-sm">All groups must match. Aliases inside a group are alternatives.</p>
+  {#each rows as row, i}
+    <div class="flex items-end gap-2">
+      <label class="block flex-1 text-sm">Aliases for group {i + 1} (comma-separated)
+        <input class="mt-1 field" bind:value={row.aliases} />
+      </label>
+      <label class="block text-sm">Match kind for group {i + 1}
+        <select class="mt-1 field" bind:value={row.kind} onchange={() => { row.kindTouched = true; }}>
+          <option value="entity">name (exact)</option>
+          <option value="concept">word (stemmed)</option>
+        </select>
+      </label>
+      {#if rows.length > 1}
+        <Button type="button" onclick={() => removeGroup(i)}>Remove group {i + 1}</Button>
+      {/if}
+    </div>
+  {/each}
+  <Button type="button" onclick={addGroup}>Add group</Button>
+  {#if fieldErrors.groups}<p role="alert" class="text-sm text-danger">{fieldErrors.groups.join(' ')}</p>{/if}
+
   <label class="block text-sm">Exclude (comma-separated)
     <input class="mt-1 field" bind:value={excludeText} />
   </label>

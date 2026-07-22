@@ -1,5 +1,5 @@
 import { api } from './client';
-import type { Client, Digest, Match, Page, Watch } from './types';
+import type { Client, Digest, Match, Page, Watch, WatchGroup } from './types';
 
 export interface MatchParams {
   client?: string;
@@ -33,9 +33,8 @@ export const dismissMatch = (id: number) => api.post<Match>(`/api/matches/${id}/
 
 export interface WatchBody {
   client: number;
-  terms: string[];
+  groups: WatchGroup[];
   exclude: string[];
-  match_mode: 'all' | 'any';
   section: string;
   active: boolean;
 }

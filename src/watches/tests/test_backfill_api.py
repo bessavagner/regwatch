@@ -44,7 +44,9 @@ def test_backfill_404s_for_a_watch_outside_the_callers_workspace(firm_a, firm_b)
     ws_a, user_a = firm_a
     ws_b, _ = firm_b
     b_client = WatchClient.objects.create(workspace=ws_b, name="B-client")
-    b_watch = Watch.objects.create(client=b_client, terms=["x"])
+    b_watch = Watch.objects.create(
+        client=b_client, groups=[{"terms": [{"text": "x", "kind": "entity"}]}]
+    )
     api = APIClient()
     api.force_authenticate(user=user_a)
     resp = api.post(
@@ -59,7 +61,9 @@ def test_backfill_404s_for_a_watch_outside_the_callers_workspace(firm_a, firm_b)
 def test_backfill_rejects_date_from_after_date_to(firm_a):
     ws, user = firm_a
     client = WatchClient.objects.create(workspace=ws, name="Beta")
-    watch = Watch.objects.create(client=client, terms=["beta corp"])
+    watch = Watch.objects.create(
+        client=client, groups=[{"terms": [{"text": "beta corp", "kind": "entity"}]}]
+    )
     api = APIClient()
     api.force_authenticate(user=user)
     resp = api.post(
@@ -74,7 +78,9 @@ def test_backfill_rejects_date_from_after_date_to(firm_a):
 def test_backfill_rejects_a_span_over_seven_days(firm_a):
     ws, user = firm_a
     client = WatchClient.objects.create(workspace=ws, name="Beta")
-    watch = Watch.objects.create(client=client, terms=["beta corp"])
+    watch = Watch.objects.create(
+        client=client, groups=[{"terms": [{"text": "beta corp", "kind": "entity"}]}]
+    )
     api = APIClient()
     api.force_authenticate(user=user)
     resp = api.post(
@@ -89,7 +95,9 @@ def test_backfill_rejects_a_span_over_seven_days(firm_a):
 def test_backfill_rejects_a_future_date_to(firm_a):
     ws, user = firm_a
     client = WatchClient.objects.create(workspace=ws, name="Beta")
-    watch = Watch.objects.create(client=client, terms=["beta corp"])
+    watch = Watch.objects.create(
+        client=client, groups=[{"terms": [{"text": "beta corp", "kind": "entity"}]}]
+    )
     api = APIClient()
     api.force_authenticate(user=user)
     resp = api.post(
@@ -104,7 +112,9 @@ def test_backfill_rejects_a_future_date_to(firm_a):
 def test_backfill_runs_and_writes_a_backfill_runlog(firm_a, monkeypatch):
     ws, user = firm_a
     client = WatchClient.objects.create(workspace=ws, name="Beta", email="beta@example.test")
-    watch = Watch.objects.create(client=client, terms=["beta corp"])
+    watch = Watch.objects.create(
+        client=client, groups=[{"terms": [{"text": "beta corp", "kind": "entity"}]}]
+    )
     monkeypatch.setattr("pipeline.backfill.fetch_editions", lambda date: [_raw_edition(date)])
     monkeypatch.setattr("watches.api.get_llm_client", lambda: FakeLLMClient(Summary("ok", "grant", 0.9)))
 
@@ -128,7 +138,9 @@ def test_backfill_runs_and_writes_a_backfill_runlog(firm_a, monkeypatch):
 def test_backfill_reports_skipped_dates_on_partial_failure(firm_a, monkeypatch):
     ws, user = firm_a
     client = WatchClient.objects.create(workspace=ws, name="Beta")
-    watch = Watch.objects.create(client=client, terms=["beta corp"])
+    watch = Watch.objects.create(
+        client=client, groups=[{"terms": [{"text": "beta corp", "kind": "entity"}]}]
+    )
 
     def fake_fetch(date):
         if date == datetime.date(2026, 6, 26):
@@ -154,7 +166,9 @@ def test_backfill_reports_skipped_dates_on_partial_failure(firm_a, monkeypatch):
 def test_backfill_respects_the_enrich_cap(firm_a, monkeypatch, settings):
     ws, user = firm_a
     client = WatchClient.objects.create(workspace=ws, name="Beta")
-    watch = Watch.objects.create(client=client, terms=["beta corp"])
+    watch = Watch.objects.create(
+        client=client, groups=[{"terms": [{"text": "beta corp", "kind": "entity"}]}]
+    )
     settings.REGWATCH_MAX_ENRICH_PER_BACKFILL = 0
     monkeypatch.setattr("pipeline.backfill.fetch_editions", lambda date: [_raw_edition(date)])
     monkeypatch.setattr("watches.api.get_llm_client", lambda: FakeLLMClient(Summary("ok", "grant", 0.9)))
@@ -175,7 +189,9 @@ def test_backfill_respects_the_enrich_cap(firm_a, monkeypatch, settings):
 def test_backfill_uses_the_backfill_specific_enrich_cap_not_the_run_daily_one(firm_a, monkeypatch, settings):
     ws, user = firm_a
     client = WatchClient.objects.create(workspace=ws, name="Beta")
-    watch = Watch.objects.create(client=client, terms=["beta corp"])
+    watch = Watch.objects.create(
+        client=client, groups=[{"terms": [{"text": "beta corp", "kind": "entity"}]}]
+    )
     # run_daily's budget stays generous (no HTTP timeout pressure); the interactive
     # backfill endpoint must use its own, much smaller budget so a real request
     # can't run long enough to hit gunicorn's worker timeout.
@@ -200,7 +216,9 @@ def test_backfill_uses_the_backfill_specific_enrich_cap_not_the_run_daily_one(fi
 def test_backfill_is_idempotent_across_requests(firm_a, monkeypatch):
     ws, user = firm_a
     client = WatchClient.objects.create(workspace=ws, name="Beta")
-    watch = Watch.objects.create(client=client, terms=["beta corp"])
+    watch = Watch.objects.create(
+        client=client, groups=[{"terms": [{"text": "beta corp", "kind": "entity"}]}]
+    )
     monkeypatch.setattr("pipeline.backfill.fetch_editions", lambda date: [_raw_edition(date)])
     monkeypatch.setattr("watches.api.get_llm_client", lambda: FakeLLMClient(Summary("ok", "grant", 0.9)))
 
@@ -220,12 +238,16 @@ def test_backfill_response_does_not_reveal_other_workspaces_match_counts(firm_a,
     ws_a, user_a = firm_a
     ws_b, _ = firm_b
     client_a = WatchClient.objects.create(workspace=ws_a, name="Beta")
-    watch_a = Watch.objects.create(client=client_a, terms=["beta corp"])
+    watch_a = Watch.objects.create(
+        client=client_a, groups=[{"terms": [{"text": "beta corp", "kind": "entity"}]}]
+    )
     # A watch in a DIFFERENT workspace that also matches — match_edition() matches
     # every active watch system-wide, so this incidentally matches too. The response
     # must not reveal that to the calling user.
     client_b = WatchClient.objects.create(workspace=ws_b, name="Gamma")
-    Watch.objects.create(client=client_b, terms=["beta corp"])
+    Watch.objects.create(
+        client=client_b, groups=[{"terms": [{"text": "beta corp", "kind": "entity"}]}]
+    )
     monkeypatch.setattr("pipeline.backfill.fetch_editions", lambda date: [_raw_edition(date)])
     monkeypatch.setattr("watches.api.get_llm_client", lambda: FakeLLMClient(Summary("ok", "grant", 0.9)))
 
