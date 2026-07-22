@@ -22,7 +22,6 @@ class Act(models.Model):
     raw_text = models.TextField()
     search_text = models.TextField()
     source_anchor = models.TextField(blank=True, default="")
-    search_vector = SearchVectorField(null=True)      # config=simple; dropped in phase 3
     search_vector_pt = SearchVectorField(null=True)   # config=portuguese
 
     class Meta:
@@ -30,7 +29,6 @@ class Act(models.Model):
             models.UniqueConstraint(fields=["edition", "identifier"], name="uq_act_edition_identifier"),
         ]
         indexes = [
-            GinIndex(fields=["search_vector"]),
             GinIndex(fields=["search_vector_pt"], name="gazette_act_search_pt_gin"),
             GinIndex(
                 name="gazette_act_search_text_trgm",

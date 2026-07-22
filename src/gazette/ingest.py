@@ -22,7 +22,6 @@ def ingest_edition(raw: RawEdition) -> Edition:
             },
         )
     Act.objects.filter(edition=edition).update(
-        search_vector=SearchVector("search_text", config="simple"),
         # Built from the raw fields, not from search_text: to_tsvector case-folds
         # on its own, and search_text has already had its accents stripped, which
         # would defeat the stemmer. NFC-normalised so it agrees with the

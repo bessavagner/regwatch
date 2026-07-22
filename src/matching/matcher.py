@@ -14,18 +14,17 @@ from matching.models import Match
 logger = logging.getLogger(__name__)
 
 
-def _fts(text: str) -> SearchQuery:
-    return SearchQuery(normalize_text(text), config="simple", search_type="phrase")
+def _pt(text: str) -> SearchQuery:
+    return SearchQuery(normalize_pt(text), config="portuguese", search_type="phrase")
 
 
 def _term_q(text: str, kind: str) -> Q:
     if kind == KIND_CONCEPT:
-        return Q(search_vector_pt=SearchQuery(
-            normalize_pt(text), config="portuguese", search_type="phrase"))
+        return Q(search_vector_pt=_pt(text))
     folded = normalize_text(text)
     if len(folded) < MIN_SUBSTRING_LEN:
         # Too short to substring safely: 'ifc' would match inside 'ifce'.
-        return Q(search_vector=_fts(text))
+        return Q(search_vector_pt=_pt(text))
     # __contains, not __icontains: Django compiles __icontains to
     # UPPER(search_text) LIKE UPPER(%pattern%), and that UPPER() wrapper makes
     # the predicate non-sargable against the gin_trgm_ops index on the bare
@@ -84,7 +83,7 @@ def _rank_query(watch: Watch) -> SearchQuery:
     # structure used to decide whether a watch matches. It will also need to
     # change once entity terms gain trigram/ILIKE substring matching, since
     # ranking cannot span a mix of ILIKE and full-text predicates.
-    return reduce(or_, (_fts(t) for t in term_texts(watch.groups)))
+    return reduce(or_, (_pt(t) for t in term_texts(watch.groups)))
 
 
 def match_edition(edition: Edition) -> list[Match]:
@@ -101,7 +100,7 @@ def match_edition(edition: Edition) -> list[Match]:
             )
             continue
         hits = acts.annotate(
-            rank=SearchRank(SearchVector("search_text", config="simple"), _rank_query(watch))
+            rank=SearchRank(SearchVector("title", "raw_text", config="portuguese"), _rank_query(watch))
         ).filter(query)
         for act in hits:
             match, was_created = Match.objects.get_or_create(

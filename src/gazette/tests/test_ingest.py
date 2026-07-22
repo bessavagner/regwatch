@@ -70,3 +70,8 @@ def test_ingest_matches_nfd_decomposed_raw_text_against_an_nfc_query():
     # The matcher builds its query the same way for a concept term.
     query = SearchQuery(normalize_pt("licitação"), config="portuguese", search_type="phrase")
     assert Act.objects.filter(pk=act.pk, search_vector_pt=query).exists()
+
+
+@pytest.mark.django_db
+def test_act_no_longer_has_the_simple_vector():
+    assert not hasattr(Act(), "search_vector")
