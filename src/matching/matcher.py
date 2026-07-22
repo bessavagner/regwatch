@@ -26,7 +26,13 @@ def _term_q(text: str, kind: str) -> Q:
     if len(folded) < MIN_SUBSTRING_LEN:
         # Too short to substring safely: 'ifc' would match inside 'ifce'.
         return Q(search_vector=_fts(text))
-    return Q(search_text__icontains=folded)
+    # __contains, not __icontains: Django compiles __icontains to
+    # UPPER(search_text) LIKE UPPER(%pattern%), and that UPPER() wrapper makes
+    # the predicate non-sargable against the gin_trgm_ops index on the bare
+    # column, forcing a sequential scan over every act. Case-insensitivity is
+    # already guaranteed on both sides by normalize_text, which lowercases
+    # both search_text and folded, so __icontains would buy nothing anyway.
+    return Q(search_text__contains=folded)
 
 
 def _group_q(group) -> Q | None:
@@ -61,6 +67,13 @@ def _watch_q(watch: Watch) -> Q | None:
             continue
         ex = ex.strip()
         if ex:
+            # Excludes are always evaluated with entity (substring) semantics,
+            # which is at least as broad as the entity inclusion it suppresses.
+            # It is NOT guaranteed to be as broad as a stemmed concept
+            # inclusion: 'licitação' (concept) matches 'licitações' via
+            # stemming, but the folded exclude 'licitacao' is not a substring
+            # of 'licitacoes', so a concept inclusion can out-reach its
+            # exclusion.
             query &= ~_term_q(ex, KIND_ENTITY)
     return query
 

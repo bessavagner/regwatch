@@ -4,8 +4,10 @@ from accounts.models import Workspace
 from watches.models import Client, Watch
 from gazette.contracts import RawEdition, RawItem
 from gazette.ingest import ingest_edition
-from matching.matcher import match_edition
+from gazette.models import Act
+from matching.matcher import _term_q, match_edition
 from matching.models import Match
+from watches.grouping import KIND_ENTITY
 
 
 def _edition_with(text, section="1"):
@@ -189,3 +191,19 @@ def test_short_entity_term_does_not_match_inside_a_longer_word():
 def test_short_entity_term_still_matches_as_a_whole_word():
     _watch(_group("ifc"))
     assert len(match_edition(_edition_with("convenio com o ifc nesta data"))) == 1
+
+
+@pytest.mark.django_db
+def test_entity_substring_lookup_stays_sargable_against_the_trigram_index():
+    # Regression guard for ebc84d5 + this fix: __icontains compiles to
+    # UPPER(search_text) LIKE UPPER(%pattern%) on Postgres, and that UPPER()
+    # wrapper makes the predicate non-sargable against the gin_trgm_ops index
+    # on the bare column, so it falls back to a sequential scan. __contains
+    # compiles to a bare LIKE and stays index-eligible. Both lookups return
+    # identical rows here (search_text and folded are already lowercased by
+    # normalize_text), so only the generated SQL distinguishes them - assert
+    # on that, not on query results.
+    qs = Act.objects.filter(_term_q("sebrae", KIND_ENTITY))
+    sql = str(qs.query)
+    assert "UPPER(" not in sql
+    assert "LIKE" in sql
