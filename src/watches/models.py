@@ -18,7 +18,8 @@ class Watch(models.Model):
     ]
 
     client = models.ForeignKey(Client, related_name="watches", on_delete=models.CASCADE)
-    terms = models.JSONField(default=list)       # required terms, combined per match_mode
+    terms = models.JSONField(default=list)       # legacy; removed in 0006
+    groups = models.JSONField(default=list)      # [{"terms": [{"text", "kind"}]}]; ANDed
     exclude = models.JSONField(default=list)      # excluded terms
     match_mode = models.CharField(max_length=3, choices=MATCH_MODE_CHOICES, default=MATCH_MODE_ALL)
     section = models.CharField(max_length=20, blank=True, default="")  # "" = all
