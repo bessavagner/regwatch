@@ -92,6 +92,12 @@ def parse_section_zip(zip_bytes: bytes, *, source_url: str) -> RawEdition:
             items.append(parsed.item)
             date = parsed.date
             section = parsed.section
+    if not items:
+        # date/section are only known from the articles themselves, so a zip that
+        # yields none would build a RawEdition with both null and blow up on the
+        # NOT NULL columns in gazette_edition. INlabs serves such a zip on 200 OK
+        # occasionally (seen 2026-07-31); fetch_editions skips the section instead.
+        raise ValueError(f"no parseable articles in section zip {source_url}")
     return RawEdition(
         date=date, section=section, source_url=source_url, items=tuple(items)
     )

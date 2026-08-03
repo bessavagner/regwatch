@@ -115,3 +115,21 @@ def test_parse_section_zip_skips_unparseable_members():
         zf.writestr("bad.xml", b"<xml><article></article></xml>")  # missing required attrs -> raises
     edition = parse_section_zip(buf.getvalue(), source_url="https://x/DO1.zip")
     assert {i.identifier for i in edition.items} == {"50000041"}   # good item survives, bad skipped
+
+
+def test_parse_section_zip_rejects_a_zip_with_no_xml_members():
+    # INlabs served a 200 OK zip with no XML entries on 2026-07-31; building a
+    # dateless RawEdition from it drove a NOT NULL violation in gazette_edition.
+    zip_bytes = _zip_of(extra={"readme.txt": b"no articles here"})
+
+    with pytest.raises(ValueError, match="no parseable articles"):
+        parse_section_zip(zip_bytes, source_url="https://x/2026-07-31-DO1.zip")
+
+
+def test_parse_section_zip_rejects_a_zip_whose_members_all_fail_to_parse():
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w") as zf:
+        zf.writestr("bad.xml", b"<xml><article></article></xml>")  # missing required attrs
+
+    with pytest.raises(ValueError, match="no parseable articles"):
+        parse_section_zip(buf.getvalue(), source_url="https://x/2026-07-31-DO1.zip")
