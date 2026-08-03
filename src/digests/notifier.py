@@ -1,9 +1,13 @@
 import datetime
+import logging
+
 from django.template.loader import render_to_string
 from watches.models import Client
 from matching.models import Match
 from digests.email import EmailSender
 from digests.models import Digest
+
+logger = logging.getLogger(__name__)
 
 
 def build_and_send_digests(
@@ -33,8 +37,18 @@ def build_and_send_digests(
             client=c, date=date, defaults={"body": body},
         )
         if not digest.sent and c.email:
-            sender.send(to=c.email, subject=f"RegWatch — {date}", body=body)
-            digest.sent = True
-            digest.save(update_fields=["sent"])
+            try:
+                sender.send(to=c.email, subject=f"RegWatch — {date}", body=body)
+            except Exception:
+                # One rejected recipient must not cost every other client their
+                # digest, nor discard a run whose scrape and matching succeeded.
+                # The digest stays unsent, so the next run retries it.
+                logger.exception(
+                    "digest send failed for client %s on %s — leaving it unsent",
+                    c.pk, date,
+                )
+            else:
+                digest.sent = True
+                digest.save(update_fields=["sent"])
         out.append(digest)
     return out

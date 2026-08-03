@@ -1,4 +1,6 @@
 import datetime
+from dataclasses import dataclass, field
+
 import pytest
 from accounts.models import Workspace
 from watches.models import Client, Watch
@@ -130,3 +132,66 @@ def test_client_filter_resend_is_idempotent(matched):
     build_and_send_digests(DATE, sender, client=matched)
     assert Digest.objects.filter(client=matched).count() == 1
     assert len(sender.sent) == 1
+
+
+@dataclass
+class _PartlyFailingSender:
+    """Rejects one recipient the way Resend rejects an unverified sender."""
+
+    failing: str
+    sent: list[tuple[str, str, str]] = field(default_factory=list)
+
+    def send(self, to: str, subject: str, body: str) -> None:
+        if to == self.failing:
+            raise RuntimeError(f"403 Forbidden for {to}")
+        self.sent.append((to, subject, body))
+
+
+@pytest.mark.django_db
+def test_a_failing_send_does_not_block_the_other_clients(db):
+    """One rejected recipient used to abort the whole pipeline run after the
+    scrape and matching had already succeeded."""
+    ws = Workspace.objects.create(name="PartialWS")
+    client_a = Client.objects.create(workspace=ws, name="AlphaClient", email="alpha@example.test")
+    client_b = Client.objects.create(workspace=ws, name="GammaClient", email="gamma@example.test")
+    Watch.objects.create(client=client_a, groups=[{"terms": [{"text": "alpha ltd", "kind": "entity"}]}])
+    Watch.objects.create(client=client_b, groups=[{"terms": [{"text": "gamma corp", "kind": "entity"}]}])
+    edition = ingest_edition(RawEdition(
+        date=DATE, section="1", source_url="https://x.test/partial",
+        items=(
+            RawItem("p1", "Portaria 1", "Org", "Licença à ALPHA LTD.", "#p1"),
+            RawItem("p2", "Portaria 2", "Org", "Licença à GAMMA CORP.", "#p2"),
+        ),
+    ))
+    match_edition(edition)
+
+    sender = _PartlyFailingSender(failing="alpha@example.test")
+    digests = build_and_send_digests(DATE, sender)
+
+    # Both digests are still built and returned; the healthy one is delivered.
+    assert len(digests) == 2
+    assert [s[0] for s in sender.sent] == ["gamma@example.test"]
+
+    by_client = {d.client_id: d for d in digests}
+    assert by_client[client_b.pk].sent is True
+    assert by_client[client_a.pk].sent is False  # stays unsent, so a retry can pick it up
+
+
+@pytest.mark.django_db
+def test_a_failed_send_is_retried_on_the_next_run(db):
+    ws = Workspace.objects.create(name="RetryWS")
+    client_a = Client.objects.create(workspace=ws, name="AlphaClient", email="alpha@example.test")
+    Watch.objects.create(client=client_a, groups=[{"terms": [{"text": "alpha ltd", "kind": "entity"}]}])
+    edition = ingest_edition(RawEdition(
+        date=DATE, section="1", source_url="https://x.test/retry",
+        items=(RawItem("r1", "Portaria 1", "Org", "Licença à ALPHA LTD.", "#r1"),),
+    ))
+    match_edition(edition)
+
+    build_and_send_digests(DATE, _PartlyFailingSender(failing="alpha@example.test"))
+
+    recovered = FakeEmailSender()
+    digests = build_and_send_digests(DATE, recovered)
+
+    assert len(recovered.sent) == 1
+    assert digests[0].sent is True
