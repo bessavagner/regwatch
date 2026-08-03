@@ -1,2 +1,15 @@
 allowBuilds:
   esbuild: true
+
+# brace-expansion expands unboundedly and can OOM the process. It reaches us only
+# through eslint/typescript-eslint, so it is lint-time only and never enters the
+# browser bundle — but `pnpm audit` gates the deploy, and silencing the gate would
+# hide the next advisory too, so we patch rather than suppress.
+#
+# TWO advisories, two disjoint ranges, and the tree resolves a version in each —
+# so both entries are load-bearing. Overriding only the 5.x line leaves 1.1.16
+# behind and audit still fails. Each selector is kept narrow so neither line is
+# dragged across a major.
+overrides:
+  brace-expansion@>=4.0.0 <5.0.8: ^5.0.8   # GHSA-mh99-v99m-4gvg
+  brace-expansion@<1.1.17: ^1.1.17         # advisory 1130588, the 1.x line
