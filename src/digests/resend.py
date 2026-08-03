@@ -32,4 +32,14 @@ class ResendEmailSender:
             headers={"Authorization": f"Bearer {self._api_key}"},
             json={"from": self._from, "to": to, "subject": subject, "text": body},
         )
-        resp.raise_for_status()
+        if resp.is_error:
+            # Resend explains the refusal in the body ("domain not verified",
+            # "you can only send testing emails to your own address");
+            # raise_for_status alone reports just the status and hides it.
+            # The body echoes no credentials, only the request's own fields.
+            raise httpx.HTTPStatusError(
+                f"Resend refused the send: {resp.status_code} "
+                f"{resp.text[:300]} (from={self._from})",
+                request=resp.request,
+                response=resp,
+            )
