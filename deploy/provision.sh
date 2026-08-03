@@ -34,7 +34,8 @@ gcloud artifacts repositories create "${AR_REPO}" --repository-format=docker \
   --location="${REGION}" --description="RegWatch images" || true
 
 echo "== Secrets (create empty; add versions below) =="
-for s in DATABASE_URL SECRET_KEY ANTHROPIC_API_KEY RESEND_API_KEY RESEND_FROM INLABS_USERNAME INLABS_PASSWORD; do
+for s in DATABASE_URL SECRET_KEY ANTHROPIC_API_KEY RESEND_API_KEY RESEND_FROM \
+         SMTP_HOST SMTP_USER SMTP_PASSWORD SMTP_FROM INLABS_USERNAME INLABS_PASSWORD; do
   gcloud secrets create "$s" --replication-policy=automatic || true
 done
 cat <<'EOF'
@@ -45,19 +46,29 @@ cat <<'EOF'
       | gcloud secrets versions add SECRET_KEY --data-file=-
     # ...and ANTHROPIC_API_KEY, RESEND_API_KEY, RESEND_FROM,
     # INLABS_USERNAME, INLABS_PASSWORD likewise (the ingestor logs into INlabs).
+    # Digests go out over SMTP, so SMTP_HOST/_USER/_PASSWORD/_FROM must be set too;
+    # SMTP_PASSWORD is a Gmail *app password*, never the account password.
+    # See docs/runbook.md "Send digests through Gmail SMTP" for how to mint one.
     Use the Supabase *session pooler* URI (IPv4, port 5432) — NOT db.<ref>.supabase.co (IPv6-only).
 EOF
 read -r -p "Press Enter once all secret versions are added... " _
 
 echo "== IAM: runtime SA may read secrets + write logs =="
-for s in DATABASE_URL SECRET_KEY ANTHROPIC_API_KEY RESEND_API_KEY RESEND_FROM INLABS_USERNAME INLABS_PASSWORD; do
+for s in DATABASE_URL SECRET_KEY ANTHROPIC_API_KEY RESEND_API_KEY RESEND_FROM \
+         SMTP_HOST SMTP_USER SMTP_PASSWORD SMTP_FROM INLABS_USERNAME INLABS_PASSWORD; do
   gcloud secrets add-iam-policy-binding "$s" \
     --member="serviceAccount:${RUNTIME_SA}" --role="roles/secretmanager.secretAccessor"
 done
 gcloud projects add-iam-policy-binding "${PROJECT_ID}" \
   --member="serviceAccount:${RUNTIME_SA}" --role="roles/logging.logWriter"
 
-SECRET_FLAGS="--set-secrets=DATABASE_URL=DATABASE_URL:latest,SECRET_KEY=SECRET_KEY:latest,ANTHROPIC_API_KEY=ANTHROPIC_API_KEY:latest,RESEND_API_KEY=RESEND_API_KEY:latest,RESEND_FROM=RESEND_FROM:latest,INLABS_USERNAME=INLABS_USERNAME:latest,INLABS_PASSWORD=INLABS_PASSWORD:latest"
+SECRET_FLAGS="--set-secrets=DATABASE_URL=DATABASE_URL:latest,SECRET_KEY=SECRET_KEY:latest,ANTHROPIC_API_KEY=ANTHROPIC_API_KEY:latest,RESEND_API_KEY=RESEND_API_KEY:latest,RESEND_FROM=RESEND_FROM:latest,SMTP_HOST=SMTP_HOST:latest,SMTP_USER=SMTP_USER:latest,SMTP_PASSWORD=SMTP_PASSWORD:latest,SMTP_FROM=SMTP_FROM:latest,INLABS_USERNAME=INLABS_USERNAME:latest,INLABS_PASSWORD=INLABS_PASSWORD:latest"
+
+# Which EmailSender the pipeline resolves. Digests go out over SMTP because the
+# project has no verified sending domain — a transactional API refuses to send
+# without one. Flip back to digests.resend.ResendEmailSender once a domain is
+# verified (docs/runbook.md).
+ENV_FLAGS="--set-env-vars=REGWATCH_EMAIL_SENDER=digests.smtp.SmtpEmailSender"
 
 echo "== Cloud Run Jobs (bootstrap image; CI redeploys real images) =="
 for job in "regwatch-migrate:migrate" "regwatch-run-daily:run_daily" "regwatch-heartbeat:check_heartbeat"; do
@@ -70,9 +81,9 @@ for job in "regwatch-migrate:migrate" "regwatch-run-daily:run_daily" "regwatch-h
     *)                  RES="--task-timeout=1800" ;;
   esac
   gcloud run jobs create "${name}" --image="${IMAGE}" --region="${REGION}" \
-    --service-account="${RUNTIME_SA}" --args="${cmd}" ${SECRET_FLAGS} --max-retries=1 ${RES} || \
+    --service-account="${RUNTIME_SA}" --args="${cmd}" ${SECRET_FLAGS} ${ENV_FLAGS} --max-retries=1 ${RES} || \
   gcloud run jobs update "${name}" --image="${IMAGE}" --region="${REGION}" \
-    --service-account="${RUNTIME_SA}" --args="${cmd}" ${SECRET_FLAGS} --max-retries=1 ${RES}
+    --service-account="${RUNTIME_SA}" --args="${cmd}" ${SECRET_FLAGS} ${ENV_FLAGS} --max-retries=1 ${RES}
 done
 
 echo "== Scheduler may invoke the scheduled jobs (least-privilege, per-job) =="
