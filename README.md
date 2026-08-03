@@ -8,7 +8,8 @@ digests.
 Early stage. Start with the design spec:
 [`docs/superpowers/specs/2026-06-26-regwatch-design.md`](docs/superpowers/specs/2026-06-26-regwatch-design.md).
 
-Operator procedures (reindex, backfills): see [docs/runbook.md](docs/runbook.md).
+Operator procedures (reindex, backfills, digest email setup): see
+[docs/runbook.md](docs/runbook.md).
 
 Built clean-room (TDD in every layer).
 
