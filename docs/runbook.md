@@ -155,6 +155,78 @@ folder first — a `@gmail.com` sender mailing a corporate domain about regulato
 acts is exactly the shape a filter distrusts. This is the deliverability tax of
 having no domain, and it is the reason to finish the section below.
 
+## Rotate the Gmail app password
+
+Do this when `SMTPAuthenticationError: (535, '5.7.8 Username and Password not
+accepted')` appears in the `run_daily` logs, or after any change to the Google
+account password — **Google silently revokes every app password when the account
+password changes**, and the only symptom is a 535 on the next scheduled run.
+Between 2026-08-05 and 2026-08-11 that revocation went unnoticed and cost six
+digests.
+
+**1. Mint a replacement.** At <https://myaccount.google.com/apppasswords>, revoke
+the old `regwatch` entry and create a new one. Put the 16-character value into
+`.env` as `SMTP_PASSWORD` (Gmail accepts it with or without the display spaces).
+`.env` is gitignored and stays that way — never paste the value into a tracked
+file, a commit message, or a log line.
+
+**2. Push new secret versions from `.env`.** Run this under **bash**, not zsh:
+`${!name}` is bash indirect expansion, and zsh spells it `${(P)name}`.
+
+```bash
+bash -c '
+set -a; . ./.env; set +a
+for s in SMTP_HOST SMTP_PORT SMTP_USER SMTP_PASSWORD SMTP_STARTTLS SMTP_FROM OPENAI_API_KEY; do
+  printf "%s" "${!s}" | gcloud secrets versions add "$s" --data-file=- 2>/dev/null \
+    || printf "%s" "${!s}" | gcloud secrets create "$s" --replication-policy=automatic --data-file=-
+done
+'
+```
+
+`printf "%s"` rather than `echo` is deliberate: a trailing newline inside
+`SMTP_PASSWORD` is itself a cause of 535.
+
+Verify without printing any value:
+
+```bash
+for s in SMTP_PASSWORD OPENAI_API_KEY; do
+  printf '%s: %s bytes\n' "$s" "$(gcloud secrets versions access latest --secret=$s | wc -c)"
+done
+```
+
+Expected: `SMTP_PASSWORD: 16 bytes` (19 if you kept the display spaces, which
+also works) and a non-zero `OPENAI_API_KEY`. A count of 17 means a newline
+slipped in — redo step 2.
+
+**3. Deploy, then confirm the credential.** Push a `vX.Y.Z` tag to trigger the
+pipeline (see "Roll back v0.14.0" above for the tag mechanics), then:
+
+```bash
+gcloud run jobs execute regwatch-run-daily --region=us-east4 --wait
+gcloud logging read \
+  'resource.type="cloud_run_job" AND jsonPayload.logger="digests.notifier"' \
+  --limit 5 --freshness=1h --format='value(timestamp,jsonPayload.message)'
+```
+
+Expected: no `digest send failed` entries. Any that appear now carry the
+provider's own words, and the same text is stored on `Digest.send_error`.
+
+**4. Drain whatever the outage stranded.**
+
+```bash
+gcloud run jobs execute regwatch-run-daily --region=us-east4 --wait \
+  --args=resend_digests,--date-from=2026-08-05,--date-to=2026-08-11
+```
+
+Expected output: `resend_digests 2026-08-05..2026-08-11: resent 6 of 6`. Confirm
+in the dashboard that no digest still reads "not sent", **and confirm the mail
+actually arrived** — SMTP answers `250 OK` and tells you nothing afterwards.
+
+From v0.15.0 on, `run_daily` sweeps the previous `REGWATCH_DIGEST_RETRY_DAYS`
+days (default 7) on every run, so a fixed credential drains its own backlog
+without this command. Reach for `resend_digests` when the outage ran longer than
+the window, or when you want a specific client re-sent (`--client <id>`).
+
 ## Verify a sending domain in Resend
 
 Do this when RegWatch has a domain of its own. It is the exit from the Gmail
