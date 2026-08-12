@@ -2,7 +2,7 @@
   import { listMatches, listClients, listWatches, sendDigest, type MatchParams } from '../lib/api/resources';
   import type { Client, Match } from '../lib/api/types';
   import { ApiError } from '../lib/api/client';
-  import { STATES, SECTIONS, CATEGORY_SEED } from '../lib/constants';
+  import { STATES, SECTIONS, CATEGORIES } from '../lib/constants';
   import AsyncState from '../lib/ui/AsyncState.svelte';
   import MatchCard from '../lib/ui/MatchCard.svelte';
   import Button from '../lib/ui/Button.svelte';
@@ -139,8 +139,10 @@
       </select>
     </label>
     <label class="text-sm text-ink-2">Category
-      <input list="cats" class="mt-1 field" onchange={(e) => setFilter('category', e.currentTarget.value)} />
-      <datalist id="cats">{#each CATEGORY_SEED as c}<option value={c}></option>{/each}</datalist>
+      <select class="mt-1 field" onchange={(e) => setFilter('category', e.currentTarget.value)}>
+        <option value="">all</option>
+        {#each CATEGORIES as c}<option value={c.value}>{c.label}</option>{/each}
+      </select>
     </label>
     <label class="text-sm text-ink-2">From
       <input type="date" class="mt-1 field" onchange={(e) => setFilter('date_from', e.currentTarget.value)} />

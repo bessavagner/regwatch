@@ -233,3 +233,12 @@ def test_deliver_digest_skips_a_client_with_no_email(matched):
     digest.refresh_from_db()
     assert digest.sent is False
     assert "no email address" in digest.send_error
+
+
+@pytest.mark.django_db
+def test_unenriched_match_says_the_summary_is_missing(matched):
+    build_and_send_digests(DATE, FakeEmailSender())
+    body = Digest.objects.get(client=matched, date=DATE).body
+    # The match was never enriched, so category is "" and ai_summary is None.
+    assert "[sem categoria]" not in body
+    assert "[resumo indisponível]" in body
