@@ -11,12 +11,12 @@ const clients = [{ id: 1, name: 'Acme', is_house: false, email: '' }];
 beforeEach(() => vi.restoreAllMocks());
 
 describe('WatchForm groups', () => {
-  it('submits one group per row with comma-separated aliases ORed inside', async () => {
+  it('submits one group per row with newline-separated aliases ORed inside', async () => {
     const createWatch = vi.spyOn(resources, 'createWatch').mockResolvedValue({} as never);
     render(WatchForm, { clients, onsaved: () => {} });
 
     await fireEvent.input(screen.getByLabelText(/aliases for group 1/i),
-      { target: { value: 'sebrae, sebrae/mg' } });
+      { target: { value: 'sebrae\nsebrae/mg' } });
     await fireEvent.click(screen.getByRole('button', { name: /add group/i }));
     await fireEvent.input(screen.getByLabelText(/aliases for group 2/i),
       { target: { value: 'contrato' } });
@@ -78,7 +78,7 @@ describe('WatchForm groups', () => {
     render(WatchForm, { clients, onsaved: () => {}, watch: mixedWatch });
 
     await fireEvent.input(screen.getByLabelText(/aliases for group 1/i),
-      { target: { value: 'sebrae, contrato, sebrae/mg' } });
+      { target: { value: 'sebrae\ncontrato\nsebrae/mg' } });
     await fireEvent.click(screen.getByRole('button', { name: /save/i }));
 
     expect(updateWatch).toHaveBeenCalledWith(8, expect.objectContaining({
@@ -97,12 +97,71 @@ describe('WatchForm groups', () => {
     render(WatchForm, { clients, onsaved: () => {} });
 
     await fireEvent.input(screen.getByLabelText(/aliases for group 1/i),
-      { target: { value: 'sebrae, contrato' } });
+      { target: { value: 'sebrae\ncontrato' } });
     await fireEvent.click(screen.getByRole('button', { name: /save/i }));
 
     expect(createWatch).toHaveBeenCalledWith(expect.objectContaining({
       groups: [{ terms: [{ text: 'sebrae', kind: 'entity' }, { text: 'contrato', kind: 'entity' }] }],
     }));
+  });
+});
+
+describe('WatchForm aliases keep commas', () => {
+  const LONG_NAME = 'Instituto Federal de Educação, Ciência e Tecnologia do Ceará';
+
+  it('keeps a comma inside an institution name as one alias', async () => {
+    const createWatch = vi.spyOn(resources, 'createWatch').mockResolvedValue({} as never);
+    render(WatchForm, { clients, onsaved: () => {} });
+
+    await fireEvent.input(screen.getByLabelText(/aliases for group 1/i),
+      { target: { value: LONG_NAME } });
+    await fireEvent.click(screen.getByRole('button', { name: /save/i }));
+
+    expect(createWatch).toHaveBeenCalledWith(expect.objectContaining({
+      groups: [{ terms: [{ text: LONG_NAME, kind: 'entity' }] }],
+    }));
+  });
+
+  it('treats each line as a separate alias and drops blank lines', async () => {
+    const createWatch = vi.spyOn(resources, 'createWatch').mockResolvedValue({} as never);
+    render(WatchForm, { clients, onsaved: () => {} });
+
+    await fireEvent.input(screen.getByLabelText(/aliases for group 1/i),
+      { target: { value: 'IFCE\nInstituto Federal do Ceará\n\n' } });
+    await fireEvent.click(screen.getByRole('button', { name: /save/i }));
+
+    const body = vi.mocked(createWatch).mock.calls[0][0];
+    expect(body.groups[0].terms.map((t) => t.text)).toEqual([
+      'IFCE',
+      'Instituto Federal do Ceará',
+    ]);
+  });
+
+  it('round-trips an existing watch without mangling its aliases', () => {
+    const watch: Watch = {
+      id: 5, client: 1, exclude: [], section: '', active: true,
+      groups: [{ terms: [
+        { text: LONG_NAME, kind: 'entity' },
+        { text: 'IFCE', kind: 'entity' },
+      ] }],
+    } as never;
+    render(WatchForm, { clients, onsaved: () => {}, watch });
+
+    const field = screen.getByLabelText(/aliases for group 1/i) as HTMLTextAreaElement;
+    expect(field.value).toBe(`${LONG_NAME}\nIFCE`);
+  });
+
+  it('still splits the exclude list on commas', async () => {
+    const createWatch = vi.spyOn(resources, 'createWatch').mockResolvedValue({} as never);
+    render(WatchForm, { clients, onsaved: () => {} });
+
+    await fireEvent.input(screen.getByLabelText(/aliases for group 1/i), { target: { value: 'IFCE' } });
+    await fireEvent.input(screen.getByLabelText(/exclude/i), { target: { value: 'aviso, errata' } });
+    await fireEvent.click(screen.getByRole('button', { name: /save/i }));
+
+    expect(createWatch).toHaveBeenCalledWith(
+      expect.objectContaining({ exclude: ['aviso', 'errata'] }),
+    );
   });
 });
 

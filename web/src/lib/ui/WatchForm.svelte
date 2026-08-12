@@ -17,7 +17,7 @@
 
   const toRows = (groups: WatchGroup[] | undefined): Row[] => {
     const rows = (groups ?? []).map((g) => ({
-      aliases: g.terms.map((t) => t.text).join(', '),
+      aliases: g.terms.map((t) => t.text).join('\n'),
       kind: (g.terms[0]?.kind ?? 'entity') as WatchTermKind,
       kindTouched: false,
       originalKinds: new Map(g.terms.map((t) => [t.text, t.kind])),
@@ -35,6 +35,10 @@
   let fieldErrors = $state<Record<string, string[]>>({});
 
   const split = (s: string) => s.split(',').map((t) => t.trim()).filter(Boolean);
+  // Aliases split on newline, never on comma: official Brazilian names embed
+  // commas ("Instituto Federal de Educação, Ciência e Tecnologia do Ceará"),
+  // and a comma split silently turned one institution into two aliases.
+  const splitLines = (s: string) => s.split('\n').map((t) => t.trim()).filter(Boolean);
 
   const addGroup = () => { rows = [...rows, newRow()]; };
   const removeGroup = (i: number) => { rows = rows.filter((_, n) => n !== i); };
@@ -44,7 +48,7 @@
     fieldErrors = {};
     const groups: WatchGroup[] = rows
       .map((r) => ({
-        terms: split(r.aliases).map((text) => ({
+        terms: splitLines(r.aliases).map((text) => ({
           text,
           kind: r.kindTouched ? r.kind : (r.originalKinds.get(text) ?? r.kind),
         })),
@@ -74,11 +78,11 @@
     </select>
   </label>
 
-  <p class="text-sm">All groups must match. Aliases inside a group are alternatives.</p>
+  <p class="text-sm">All groups must match. Each line inside a group is an alternative spelling of the same thing.</p>
   {#each rows as row, i}
     <div class="flex items-end gap-2">
-      <label class="block flex-1 text-sm">Aliases for group {i + 1} (comma-separated)
-        <input class="mt-1 field" bind:value={row.aliases} />
+      <label class="block flex-1 text-sm">Aliases for group {i + 1} (one per line)
+        <textarea class="mt-1 field" rows="3" bind:value={row.aliases}></textarea>
       </label>
       <label class="block text-sm">Match kind for group {i + 1}
         <select class="mt-1 field" bind:value={row.kind} onchange={() => { row.kindTouched = true; }}>
