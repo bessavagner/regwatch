@@ -28,15 +28,39 @@ class FallbackLLMClient:
         primary_path = os.environ.get("REGWATCH_LLM_PRIMARY", DEFAULT_PRIMARY)
         fallback_path = os.environ.get("REGWATCH_LLM_FALLBACK", DEFAULT_FALLBACK)
 
-        primary = import_string(primary_path).from_env()
-        try:
-            fallback = import_string(fallback_path).from_env()
-        except Exception:
-            # A missing or misconfigured second key degrades the run to
-            # primary-only; it must never stop the day's digests going out.
+        # Both constructions are guarded, and symmetrically. A provider whose
+        # key is absent is a configuration gap, not a reason to lose the day:
+        # enrichment is one step of run_daily, and the scrape, matching and
+        # digest delivery around it need no LLM at all. Only having *neither*
+        # provider is fatal.
+        primary = cls._build(primary_path)
+        fallback = cls._build(fallback_path)
+
+        if primary is None:
+            if fallback is None:
+                raise RuntimeError(
+                    f"no usable LLM provider: neither {primary_path} nor "
+                    f"{fallback_path} could be constructed from the environment"
+                )
+            # Promote, so summarize() always has a primary to call and the
+            # single-provider path stays the same shape as the two-provider one.
+            logger.warning(
+                "primary LLM %s unavailable; promoting %s and running single-provider",
+                primary_path, fallback_path,
+            )
+            return cls(fallback, None)
+
+        if fallback is None:
             logger.warning("no usable fallback LLM (%s); running primary-only", fallback_path)
-            fallback = None
         return cls(primary, fallback)
+
+    @staticmethod
+    def _build(path: str) -> LLMClient | None:
+        try:
+            return import_string(path).from_env()
+        except Exception:
+            logger.warning("could not construct LLM client %s", path, exc_info=True)
+            return None
 
     def summarize(self, act_text: str, terms: list[str]) -> Summary:
         try:

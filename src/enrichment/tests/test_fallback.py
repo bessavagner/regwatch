@@ -45,3 +45,30 @@ def test_from_env_degrades_to_primary_only_when_the_fallback_key_is_absent(monke
     client = FallbackLLMClient.from_env()
 
     assert client._fallback is None, "a missing second key must not break the run"
+
+
+def test_from_env_promotes_the_fallback_when_the_primary_key_is_absent(monkeypatch):
+    """A missing primary key must degrade, not kill the run.
+
+    OPENAI_API_KEY was absent from the Cloud Run job on 2026-08-12 and the
+    unguarded primary construction would have raised straight out of
+    get_llm_client(), failing the whole daily run — including the scrape,
+    matching and digest delivery that need no LLM at all.
+    """
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "sk-anthropic")
+
+    client = FallbackLLMClient.from_env()
+
+    from enrichment.anthropic_client import AnthropicLLMClient
+    assert isinstance(client._primary, AnthropicLLMClient)
+    assert client._fallback is None
+    assert client.summarize.__self__ is client  # still a usable LLMClient
+
+
+def test_from_env_raises_when_neither_provider_is_configured(monkeypatch):
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+
+    with pytest.raises(RuntimeError, match="no usable LLM provider"):
+        FallbackLLMClient.from_env()
