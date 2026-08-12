@@ -108,3 +108,8 @@ REGWATCH_MAX_ENRICH_PER_RUN = int(os.environ.get("REGWATCH_MAX_ENRICH_PER_RUN", 
 # limit — so it needs a much smaller enrichment budget to avoid the worker being
 # SIGABRT-killed mid-request while it's still enriching sequentially.
 REGWATCH_MAX_ENRICH_PER_BACKFILL = int(os.environ.get("REGWATCH_MAX_ENRICH_PER_BACKFILL", "20"))
+# How far back run_daily re-attempts digests an earlier run failed to send.
+# Delivery outages are measured in days (a revoked SMTP credential ran for a
+# week undetected), and a digest is otherwise unreachable once its own date
+# passes.
+REGWATCH_DIGEST_RETRY_DAYS = int(os.environ.get("REGWATCH_DIGEST_RETRY_DAYS", "7"))

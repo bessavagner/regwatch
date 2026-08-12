@@ -1,3 +1,5 @@
+import datetime
+
 import pytest
 from accounts.models import Workspace
 from watches.models import Client, Watch
@@ -48,3 +50,29 @@ def test_run_pipeline_respects_max_enrich(firm):
                  FakeEmailSender(), max_enrich=0)
     assert Match.objects.count() == 1
     assert Match.objects.get().ai_summary is None     # capped out -> never enriched
+
+
+@pytest.mark.django_db
+def test_run_pipeline_retries_recent_unsent_digests(firm):
+    stale = Digest.objects.create(
+        client=firm, date=DATE - datetime.timedelta(days=3), body="older", sent=False
+    )
+
+    sender = FakeEmailSender()
+    run_pipeline([], FakeLLMClient(Summary("ok", "grant", 0.9)), sender, today=DATE)
+
+    stale.refresh_from_db()
+    assert stale.sent is True, "a digest stranded by an earlier outage must be retried"
+
+
+@pytest.mark.django_db
+def test_run_pipeline_leaves_digests_older_than_the_retry_window(firm, settings):
+    settings.REGWATCH_DIGEST_RETRY_DAYS = 2
+    ancient = Digest.objects.create(
+        client=firm, date=DATE - datetime.timedelta(days=30), body="ancient", sent=False
+    )
+
+    run_pipeline([], FakeLLMClient(Summary("ok", "grant", 0.9)), FakeEmailSender(), today=DATE)
+
+    ancient.refresh_from_db()
+    assert ancient.sent is False

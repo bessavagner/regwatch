@@ -37,6 +37,7 @@ class Command(BaseCommand):
                 get_llm_client(),
                 get_email_sender(),
                 max_enrich=settings.REGWATCH_MAX_ENRICH_PER_RUN,
+                today=run_date,
             )
             ed_qs = Edition.objects.filter(date=run_date)
             log.editions = ed_qs.count()
