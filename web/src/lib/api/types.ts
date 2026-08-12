@@ -37,15 +37,30 @@ export interface Watch {
   active: boolean;
 }
 
+export interface ActDetail {
+  id: number;
+  title: string;
+  agency: string;
+  identifier: string;
+  date: string;
+  section: string;
+  source_url: string;
+  source_anchor: string;
+}
+
 export interface Match {
   id: number;
   watch: number;
   act: number;
+  act_detail: ActDetail;
+  client_id: number;
+  client_name: string;
   snippet: string;
   rank: number;
-  ai_summary: string;
+  // null whenever enrichment never ran for this match.
+  ai_summary: string | null;
   category: string;
-  confidence: number;
+  confidence: number | null;
   state: 'new' | 'relevant' | 'dismissed';
   created_at: string;
 }

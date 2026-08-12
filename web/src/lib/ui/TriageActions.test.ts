@@ -9,6 +9,12 @@ afterEach(() => vi.restoreAllMocks());
 const match: Match = {
   id: 7, watch: 1, act: 1, snippet: 's', rank: 0.5, ai_summary: '', category: '',
   confidence: 0.5, state: 'new', created_at: '2026-07-01T00:00:00Z',
+  client_id: 1, client_name: 'Beta Corp',
+  act_detail: {
+    id: 1, title: 'Portaria 1', agency: '', identifier: 'id-1',
+    date: '2026-07-01', section: 'DO1',
+    source_url: 'https://inlabs.in.gov.br/edition/DO1', source_anchor: '#a1',
+  },
 };
 
 test('clicking Relevant calls the API and emits the updated match', async () => {

@@ -97,8 +97,8 @@
     <p class="eyebrow mb-2 text-xs opacity-60">00 · signal</p>
     <div class="hero__body">
       <div>
-        <h1 class="hero__title">built to <em>watch</em>,&nbsp;in real time.</h1>
-        <p class="hero__lede">every new Diário Oficial da União publication, checked against your watches the moment it lands.</p>
+        <h1 class="hero__title">triage today's <em>signal</em>.</h1>
+        <p class="hero__lede">every Diário Oficial da União edition, checked against your watches twice each weekday — 08:05 and 13:00.</p>
       </div>
       <SignalDial value={count} />
     </div>
