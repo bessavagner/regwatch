@@ -263,23 +263,45 @@ the old `regwatch` entry and create a new one. Put the 16-character value into
 `.env` is gitignored and stays that way — never paste the value into a tracked
 file, a commit message, or a log line.
 
-**2. Push new secret versions from `.env`.** Run this under **bash**, not zsh:
-`${!name}` is bash indirect expansion, and zsh spells it `${(P)name}`.
+**2. Push new secret versions from `.env`.**
+
+**Do not `source` / `.` the `.env` file to do this.** Several values in it —
+`SMTP_PASSWORD` among them — contain characters the shell treats as syntax
+(`&`, `*`, `:`), so sourcing fails on those exact lines and leaves the variable
+*unset*. The push then silently stores an empty secret, and the next run fails
+with the same 535 you were trying to fix. Verified on 2026-08-12: of the seven
+values below, `SMTP_PASSWORD` was one of four that would not source.
+
+Read each value out of the file instead of executing it:
 
 ```bash
-bash -c '
-set -a; . ./.env; set +a
+env_value() {  # print a raw value from .env without letting the shell evaluate it
+  sed -n "s/^$1=//p" .env | head -1 | sed -e 's/^"\(.*\)"$/\1/' -e "s/^'\(.*\)'\$/\1/"
+}
 for s in SMTP_HOST SMTP_PORT SMTP_USER SMTP_PASSWORD SMTP_STARTTLS SMTP_FROM OPENAI_API_KEY; do
-  printf "%s" "${!s}" | gcloud secrets versions add "$s" --data-file=- 2>/dev/null \
-    || printf "%s" "${!s}" | gcloud secrets create "$s" --replication-policy=automatic --data-file=-
+  printf '%s' "$(env_value "$s")" | gcloud secrets versions add "$s" --data-file=- 2>/dev/null \
+    || printf '%s' "$(env_value "$s")" | gcloud secrets create "$s" --replication-policy=automatic --data-file=-
 done
-'
 ```
 
-`printf "%s"` rather than `echo` is deliberate: a trailing newline inside
-`SMTP_PASSWORD` is itself a cause of 535.
+This works in both zsh and bash. `printf '%s'` rather than `echo` is deliberate:
+a trailing newline inside `SMTP_PASSWORD` is itself a cause of 535, and `$(...)`
+already strips the one `sed` emits.
 
-Verify without printing any value:
+Before pushing, confirm every value actually came out non-empty — this prints
+byte counts, never the values:
+
+```bash
+for s in SMTP_HOST SMTP_PORT SMTP_USER SMTP_PASSWORD SMTP_STARTTLS SMTP_FROM OPENAI_API_KEY; do
+  printf '%s: %s bytes\n' "$s" "$(printf '%s' "$(env_value "$s")" | wc -c)"
+done
+```
+
+Any `0 bytes` means the key is missing or misspelled in `.env` — fix it before
+running the push loop, not after.
+
+Then verify what actually landed in Secret Manager, again without printing any
+value:
 
 ```bash
 for s in SMTP_PASSWORD OPENAI_API_KEY; do
@@ -288,8 +310,8 @@ done
 ```
 
 Expected: `SMTP_PASSWORD: 16 bytes` (19 if you kept the display spaces, which
-also works) and a non-zero `OPENAI_API_KEY`. A count of 17 means a newline
-slipped in — redo step 2.
+also works) and a non-zero `OPENAI_API_KEY`. A count of 17 or 20 means a newline
+slipped in, and `0` means the value never made it out of `.env` — redo step 2.
 
 **3. Deploy, then confirm the credential.** Push a `vX.Y.Z` tag to trigger the
 pipeline (see "Roll back v0.14.0" above for the tag mechanics), then:
