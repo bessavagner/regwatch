@@ -155,6 +155,58 @@ folder first — a `@gmail.com` sender mailing a corporate domain about regulato
 acts is exactly the shape a filter distrusts. This is the deliverability tax of
 having no domain, and it is the reason to finish the section below.
 
+## What the heartbeat now asserts
+
+`check_heartbeat` used to pass whenever a `status="success"` row existed for the
+date. That is a dead-man's switch on the *process*, not on the *product*: on
+2026-08-11 the run exited zero, logged `success`, and delivered nothing. It now
+asserts delivery, and fails with one of three messages.
+
+**`heartbeat: no completed scheduled RunLog for <date>`**
+The scheduled run never finished — it crashed, or Cloud Scheduler never fired
+it. Neither `success` nor `partial` was recorded. Start with the job's own logs:
+
+```bash
+gcloud run jobs executions list --job=regwatch-run-daily --region=us-east4 --limit=5
+gcloud logging read \
+  'resource.type="cloud_run_job" AND severity>=ERROR' \
+  --limit 20 --freshness=1d --format='value(timestamp,jsonPayload.message)'
+```
+
+Remember the 13:00 midday run is the safety net for a failed 08:05 run, and the
+heartbeat only fires at 14:00 — so a failure here means *both* runs missed.
+
+**`heartbeat: run for <date> was partial — <reason>`**
+The run completed but delivered or enriched less than it matched. The reason is
+copied verbatim from `RunLog.errors` and reads either `N matches not enriched`
+or `N digests not sent` (or both, semicolon-separated).
+
+For *digests not sent*, the cause is on the row — `Digest.send_error` now holds
+the provider's own words. Read it, fix the cause, then:
+
+```bash
+gcloud run jobs execute regwatch-run-daily --region=us-east4 --wait \
+  --args=resend_digests,--date-from=<date>,--date-to=<date>
+```
+
+For *matches not enriched*, both LLM providers refused. The refusal body is now
+logged rather than swallowed:
+
+```bash
+gcloud logging read \
+  'resource.type="cloud_run_job" AND (jsonPayload.logger="enrichment.fallback"
+   OR textPayload:"refused the request")' \
+  --limit 10 --freshness=1d --format='value(timestamp,jsonPayload.message)'
+```
+
+A `falling back to the secondary provider` warning without a `partial` status is
+healthy — that is the fallback doing its job.
+
+**`heartbeat: N undelivered digest(s) for <date>`**
+The run recorded clean counts but a digest for that date is still `sent=False` —
+typically a retry that failed after the run wrote its counters. Same fix as
+above: read `send_error`, then `resend_digests`.
+
 ## Rotate the Gmail app password
 
 Do this when `SMTPAuthenticationError: (535, '5.7.8 Username and Password not

@@ -3,6 +3,7 @@ from zoneinfo import ZoneInfo
 
 from django.core.management.base import BaseCommand, CommandError
 
+from digests.models import Digest
 from pipeline.models import RunLog
 
 SAO_PAULO = ZoneInfo("America/Sao_Paulo")
@@ -20,6 +21,26 @@ class Command(BaseCommand):
         else:
             date = datetime.datetime.now(SAO_PAULO).date()
 
-        if not RunLog.objects.filter(date=date, status="success", trigger="scheduled").exists():
-            raise CommandError(f"heartbeat: no successful RunLog for {date}")
-        self.stdout.write(f"heartbeat OK: successful RunLog for {date}")
+        log = (
+            RunLog.objects.filter(date=date, trigger="scheduled")
+            .order_by("-started_at")
+            .first()
+        )
+        if log is None or log.status not in ("success", "partial"):
+            raise CommandError(f"heartbeat: no completed scheduled RunLog for {date}")
+
+        # A dead-man's switch that only asks "did the process exit zero" cannot
+        # see the failure that actually matters: on 2026-08-11 the run reported
+        # success while every digest went undelivered.
+        if log.status == "partial":
+            raise CommandError(f"heartbeat: run for {date} was partial — {log.errors}")
+
+        undelivered = Digest.objects.filter(date=date, sent=False).count()
+        if undelivered:
+            raise CommandError(
+                f"heartbeat: {undelivered} undelivered digest(s) for {date}"
+            )
+
+        self.stdout.write(
+            f"heartbeat OK: {date} matched {log.matches}, delivered {log.digests_sent}"
+        )
