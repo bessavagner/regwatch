@@ -12,6 +12,9 @@ set -euo pipefail
 # Supabase's AWS region.
 : "${REGION:=us-east4}"
 : "${ALERT_EMAIL:?set ALERT_EMAIL}"          # where failure alerts go
+# The secret list is shared with deploy-api.sh and .github/workflows/deploy.yml
+# so a secret is declared in exactly one place. See deploy/secrets.list.
+. "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/secrets-lib.sh"
 RUNTIME_SA="regwatch-run@${PROJECT_ID}.iam.gserviceaccount.com"
 SCHED_SA="regwatch-scheduler@${PROJECT_ID}.iam.gserviceaccount.com"
 AR_REPO="regwatch"
@@ -34,9 +37,7 @@ gcloud artifacts repositories create "${AR_REPO}" --repository-format=docker \
   --location="${REGION}" --description="RegWatch images" || true
 
 echo "== Secrets (create empty; add versions below) =="
-for s in DATABASE_URL SECRET_KEY ANTHROPIC_API_KEY OPENAI_API_KEY RESEND_API_KEY RESEND_FROM \
-         SMTP_HOST SMTP_PORT SMTP_USER SMTP_PASSWORD SMTP_STARTTLS SMTP_FROM \
-         INLABS_USERNAME INLABS_PASSWORD; do
+for s in $(secret_names); do
   gcloud secrets create "$s" --replication-policy=automatic || true
 done
 cat <<'EOF'
@@ -55,16 +56,14 @@ EOF
 read -r -p "Press Enter once all secret versions are added... " _
 
 echo "== IAM: runtime SA may read secrets + write logs =="
-for s in DATABASE_URL SECRET_KEY ANTHROPIC_API_KEY OPENAI_API_KEY RESEND_API_KEY RESEND_FROM \
-         SMTP_HOST SMTP_PORT SMTP_USER SMTP_PASSWORD SMTP_STARTTLS SMTP_FROM \
-         INLABS_USERNAME INLABS_PASSWORD; do
+for s in $(secret_names); do
   gcloud secrets add-iam-policy-binding "$s" \
     --member="serviceAccount:${RUNTIME_SA}" --role="roles/secretmanager.secretAccessor"
 done
 gcloud projects add-iam-policy-binding "${PROJECT_ID}" \
   --member="serviceAccount:${RUNTIME_SA}" --role="roles/logging.logWriter"
 
-SECRET_FLAGS="--set-secrets=DATABASE_URL=DATABASE_URL:latest,SECRET_KEY=SECRET_KEY:latest,ANTHROPIC_API_KEY=ANTHROPIC_API_KEY:latest,RESEND_API_KEY=RESEND_API_KEY:latest,RESEND_FROM=RESEND_FROM:latest,SMTP_HOST=SMTP_HOST:latest,SMTP_USER=SMTP_USER:latest,SMTP_PASSWORD=SMTP_PASSWORD:latest,SMTP_FROM=SMTP_FROM:latest,INLABS_USERNAME=INLABS_USERNAME:latest,INLABS_PASSWORD=INLABS_PASSWORD:latest,SMTP_PORT=SMTP_PORT:latest,SMTP_STARTTLS=SMTP_STARTTLS:latest,OPENAI_API_KEY=OPENAI_API_KEY:latest"
+SECRET_FLAGS="--set-secrets=$(secret_flags)"
 
 # Which EmailSender the pipeline resolves. Digests go out over SMTP because the
 # project has no verified sending domain — a transactional API refuses to send

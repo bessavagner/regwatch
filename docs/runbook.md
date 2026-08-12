@@ -155,6 +155,42 @@ folder first — a `@gmail.com` sender mailing a corporate domain about regulato
 acts is exactly the shape a filter distrusts. This is the deliverability tax of
 having no domain, and it is the reason to finish the section below.
 
+## Add a secret to the deployment
+
+Declare it in **`deploy/secrets.list`** and nowhere else. `provision.sh`,
+`deploy-api.sh` and `.github/workflows/deploy.yml` all read that file through
+`deploy/secrets-lib.sh`, so one line plus a tag push is the whole change.
+
+```bash
+echo 'MY_NEW_SECRET' >> deploy/secrets.list
+printf '%s' 'the-value' | gcloud secrets create MY_NEW_SECRET \
+  --replication-policy=automatic --data-file=-
+gcloud secrets add-iam-policy-binding MY_NEW_SECRET \
+  --member="serviceAccount:regwatch-run@regwatch-501619.iam.gserviceaccount.com" \
+  --role="roles/secretmanager.secretAccessor"
+git commit -am 'chore(deploy): mount MY_NEW_SECRET' && git push && git tag vX.Y.Z && git push origin vX.Y.Z
+```
+
+The Secret Manager entry and the IAM binding are still manual — the deploy
+mounts secrets, it does not create them. A secret listed but not created makes
+the deploy fail loudly on `--set-secrets`, which is the intended failure mode.
+
+Verify what a job actually has mounted:
+
+```bash
+gcloud run jobs describe regwatch-run-daily --region=us-east4 \
+  --format='value(spec.template.spec.template.spec.containers[0].env)' \
+  | tr ',' '\n' | grep -oE "'name': '[A-Z_]+'" | sed "s/'name': '//;s/'//" | sort -u
+```
+
+**Why this file exists.** The list used to live only in `provision.sh`, a
+one-shot script CI never re-runs, while the deploy updated just image and args.
+On 2026-08-12 three secrets added to `provision.sh` were therefore never mounted,
+and two of the failures were silent until a run died: a missing `OPENAI_API_KEY`
+took down the entire daily run, and missing `INLABS_*` on the API service broke
+the "Run on past editions" backfill endpoint. If you find yourself adding a
+secret name to a second place, that is the bug coming back.
+
 ## Change the enrichment model
 
 Enrichment runs OpenAI first and falls back to Anthropic (`FallbackLLMClient`).

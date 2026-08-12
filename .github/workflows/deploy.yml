@@ -91,11 +91,20 @@ jobs:
           echo "IMAGE=$IMAGE" >> "$GITHUB_ENV"
       - name: Deploy jobs
         run: |
+          . deploy/secrets-lib.sh
+          # --set-secrets on every deploy, from the shared list. Without this the
+          # deploy only ever updated image and args, so a secret added to
+          # provision.sh (which CI never re-runs) was never actually mounted —
+          # see the header of deploy/secrets.list.
           for pair in regwatch-migrate:migrate regwatch-run-daily:run_daily regwatch-heartbeat:check_heartbeat; do
             name="${pair%%:*}"; cmd="${pair##*:}"
-            gcloud run jobs update "$name" --image="$IMAGE" --region="$REGION" --args="$cmd"
+            gcloud run jobs update "$name" --image="$IMAGE" --region="$REGION" --args="$cmd" \
+              --set-secrets="$(secret_flags)"
           done
       - name: Run migrations
         run: gcloud run jobs execute regwatch-migrate --region="$REGION" --wait
       - name: Deploy service
-        run: gcloud run services update regwatch-api --image="$IMAGE" --region="$REGION"
+        run: |
+          . deploy/secrets-lib.sh
+          gcloud run services update regwatch-api --image="$IMAGE" --region="$REGION" \
+            --set-secrets="$(secret_flags)"

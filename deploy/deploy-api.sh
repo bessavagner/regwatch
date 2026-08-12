@@ -13,6 +13,8 @@ RUNTIME_SA="${RUNTIME_SA:?set RUNTIME_SA (least-privilege runtime service accoun
 # URL), so ALLOWED_HOSTS / CSRF_ORIGINS may be comma-separated lists of hosts.
 ALLOWED_HOSTS="${ALLOWED_HOSTS:?set ALLOWED_HOSTS e.g. host1.a.run.app,host2.run.app}"
 CSRF_ORIGINS="${CSRF_ORIGINS:?set CSRF_ORIGINS e.g. https://host1.a.run.app,https://host2.run.app}"
+# Shared secret list — see deploy/secrets.list.
+. "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/secrets-lib.sh"
 
 # `^@^` makes gcloud use "@" as the env-var separator so the commas inside a
 # multi-host ALLOWED_HOSTS / CSRF_ORIGINS list are not misread as new env vars.
@@ -28,6 +30,6 @@ gcloud run deploy regwatch-api \
   --timeout=300 \
   --allow-unauthenticated \
   --set-env-vars="^@^DJANGO_ALLOWED_HOSTS=${ALLOWED_HOSTS}@DJANGO_CSRF_TRUSTED_ORIGINS=${CSRF_ORIGINS}@REGWATCH_EMAIL_SENDER=digests.smtp.SmtpEmailSender" \
-  --set-secrets="SECRET_KEY=SECRET_KEY:latest,DATABASE_URL=DATABASE_URL:latest,ANTHROPIC_API_KEY=ANTHROPIC_API_KEY:latest,RESEND_API_KEY=RESEND_API_KEY:latest,RESEND_FROM=RESEND_FROM:latest,SMTP_HOST=SMTP_HOST:latest,SMTP_USER=SMTP_USER:latest,SMTP_PASSWORD=SMTP_PASSWORD:latest,SMTP_FROM=SMTP_FROM:latest,SMTP_PORT=SMTP_PORT:latest,SMTP_STARTTLS=SMTP_STARTTLS:latest,OPENAI_API_KEY=OPENAI_API_KEY:latest"
+  --set-secrets="$(secret_flags)"
 
 echo "Deployed. Run the 'migrate' Job once (creates django_session) before first use."
