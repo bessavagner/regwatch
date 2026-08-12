@@ -116,3 +116,49 @@ def test_cannot_triage_other_workspace_match(firm_a, firm_b):
     assert api.post(f"/api/matches/{m_b.id}/relevant").status_code == 404
     m_b.refresh_from_db()
     assert m_b.state == "new"
+
+
+@pytest.mark.django_db
+def test_match_payload_identifies_the_act(firm_a):
+    ws, user = firm_a
+    match = _match(ws, date=datetime.date(2026, 7, 1))
+    api = APIClient()
+    api.force_authenticate(user=user)
+
+    resp = api.get("/api/matches")
+    assert resp.status_code == 200
+    row = resp.data["results"][0]
+
+    detail = row["act_detail"]
+    assert detail["title"] == "t"
+    assert detail["identifier"] == match.act.identifier
+    assert detail["date"] == "2026-07-01"
+    assert detail["section"] == "1"
+    assert detail["source_url"] == "https://e.test"
+    # The bare id stays, so nothing that already consumes it breaks.
+    assert row["act"] == match.act_id
+
+
+@pytest.mark.django_db
+def test_match_payload_names_the_client(firm_a):
+    ws, user = firm_a
+    match = _match(ws, date=datetime.date(2026, 7, 1))
+    api = APIClient()
+    api.force_authenticate(user=user)
+
+    row = api.get("/api/matches").data["results"][0]
+    assert row["client_id"] == match.watch.client_id
+    assert row["client_name"] == "C"
+
+
+@pytest.mark.django_db
+def test_match_list_does_not_issue_a_query_per_row(firm_a, django_assert_max_num_queries):
+    ws, user = firm_a
+    for _ in range(25):
+        _match(ws, date=datetime.date(2026, 7, 1))
+    api = APIClient()
+    api.force_authenticate(user=user)
+
+    # 25 rows must not cost 25 act lookups plus 25 client lookups.
+    with django_assert_max_num_queries(8):
+        api.get("/api/matches")

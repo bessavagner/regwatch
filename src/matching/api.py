@@ -3,21 +3,40 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 
 from accounts.permissions import WorkspaceScopedQuerysetMixin
+from gazette.models import Act
 from matching.models import Match
 
 
+class ActDetailSerializer(serializers.ModelSerializer):
+    date = serializers.DateField(source="edition.date", read_only=True)
+    section = serializers.CharField(source="edition.section", read_only=True)
+    source_url = serializers.CharField(source="edition.source_url", read_only=True)
+
+    class Meta:
+        model = Act
+        fields = [
+            "id", "title", "agency", "identifier",
+            "date", "section", "source_url", "source_anchor",
+        ]
+
+
 class MatchSerializer(serializers.ModelSerializer):
+    act_detail = ActDetailSerializer(source="act", read_only=True)
+    client_id = serializers.IntegerField(source="watch.client_id", read_only=True)
+    client_name = serializers.CharField(source="watch.client.name", read_only=True)
+
     class Meta:
         model = Match
         fields = [
-            "id", "watch", "act", "snippet", "rank", "ai_summary",
-            "category", "confidence", "state", "created_at",
+            "id", "watch", "act", "act_detail", "client_id", "client_name",
+            "snippet", "rank", "ai_summary", "category", "confidence",
+            "state", "created_at",
         ]
 
 
 class MatchViewSet(WorkspaceScopedQuerysetMixin, viewsets.ReadOnlyModelViewSet):
     serializer_class = MatchSerializer
-    queryset = Match.objects.all()
+    queryset = Match.objects.select_related("act__edition", "watch__client").all()
     workspace_lookup = "watch__client__workspace"
 
     def get_queryset(self):
