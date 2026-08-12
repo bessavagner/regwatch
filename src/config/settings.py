@@ -97,7 +97,7 @@ REST_FRAMEWORK = {
 }
 
 REGWATCH_LLM_CLIENT = os.environ.get(
-    "REGWATCH_LLM_CLIENT", "enrichment.anthropic_client.AnthropicLLMClient"
+    "REGWATCH_LLM_CLIENT", "enrichment.fallback.FallbackLLMClient"
 )
 REGWATCH_EMAIL_SENDER = os.environ.get(
     "REGWATCH_EMAIL_SENDER", "digests.resend.ResendEmailSender"
