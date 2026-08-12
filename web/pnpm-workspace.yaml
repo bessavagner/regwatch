@@ -10,6 +10,13 @@ allowBuilds:
 # so both entries are load-bearing. Overriding only the 5.x line leaves 1.1.16
 # behind and audit still fails. Each selector is kept narrow so neither line is
 # dragged across a major.
+#
+# js-yaml and nanoid are the same shape: dev-tooling-only transitives that
+# `pnpm audit` gates the deploy on. js-yaml arrives via eslint's config loader
+# and nanoid via vite -> postcss, so neither is reachable from the browser
+# bundle, but both are patched rather than suppressed for the reason above.
 overrides:
   brace-expansion@>=4.0.0 <5.0.8: ^5.0.8   # GHSA-mh99-v99m-4gvg
   brace-expansion@<1.1.17: ^1.1.17         # advisory 1130588, the 1.x line
+  js-yaml@<4.3.1: ^4.3.1                   # GHSA-5p4m-2wfm-xmqj
+  nanoid@<3.3.17: ^3.3.17                  # GHSA-2v37-7h3g-55p8
