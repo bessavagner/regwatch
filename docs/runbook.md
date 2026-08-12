@@ -155,6 +155,47 @@ folder first — a `@gmail.com` sender mailing a corporate domain about regulato
 acts is exactly the shape a filter distrusts. This is the deliverability tax of
 having no domain, and it is the reason to finish the section below.
 
+## Prune stale matches
+
+A watch's definition can change after it has already produced matches — the
+groups migration on 2026-07-21 rewrote every watch, and the matches made under
+the old definitions stayed in the triage queue. On 2026-08-12 that was 51 of 122
+matches (42% of the feed), none of which the current watch definitions would
+produce. They mislead every precision judgement made from the feed.
+
+`prune_stale_matches` re-evaluates each untriaged match against its watch's
+**current** definition and removes the ones that no longer satisfy it.
+
+**Always dry-run first.** With no flags it deletes nothing and prints per-watch
+counts:
+
+```bash
+gcloud run jobs execute regwatch-run-daily --region=us-east4 --wait \
+  --args=prune_stale_matches
+```
+
+```
+watch 4 (IFCE): 51 stale
+prune_stale_matches: would delete 51 match(es)
+```
+
+Read the per-watch counts and satisfy yourself they are the watches you expect.
+A count covering nearly all of a watch's matches usually means the watch was
+retargeted, not that the matches were wrong — decide which you meant. Only then:
+
+```bash
+gcloud run jobs execute regwatch-run-daily --region=us-east4 --wait \
+  --args=prune_stale_matches,--apply
+```
+
+`--watch <id>` limits the run to a single watch.
+
+**`--apply` deletes rows and there is no undo** — take a `pg_dump` first if the
+count is large or surprising. Matches in state `relevant` or `dismissed` are
+deliberately exempt at every count: a triaged verdict is a human decision, and
+the command will never discard one even when the watch that produced it has been
+retargeted beyond recognition.
+
 ## What the heartbeat now asserts
 
 `check_heartbeat` used to pass whenever a `status="success"` row existed for the
