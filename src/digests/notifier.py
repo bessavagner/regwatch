@@ -82,3 +82,31 @@ def build_and_send_digests(
         deliver_digest(digest, sender)
         out.append(digest)
     return out
+
+
+def retry_unsent_digests(
+    date_from: datetime.date,
+    date_to: datetime.date,
+    sender: EmailSender,
+    client: Client | None = None,
+) -> tuple[int, int]:
+    """Re-attempt every unsent digest in [date_from, date_to].
+
+    A digest whose send failed is otherwise unreachable: build_and_send_digests
+    only ever revisits the date it is called with, and no later scheduled run
+    processes a past date. Returns (sent, attempted).
+    """
+    qs = (
+        Digest.objects.filter(sent=False, date__gte=date_from, date__lte=date_to)
+        .select_related("client")
+        .order_by("date", "client_id")
+    )
+    if client is not None:
+        qs = qs.filter(client=client)
+
+    attempted = sent = 0
+    for digest in qs:
+        attempted += 1
+        if deliver_digest(digest, sender):
+            sent += 1
+    return sent, attempted
