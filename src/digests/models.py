@@ -7,6 +7,9 @@ class Digest(models.Model):
     date = models.DateField()
     body = models.TextField()
     sent = models.BooleanField(default=False)
+    send_error = models.TextField(blank=True, default="")
+    send_attempts = models.IntegerField(default=0)
+    last_attempt_at = models.DateTimeField(null=True, blank=True)
 
     class Meta:
         constraints = [

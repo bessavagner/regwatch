@@ -7,8 +7,8 @@ from watches.models import Client, Watch
 from gazette.contracts import RawEdition, RawItem
 from gazette.ingest import ingest_edition
 from matching.matcher import match_edition
-from digests.email import FakeEmailSender
-from digests.notifier import build_and_send_digests
+from digests.email import FakeEmailSender, RaisingEmailSender
+from digests.notifier import build_and_send_digests, deliver_digest
 from digests.models import Digest
 
 DATE = datetime.date(2026, 6, 26)
@@ -195,3 +195,41 @@ def test_a_failed_send_is_retried_on_the_next_run(db):
 
     assert len(recovered.sent) == 1
     assert digests[0].sent is True
+
+
+@pytest.mark.django_db
+def test_failed_send_records_the_reason_on_the_digest(matched):
+    digests = build_and_send_digests(DATE, RaisingEmailSender("mailbox full"))
+    digest = digests[0]
+    digest.refresh_from_db()
+    assert digest.sent is False
+    assert "mailbox full" in digest.send_error
+    assert digest.send_attempts == 1
+    assert digest.last_attempt_at is not None
+
+
+@pytest.mark.django_db
+def test_successful_send_clears_a_previous_error(matched):
+    build_and_send_digests(DATE, RaisingEmailSender("temporary"))
+    digest = Digest.objects.get(client=matched, date=DATE)
+    assert digest.send_error
+
+    sent = deliver_digest(digest, FakeEmailSender())
+
+    digest.refresh_from_db()
+    assert sent is True
+    assert digest.sent is True
+    assert digest.send_error == ""
+    assert digest.send_attempts == 2
+
+
+@pytest.mark.django_db
+def test_deliver_digest_skips_a_client_with_no_email(matched):
+    matched.email = ""
+    matched.save()
+    digest = Digest.objects.create(client=matched, date=DATE, body="x")
+
+    assert deliver_digest(digest, FakeEmailSender()) is False
+    digest.refresh_from_db()
+    assert digest.sent is False
+    assert "no email address" in digest.send_error
