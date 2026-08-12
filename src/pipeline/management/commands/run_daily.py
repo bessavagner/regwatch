@@ -45,8 +45,20 @@ class Command(BaseCommand):
             run_matches = Match.objects.filter(act__edition__date=run_date)
             log.matches = run_matches.count()
             log.enriched = run_matches.exclude(ai_summary__isnull=True).count()
-            log.digests = Digest.objects.filter(date=run_date).count()
-            log.status = "success"
+            day_digests = Digest.objects.filter(date=run_date)
+            log.digests = day_digests.count()
+            log.digests_sent = day_digests.filter(sent=True).count()
+
+            # A run that scraped and matched but delivered nothing is not a
+            # success. Saying so here is what makes check_heartbeat able to see
+            # a silent failure at all.
+            shortfalls = []
+            if log.matches and log.enriched < log.matches:
+                shortfalls.append(f"{log.matches - log.enriched} matches not enriched")
+            if log.digests_sent < log.digests:
+                shortfalls.append(f"{log.digests - log.digests_sent} digests not sent")
+            log.status = "partial" if shortfalls else "success"
+            log.errors = "; ".join(shortfalls)
         except Exception:
             log.status = "failed"
             log.errors = traceback.format_exc()
@@ -57,5 +69,6 @@ class Command(BaseCommand):
         log.save()
         self.stdout.write(
             f"run_daily {run_date}: editions={log.editions} acts={log.acts} "
-            f"matches={log.matches} enriched={log.enriched} digests={log.digests}"
+            f"matches={log.matches} enriched={log.enriched} digests={log.digests} "
+            f"digests_sent={log.digests_sent} status={log.status}"
         )

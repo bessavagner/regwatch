@@ -6,6 +6,8 @@ from accounts.models import Workspace
 from watches.models import Client, Watch
 from enrichment.llm import Summary, FakeLLMClient
 from digests.email import FakeEmailSender
+from digests.email import RaisingEmailSender
+from digests.models import Digest
 from gazette.contracts import RawEdition, RawItem
 from pipeline.models import RunLog
 
@@ -59,3 +61,60 @@ def test_run_daily_records_failure_and_reraises(monkeypatch):
     assert log.status == "failed"
     assert "inlabs down" in log.errors
     assert log.finished_at is not None
+
+
+@pytest.fixture
+def client_with_unsent_digest(db):
+    ws = Workspace.objects.create(name="Acme")
+    c = Client.objects.create(workspace=ws, name="Beta", email="beta@example.test")
+    Digest.objects.create(client=c, date=DATE, body="body", sent=False)
+    return c
+
+
+def _no_editions(monkeypatch, sender):
+    """Run the command with nothing to scrape and a sender we control.
+
+    run_daily resolves the LLM client and the email sender through
+    pipeline.adapters, which read REGWATCH_* settings and go to the real
+    providers; both seams have to be stubbed or the command raises before it
+    ever computes a status.
+    """
+    monkeypatch.setattr(
+        "pipeline.management.commands.run_daily.fetch_editions", lambda d: []
+    )
+    monkeypatch.setattr(
+        "pipeline.management.commands.run_daily.get_llm_client",
+        lambda: FakeLLMClient(Summary("ok", "grant", 0.9)),
+    )
+    monkeypatch.setattr(
+        "pipeline.management.commands.run_daily.get_email_sender", lambda: sender
+    )
+
+
+@pytest.mark.django_db
+def test_run_is_partial_when_a_digest_was_not_delivered(
+    client_with_unsent_digest, monkeypatch
+):
+    # The sender still refuses, so the backlog sweep cannot rescue the digest —
+    # which is exactly the 2026-08-05..11 outage the status has to stop hiding.
+    _no_editions(monkeypatch, RaisingEmailSender("535 BadCredentials"))
+    call_command("run_daily", "--date", DATE.isoformat())
+
+    log = RunLog.objects.get(date=DATE, trigger="scheduled")
+    assert log.digests_sent == 0
+    assert log.digests == 1
+    assert log.status == "partial"
+    assert "digest" in log.errors.lower()
+
+
+@pytest.mark.django_db
+def test_run_is_success_when_everything_was_delivered(
+    client_with_unsent_digest, monkeypatch
+):
+    Digest.objects.update(sent=True)
+    _no_editions(monkeypatch, FakeEmailSender())
+    call_command("run_daily", "--date", DATE.isoformat())
+
+    log = RunLog.objects.get(date=DATE, trigger="scheduled")
+    assert log.status == "success"
+    assert log.digests_sent == 1
