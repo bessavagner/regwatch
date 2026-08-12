@@ -87,3 +87,23 @@ def test_from_env_raises_when_key_missing(monkeypatch):
     monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
     with pytest.raises(RuntimeError):
         AnthropicLLMClient.from_env()
+
+
+def test_error_status_reports_the_providers_explanation():
+    def handler(request):
+        return httpx.Response(
+            400,
+            json={"type": "error", "error": {
+                "type": "invalid_request_error",
+                "message": "Your credit balance is too low to access the Anthropic API",
+            }},
+        )
+
+    client = AnthropicLLMClient("sk-secret-value", transport=httpx.MockTransport(handler))
+    with pytest.raises(httpx.HTTPStatusError) as excinfo:
+        client.summarize("qualquer ato", ["beta corp"])
+
+    message = str(excinfo.value)
+    assert "credit balance is too low" in message
+    assert "claude-haiku-4-5-20251001" in message
+    assert "sk-secret-value" not in message, "the key must never reach a log line"

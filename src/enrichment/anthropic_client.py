@@ -65,7 +65,17 @@ class AnthropicLLMClient:
                 "messages": [{"role": "user", "content": user}],
             },
         )
-        resp.raise_for_status()
+        if resp.is_error:
+            # Anthropic explains the refusal in the body ("credit balance is too
+            # low", "model not found"); raise_for_status alone reports just the
+            # status and hides it — which is how a two-week enrichment blackout
+            # went undiagnosed. The body echoes no credentials.
+            raise httpx.HTTPStatusError(
+                f"Anthropic refused the request: {resp.status_code} "
+                f"{resp.text[:300]} (model={self._model})",
+                request=resp.request,
+                response=resp,
+            )
         try:
             text = _unwrap_json(resp.json()["content"][0]["text"])
             data = json.loads(text)
