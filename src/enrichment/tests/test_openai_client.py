@@ -32,7 +32,7 @@ def test_summarize_parses_model_json_into_summary():
     assert result.confidence == 0.9
     assert captured["url"] == "https://api.openai.com/v1/chat/completions"
     assert captured["headers"].get("authorization") == "Bearer sk-test"
-    assert captured["body"]["model"] == "gpt-5.4-mini"
+    assert captured["body"]["model"] == "gpt-5.6-luna"
     # Newer OpenAI models reject max_tokens.
     assert "max_tokens" not in captured["body"]
     assert captured["body"]["max_completion_tokens"] == 300
@@ -92,6 +92,28 @@ def test_error_status_reports_the_providers_explanation():
     message = str(excinfo.value)
     assert "insufficient_quota" in message
     assert "sk-secret-value" not in message
+
+
+def test_from_env_reads_key_and_optional_model(monkeypatch):
+    monkeypatch.setenv("OPENAI_API_KEY", "sk-env")
+    monkeypatch.setenv("REGWATCH_OPENAI_MODEL", "gpt-5.6-terra")
+    client = OpenAILLMClient.from_env()
+    assert client._api_key == "sk-env"
+    assert client._model == "gpt-5.6-terra"
+
+
+def test_from_env_defaults_to_the_cost_tier(monkeypatch):
+    # The model name is a moving target; the default must stay the cheap tier
+    # rather than drifting onto a flagship at 25x the input price.
+    monkeypatch.setenv("OPENAI_API_KEY", "sk-env")
+    monkeypatch.delenv("REGWATCH_OPENAI_MODEL", raising=False)
+    assert OpenAILLMClient.from_env()._model == "gpt-5.6-luna"
+
+
+def test_from_env_raises_when_key_missing(monkeypatch):
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    with pytest.raises(RuntimeError):
+        OpenAILLMClient.from_env()
 
 
 def test_act_text_is_truncated_before_sending():

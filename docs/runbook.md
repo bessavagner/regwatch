@@ -155,6 +155,57 @@ folder first — a `@gmail.com` sender mailing a corporate domain about regulato
 acts is exactly the shape a filter distrusts. This is the deliverability tax of
 having no domain, and it is the reason to finish the section below.
 
+## Change the enrichment model
+
+Enrichment runs OpenAI first and falls back to Anthropic (`FallbackLLMClient`).
+The OpenAI default is **`gpt-5.6-luna`** — the cost-optimised tier of the current
+generation, $0.20/MTok in and $1.20/MTok out, against $2/$12 for `terra` and
+$5/$30 for the `sol` flagship. Summarising one act into one Portuguese sentence
+plus a label is not frontier work, and the job does it up to 200 times a run, so
+the cheap tier is the correct default and a flagship would be pure spend.
+
+OpenAI renames and retires models faster than this repo is redeployed, so check
+what your key can actually see before assuming a name still works:
+
+```bash
+env_value() { sed -n "s/^$1=//p" .env | head -1 | sed -e 's/^"\(.*\)"$/\1/' -e "s/^'\(.*\)'\$/\1/"; }
+curl -sS https://api.openai.com/v1/models -H "Authorization: Bearer $(env_value OPENAI_API_KEY)" \
+  | python3 -c "import json,sys;[print(m['id']) for m in sorted(json.load(sys.stdin)['data'],key=lambda m:-m['created']) if m['id'].startswith('gpt-')]" \
+  | head -20
+```
+
+Smoke-test a candidate against a real act before switching. This exercises the
+same strict-`json_schema` path the pipeline uses, so a model that cannot do
+structured outputs fails here rather than in production:
+
+```bash
+DJANGO_DEBUG=1 DJANGO_SETTINGS_MODULE=config.settings_test \
+OPENAI_API_KEY="$(env_value OPENAI_API_KEY)" \
+uv run python -c "
+import os, sys; sys.path.insert(0,'src')
+import django; django.setup()
+from enrichment.openai_client import OpenAILLMClient
+print(OpenAILLMClient(os.environ['OPENAI_API_KEY'], model='gpt-5.6-luna').summarize(
+    'EXTRATO DE CONTRATO N 9/2026 entre IFCE Campus Crateus e BETA CORP LTDA.', ['beta corp']))
+"
+```
+
+To switch, set the env var rather than editing the default — no redeploy of the
+image is needed, just a Job/Service update:
+
+```bash
+gcloud run jobs update regwatch-run-daily --region=us-east4 \
+  --update-env-vars=REGWATCH_OPENAI_MODEL=gpt-5.6-terra
+```
+
+Two failure modes to know. `model_not_found` in the logs means the name was
+retired — pick one from the list above. And **reasoning tokens count against
+`max_completion_tokens` (300)**: if you move to a reasoning-heavy model, a reply
+can burn the whole budget on reasoning and come back `finish_reason=length` with
+truncated JSON, which surfaces as `could not parse LLM reply into Summary`.
+Check `usage.completion_tokens_details.reasoning_tokens` on a test call; it is 0
+for `luna`.
+
 ## Prune stale matches
 
 A watch's definition can change after it has already produced matches — the

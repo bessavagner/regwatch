@@ -6,6 +6,13 @@ import httpx
 from enrichment.anthropic_client import CATEGORIES, SYSTEM_PROMPT, _unwrap_json
 from enrichment.llm import Summary
 
+# The cost-optimised tier of the current (5.6) generation: $0.20/MTok in,
+# $1.20/MTok out, against $5/$30 for the sol flagship. Enrichment is a
+# high-volume, low-difficulty job — one Portuguese sentence plus a label, up to
+# REGWATCH_MAX_ENRICH_PER_RUN (200) times a run — so the cheap tier is the right
+# one and the flagship would be a pure waste. Override with REGWATCH_OPENAI_MODEL.
+DEFAULT_MODEL = "gpt-5.6-luna"
+
 # Structured Outputs: with strict=true the model is constrained to this schema,
 # so the ```json fence the Anthropic path has to strip never appears. Strict mode
 # requires additionalProperties=false and every property listed in required.
@@ -33,7 +40,7 @@ class OpenAILLMClient:
         self,
         api_key: str,
         *,
-        model: str = "gpt-5.4-mini",
+        model: str = DEFAULT_MODEL,
         base_url: str = "https://api.openai.com",
         transport: httpx.BaseTransport | None = None,
     ):
@@ -49,7 +56,7 @@ class OpenAILLMClient:
             api_key = os.environ["OPENAI_API_KEY"]
         except KeyError as exc:
             raise RuntimeError("OPENAI_API_KEY must be set") from exc
-        model = os.environ.get("REGWATCH_OPENAI_MODEL", "gpt-5.4-mini")
+        model = os.environ.get("REGWATCH_OPENAI_MODEL", DEFAULT_MODEL)
         return cls(api_key, model=model)
 
     def summarize(self, act_text: str, terms: list[str]) -> Summary:
