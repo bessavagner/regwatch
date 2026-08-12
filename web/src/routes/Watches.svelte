@@ -3,12 +3,18 @@
   import { ApiError } from '../lib/api/client';
   import type { Client, Watch } from '../lib/api/types';
   import { navigate } from '../lib/router/router.svelte';
+  import { SECTIONS } from '../lib/constants';
   import AsyncState from '../lib/ui/AsyncState.svelte';
   import Card from '../lib/ui/Card.svelte';
   import Button from '../lib/ui/Button.svelte';
   import Badge from '../lib/ui/Badge.svelte';
   import WatchForm from '../lib/ui/WatchForm.svelte';
   import BackfillForm from '../lib/ui/BackfillForm.svelte';
+
+  // The row used to render a bare "seção" with no value for an all-sections
+  // watch; map the stored code to the label the form offers.
+  const sectionLabel = (code: string) =>
+    SECTIONS.find((s) => s.value === code)?.label ?? code;
 
   let status = $state<'idle' | 'loading' | 'loaded' | 'empty' | 'error'>('idle');
   let watches = $state<Watch[]>([]);
@@ -81,8 +87,16 @@
           <li class="row reveal" style="--i: {i}">
             <div class="flex items-center justify-between gap-2">
               <div>
+                <p class="as-typed text-xs text-muted">{w.client_name}</p>
                 <p class="as-typed text-sm font-medium text-ink">{w.groups.map((g) => g.terms.map((t) => t.text).join(' / ')).join(' + ')}</p>
-                <p class="mt-0.5 font-mono text-xs text-muted"><span class="as-typed">seção {w.section}{w.exclude.length ? ` · excl: ${w.exclude.join(', ')}` : ''}</span></p>
+                <p class="mt-0.5 font-mono text-xs text-muted">
+                  <span class="as-typed">{w.section ? sectionLabel(w.section) : 'all sections'}{w.exclude.length ? ` · excl: ${w.exclude.join(', ')}` : ''}</span> ·
+                  {#if w.match_count === 0}
+                    <span class="text-danger">no matches yet — check the terms</span>
+                  {:else}
+                    {w.match_count} matches · last {w.last_match_at?.slice(0, 10)}
+                  {/if}
+                </p>
               </div>
               <div class="flex items-center gap-2">
                 <Badge label={w.active ? 'active' : 'inactive'} tone={w.active ? 'green' : 'gray'} />

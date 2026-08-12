@@ -31,10 +31,13 @@ export interface WatchGroup {
 export interface Watch {
   id: number;
   client: number;
+  client_name: string;
   groups: WatchGroup[];
   exclude: string[];
   section: string;
   active: boolean;
+  match_count: number;
+  last_match_at: string | null;
 }
 
 export interface ActDetail {

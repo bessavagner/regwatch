@@ -210,3 +210,36 @@ def test_watch_cannot_attach_to_other_workspace_client(firm_a, firm_b):
     }, format="json")
     assert resp.status_code == 400
     assert "client" in resp.data
+
+
+@pytest.mark.django_db
+def test_watch_payload_reports_its_match_activity(firm_a):
+    client = _client_for(firm_a)
+    Watch.objects.create(
+        client=client, groups=[{"terms": [{"text": "beta corp", "kind": "entity"}]}]
+    )
+    edition = ingest_edition(RawEdition(
+        date=datetime.date(2026, 8, 11), section="1", source_url="https://e.test",
+        items=(
+            RawItem("a1", "Portaria 12", "Org", "Licença à BETA CORP.", "#a1"),
+            RawItem("a2", "Portaria 13", "Org", "Contrato com BETA CORP.", "#a2"),
+        ),
+    ))
+    match_edition(edition)
+
+    row = _api_for(firm_a).get("/api/watches").data["results"][0]
+    assert row["client_name"] == client.name
+    assert row["match_count"] == 2
+    assert row["last_match_at"] is not None
+
+
+@pytest.mark.django_db
+def test_watch_that_never_matched_reports_zero(firm_a):
+    client = _client_for(firm_a)
+    Watch.objects.create(
+        client=client, groups=[{"terms": [{"text": "gamma industries", "kind": "entity"}]}]
+    )
+
+    row = _api_for(firm_a).get("/api/watches").data["results"][0]
+    assert row["match_count"] == 0
+    assert row["last_match_at"] is None

@@ -181,6 +181,9 @@ describe('WatchForm', () => {
       exclude: [],
       section: '',
       active: true,
+      client_name: 'Acme',
+      match_count: 0,
+      last_match_at: null,
     };
     vi.spyOn(resources, 'createWatch').mockResolvedValue(created);
     render(WatchForm, { clients, onsaved: () => {} });

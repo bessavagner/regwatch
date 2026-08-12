@@ -3,6 +3,7 @@ import traceback
 from zoneinfo import ZoneInfo
 
 from django.conf import settings
+from django.db.models import Count, Max
 from django.utils import timezone
 from rest_framework import serializers, viewsets
 from rest_framework.decorators import action
@@ -43,10 +44,18 @@ class WatchSerializer(serializers.ModelSerializer):
     # validate_groups entirely when the key is omitted, letting a watch with
     # groups=[] through silently — the exact bug this task closes.
     groups = serializers.JSONField()
+    client_name = serializers.CharField(source="client.name", read_only=True)
+    # Annotated on the queryset; a watch that matches nothing is otherwise
+    # indistinguishable from one that matches daily.
+    match_count = serializers.IntegerField(read_only=True)
+    last_match_at = serializers.DateTimeField(read_only=True)
 
     class Meta:
         model = Watch
-        fields = ["id", "client", "groups", "exclude", "section", "active"]
+        fields = [
+            "id", "client", "client_name", "groups", "exclude", "section",
+            "active", "match_count", "last_match_at",
+        ]
 
     def validate_groups(self, value):
         if not isinstance(value, list):
@@ -101,7 +110,11 @@ class BackfillRequestSerializer(serializers.Serializer):
 
 class WatchViewSet(WorkspaceScopedQuerysetMixin, viewsets.ModelViewSet):
     serializer_class = WatchSerializer
-    queryset = Watch.objects.all()
+    # Match.watch declares related_name="matches", so that is the accessor.
+    queryset = Watch.objects.select_related("client").annotate(
+        match_count=Count("matches", distinct=True),
+        last_match_at=Max("matches__created_at"),
+    )
     workspace_lookup = "client__workspace"
 
     @action(detail=True, methods=["post"])

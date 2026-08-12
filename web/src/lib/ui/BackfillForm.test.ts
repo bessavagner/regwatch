@@ -14,6 +14,9 @@ const watch: Watch = {
   exclude: [],
   section: '1',
   active: true,
+  client_name: 'Acme',
+  match_count: 0,
+  last_match_at: null,
 };
 
 test('submitting shows a pending state, then a result summary with a link to the feed', async () => {

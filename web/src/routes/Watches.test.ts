@@ -15,8 +15,11 @@ const watch: Watch = {
     { terms: [{ text: 'contrato', kind: 'concept' }] },
   ],
   exclude: [],
-  section: '1',
+  section: 'DO1',
   active: true,
+  client_name: 'Acme',
+  match_count: 12,
+  last_match_at: '2026-08-11T09:14:00Z',
 };
 
 test('lists existing watches, rendering groups as OR-within / AND-across', async () => {
@@ -59,6 +62,29 @@ test('clicking "Run on past editions" reveals the backfill form', async () => {
   await waitFor(() => expect(screen.getByRole('button', { name: /run on past editions/i })).toBeInTheDocument());
   await user.click(screen.getByRole('button', { name: /run on past editions/i }));
   expect(screen.getByLabelText(/from/i)).toBeInTheDocument();
+});
+
+test('a watch row names its client and reports its match activity', async () => {
+  vi.spyOn(resources, 'listClients').mockResolvedValue({ count: 1, next: null, previous: null, results: clients });
+  vi.spyOn(resources, 'listWatches').mockResolvedValue({ count: 1, next: null, previous: null, results: [watch] });
+  render(Watches);
+
+  await waitFor(() => expect(screen.getByText('Acme')).toBeInTheDocument());
+  expect(screen.getByText(/12 matches/)).toBeInTheDocument();
+  expect(screen.getByText(/last 2026-08-11/)).toBeInTheDocument();
+  // The row used to print a bare "seção 1"; it now uses the form's own label.
+  expect(screen.getByText(/seção 1/)).toBeInTheDocument();
+});
+
+test('a watch that has never matched says so instead of looking healthy', async () => {
+  vi.spyOn(resources, 'listClients').mockResolvedValue({ count: 1, next: null, previous: null, results: clients });
+  vi.spyOn(resources, 'listWatches').mockResolvedValue({
+    count: 1, next: null, previous: null,
+    results: [{ ...watch, match_count: 0, last_match_at: null }],
+  });
+  render(Watches);
+
+  await waitFor(() => expect(screen.getByText(/no matches yet/i)).toBeInTheDocument());
 });
 
 test('with zero clients, "New watch" is disabled with a link to Clients', async () => {
