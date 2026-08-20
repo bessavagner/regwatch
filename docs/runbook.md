@@ -283,6 +283,57 @@ deliberately exempt at every count: a triaged verdict is a human decision, and
 the command will never discard one even when the watch that produced it has been
 retargeted beyond recognition.
 
+## Find the phrases making a watch noisy
+
+A watch matches on terms, but a term does more than one job in the DOU. On
+2026-08-20, 31 of Meridiano's matches came from `saneamento` and only ~6 were
+sanitation works. The rest split between the legal sense — in Brazilian legal
+Portuguese `saneamento` means *curing a procedural defect*, as in "providências
+necessárias ao **saneamento do certame**" — and acts that merely carry
+"Secretaria Municipal de Saúde e **Saneamento**" in a signature block.
+
+`exclude` on the watch already fixes this; twelve phrases removed 17 of the 31
+with no real matches lost. The hard part is knowing *which* phrases, which is
+what this command answers:
+
+```bash
+gcloud run jobs execute regwatch-run-daily --region=us-east4 --wait \
+  --args=watch_term_contexts,--watch,6
+```
+
+```
+watch 6 (Meridiano Infraestrutura) — 200 matched act(s) with text
+
+  term 'saneamento' (concept) — literal in 31 act(s)
+    preceded by:
+         7  saude e saneamento
+         4  municipal de saneamento
+         3  parentais e saneamento
+         2  necessarias ao saneamento
+    followed by:
+         3  saneamento para as
+         2  saneamento e a
+```
+
+Read the clusters, decide which are noise, and add those phrases to the watch's
+exclude list. Left and right context are counted **separately** on purpose: a
+two-sided window fragments on the dates and process numbers that follow most
+DOU phrases, so the recurring half never adds up. Phrases seen once are not
+shown — one occurrence is an anecdote, not a pattern worth excluding.
+
+`--window N` widens the context (default 2 words); `--top N` shows more
+clusters per term (default 10).
+
+**Two things it will not show you.** Concept terms match through the Portuguese
+stemmer, so an act can match `licitação` while containing only `licitações`;
+those report as "no literal occurrences (matched via stemming)". And acts past
+the 7-day text retention window have no body left — the header says how many
+were skipped, so a small corpus is never mistaken for a quiet term.
+
+Excludes are evaluated with entity (substring) semantics over the whole act, so
+prefer a phrase specific enough not to appear in an act you want. `saneamento
+do certame` is safe; a bare `saude` is not.
+
 ## Prune act text (Supabase size)
 
 On 2026-08-20 the Supabase database hit 762 MB against the free plan's 500 MB.
