@@ -283,6 +283,79 @@ deliberately exempt at every count: a triaged verdict is a human decision, and
 the command will never discard one even when the watch that produced it has been
 retargeted beyond recognition.
 
+## Prune act text (Supabase size)
+
+On 2026-08-20 the Supabase database hit 762 MB against the free plan's 500 MB.
+`gazette_act` was 749 MB of it — 98% — for 51 days of DOU. The growth rate was
+~14.7 MB/day, so the plan limit came back every six weeks regardless of what was
+paid for it.
+
+Almost none of that storage was doing work. **649 of 87,035 acts had ever
+produced a match (0.75%).** `raw_text`, `search_text` and `search_vector_pt`
+have a one-day working life: `match_edition` filters a single edition, the
+enricher reads `raw_text` once, and the 280-char snippet is copied onto the
+`Match`. The API (`matching/api.py`) serializes only `title, agency, identifier,
+date, section, source_url, source_anchor` — no screen has ever read an act body.
+
+`prune_act_text` drops act text past a retention window:
+
+- older than the window and **never matched** → the row is deleted
+- older than the window and **has matches** → the row is kept, and only
+  `raw_text` / `search_text` / `search_vector_pt` are cleared
+
+Matched rows are never deleted: `Match.act` is `on_delete=CASCADE`, so deleting
+one would silently take a client's triaged history with it.
+
+**Always dry-run first.** With no `--apply` it writes nothing:
+
+```bash
+gcloud run jobs execute regwatch-run-daily --region=us-east4 --wait \
+  --args=prune_act_text,--days,7
+```
+
+```
+cutoff 2026-08-13 (keeping 7 day(s) of text)
+  delete (never matched): 72772 act(s)
+  strip  (has matches)  : 212 act(s)
+  text payload affected : 267 MB
+prune_act_text: dry run, nothing written
+```
+
+Then apply, and reclaim the space in the same run:
+
+```bash
+gcloud run jobs execute regwatch-run-daily --region=us-east4 --wait \
+  --args=prune_act_text,--days,7,--apply,--reclaim
+```
+
+**`--reclaim` is not optional if you are trying to get under a plan limit.**
+Clearing the columns returns the space to Postgres, not to the disk Supabase
+meters. `--reclaim` runs `VACUUM (FULL, ANALYZE)` plus a `REINDEX` of both GIN
+indexes, which is what actually shrinks the files. It takes an ACCESS EXCLUSIVE
+lock on `gazette_act` — run it outside the 08:05 and 13:00 windows. It is safe
+on a nearly-empty table because `VACUUM FULL` writes a new compacted copy, so
+it needs free space for the *result*, not for the original.
+
+The first run took 762 MB → **155 MB**, and left all 650 matches, their
+snippets, their summaries and all 41 digests intact.
+
+**Pruning marks the edition, and backfill respects the mark.** A pruned
+`Edition` row survives with `text_pruned_at` set. `backfill_watch` skips those
+rows and re-fetches the day from INlabs, because matching a stripped edition
+from storage would find nothing and report success. `ingest_edition` clears the
+mark when the text comes back, so pruning is always reversible from upstream —
+that is why dropping the bodies is safe at all.
+
+**Choosing the window.** Steady state is roughly `days x 14.7 MB`, plus about
+1 MB/year for the identity of acts that matched. 7 days is ~105 MB. The digest
+retry window (`REGWATCH_DIGEST_RETRY_DAYS`, default 7) does *not* constrain it:
+`retry_unsent_digests` re-sends the stored `Digest.body` and never re-reads an
+act. The real cost of a short window is that backfilling a **new** watch over
+pruned dates has to re-download those days from INlabs.
+
+Run it weekly. Without a schedule the database climbs back over the limit in
+about six weeks.
+
 ## What the heartbeat now asserts
 
 `check_heartbeat` used to pass whenever a `status="success"` row existed for the

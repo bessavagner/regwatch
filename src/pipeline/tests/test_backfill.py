@@ -6,7 +6,7 @@ from accounts.models import Workspace
 from watches.models import Client, Watch
 from gazette.contracts import RawEdition, RawItem
 from gazette.ingest import ingest_edition
-from gazette.models import Edition
+from gazette.models import Act, Edition
 from matching.models import Match
 from digests.models import Digest
 from enrichment.llm import Summary, FakeLLMClient
@@ -163,3 +163,35 @@ def test_backfill_enrich_cap_is_shared_across_all_clients_not_per_caller(firm, m
     # exactly one of the two matches was enriched, globally — proves the cap is a single
     # shared counter, not "1 per distinct client" (which would enrich both).
     assert Match.objects.exclude(ai_summary__isnull=True).count() == 1
+
+
+@pytest.mark.django_db
+def test_backfill_refetches_a_pruned_date_instead_of_matching_empty_bodies(firm, monkeypatch):
+    """A pruned edition still exists but its acts have no text.
+
+    Reusing it from storage would match nothing and report success, so backfill
+    has to treat it as absent and pull the text back from INlabs.
+    """
+    ingest_edition(_raw_edition(DATE))
+    Edition.objects.filter(date=DATE).update(text_pruned_at=datetime.datetime.now(datetime.UTC))
+    Act.objects.filter(edition__date=DATE).update(
+        raw_text="", search_text="", search_vector_pt=None
+    )
+    Match.objects.all().delete()
+
+    calls = []
+
+    def _fetch(date):
+        calls.append(date)
+        return [_raw_edition(date)]
+
+    monkeypatch.setattr("pipeline.backfill.fetch_editions", _fetch)
+    llm = FakeLLMClient(Summary("ok", "grant", 0.9))
+
+    result = backfill_watch(DATE, DATE, llm, firm.id, max_enrich=10)
+
+    assert calls == [DATE], "pruned edition should have been re-fetched"
+    assert result.matches == 1
+    assert Match.objects.count() == 1
+    assert Edition.objects.get(date=DATE).text_pruned_at is None
+    assert Edition.objects.filter(date=DATE).count() == 1, "re-fetch must not duplicate"

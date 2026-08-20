@@ -33,7 +33,10 @@ def backfill_watch(
     enriched_total = 0
     date = date_from
     while date <= date_to:
-        editions = list(Edition.objects.filter(date=date))
+        # text_pruned_at: prune_act_text stripped this edition's bodies, so
+        # matching it from storage would silently find nothing. Treat it as
+        # absent and re-fetch, which restores the text via ingest_edition.
+        editions = list(Edition.objects.filter(date=date, text_pruned_at__isnull=True))
         if not editions:
             try:
                 raw_editions = fetch_editions(date)

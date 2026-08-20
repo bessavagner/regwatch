@@ -7,6 +7,10 @@ class Edition(models.Model):
     date = models.DateField()
     section = models.CharField(max_length=20)
     source_url = models.URLField()
+    # Set when prune_act_text strips this edition's act bodies. The rows survive
+    # for the matches that reference them, but the edition can no longer be
+    # re-matched from storage, so backfill must re-fetch it from INlabs.
+    text_pruned_at = models.DateTimeField(null=True, blank=True)
 
     class Meta:
         constraints = [

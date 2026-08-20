@@ -8,7 +8,7 @@ from gazette.normalize import NormalizeNFC, normalize_text
 def ingest_edition(raw: RawEdition) -> Edition:
     edition, _ = Edition.objects.update_or_create(
         date=raw.date, section=raw.section,
-        defaults={"source_url": raw.source_url},
+        defaults={"source_url": raw.source_url, "text_pruned_at": None},
     )
     for item in raw.items:
         Act.objects.update_or_create(
