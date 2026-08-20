@@ -51,7 +51,11 @@ test('MatchCard does not claim 0% confidence when enrichment never ran', () => {
   expect(screen.getByText('a relevant snippet')).toBeInTheDocument();
 });
 
-test('MatchCard shows confidence when enrichment did run', () => {
-  render(MatchCard, { props: { match: { ...match, confidence: 0.85 } } });
-  expect(screen.getByText(/confidence 85%/)).toBeInTheDocument();
+// The model returns 0.98-0.99 for every category including `other`, so the
+// number ranked and warned about nothing while looking like a verdict. It is
+// still collected on the Match; it is just not shown.
+test('MatchCard never renders confidence, however high', () => {
+  render(MatchCard, { props: { match: { ...match, confidence: 0.99 } } });
+  expect(screen.queryByText(/confidence/i)).toBeNull();
+  expect(screen.queryByText(/99/)).toBeNull();
 });

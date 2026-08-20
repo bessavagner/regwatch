@@ -6,9 +6,6 @@
   const tone = $derived(
     match.state === 'relevant' ? 'green' : match.state === 'dismissed' ? 'red' : 'blue',
   );
-  // confidence is null whenever enrichment did not run. Math.round(null * 100)
-  // is 0, which rendered as a confident "0%" verdict on acts nobody had read.
-  const enriched = $derived(match.confidence !== null && match.confidence !== undefined);
 </script>
 
 <div class="flex items-start justify-between gap-2">
@@ -31,9 +28,6 @@
 
 <div class="mt-2 flex flex-wrap items-center gap-2 text-xs text-muted">
   {#if match.category}<Badge label={match.category} tone="gray" />{/if}
-  {#if enriched}
-    <span class="font-mono tabular-nums">confidence {Math.round(match.confidence! * 100)}%</span>
-  {/if}
   {#if match.act_detail.source_url}
     <a
       class="underline"
