@@ -118,3 +118,34 @@ def test_run_is_success_when_everything_was_delivered(
     log = RunLog.objects.get(date=DATE, trigger="scheduled")
     assert log.status == "success"
     assert log.digests_sent == 1
+
+
+@pytest.mark.django_db
+def test_runlog_separates_this_run_from_the_date_total(firm, monkeypatch):
+    """The midday re-run must not re-report the morning's work as its own.
+
+    The date-scoped totals deliberately still show the day's true state — the
+    heartbeat reads only the latest run of a date and would otherwise mask a
+    morning partial behind a quiet midday run that created nothing.
+    """
+    monkeypatch.setattr(
+        "pipeline.management.commands.run_daily.fetch_editions",
+        lambda date: [_edition()],
+    )
+    llm = FakeLLMClient(Summary("ok", "grant", 0.9))
+    monkeypatch.setattr("pipeline.management.commands.run_daily.get_llm_client", lambda: llm)
+    monkeypatch.setattr(
+        "pipeline.management.commands.run_daily.get_email_sender", lambda: FakeEmailSender()
+    )
+
+    call_command("run_daily", "--date", DATE.isoformat())
+    call_command("run_daily", "--date", DATE.isoformat())
+
+    morning, midday = RunLog.objects.filter(date=DATE).order_by("started_at")
+
+    assert (morning.ingested_acts, morning.created_matches, morning.created_enriched) == (1, 1, 1)
+    assert (midday.ingested_acts, midday.created_matches, midday.created_enriched) == (1, 0, 0)
+
+    # The day still holds exactly one match, and both rows report that.
+    assert morning.matches == midday.matches == 1
+    assert midday.status == "success"

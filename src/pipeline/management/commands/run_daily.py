@@ -32,13 +32,17 @@ class Command(BaseCommand):
         log = RunLog.objects.create(date=run_date, status="running")
         try:
             editions = fetch_editions(run_date)
-            run_pipeline(
+            result = run_pipeline(
                 editions,
                 get_llm_client(),
                 get_email_sender(),
                 max_enrich=settings.REGWATCH_MAX_ENRICH_PER_RUN,
                 today=run_date,
             )
+            log.ingested_acts = result.ingested_acts
+            log.created_matches = result.created_matches
+            log.created_enriched = result.created_enriched
+
             ed_qs = Edition.objects.filter(date=run_date)
             log.editions = ed_qs.count()
             log.acts = Act.objects.filter(edition__in=ed_qs).count()
@@ -67,8 +71,12 @@ class Command(BaseCommand):
             raise
         log.finished_at = timezone.now()
         log.save()
+        # Both views, labelled: what this run did, then the day's totals. Only
+        # the first tells you whether the run was worth anything.
         self.stdout.write(
-            f"run_daily {run_date}: editions={log.editions} acts={log.acts} "
+            f"run_daily {run_date}: this run ingested={log.ingested_acts} "
+            f"matched={log.created_matches} enriched={log.created_enriched} | "
+            f"date totals editions={log.editions} acts={log.acts} "
             f"matches={log.matches} enriched={log.enriched} digests={log.digests} "
             f"digests_sent={log.digests_sent} status={log.status}"
         )

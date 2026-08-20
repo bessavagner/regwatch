@@ -1,4 +1,5 @@
 import datetime
+from dataclasses import dataclass, field
 
 from django.conf import settings
 
@@ -11,6 +12,16 @@ from digests.email import EmailSender
 from digests.notifier import build_and_send_digests, retry_unsent_digests
 
 
+@dataclass
+class RunResult:
+    """What one run did, as opposed to what exists for the date afterwards."""
+
+    ingested_acts: int = 0
+    created_matches: int = 0
+    created_enriched: int = 0
+    digests: list = field(default_factory=list)
+
+
 def run_pipeline(
     raw_editions: list[RawEdition],
     llm: LLMClient,
@@ -18,17 +29,24 @@ def run_pipeline(
     *,
     max_enrich: int | None = None,
     today: datetime.date | None = None,
-):
+) -> RunResult:
+    result = RunResult()
     dates = set()
     enriched = 0
     for raw in raw_editions:
+        result.ingested_acts += len(raw.items)
         edition = ingest_edition(raw)
         dates.add(edition.date)
+        # match_edition returns only the matches it created, so a re-run over a
+        # day already processed correctly reports zero created and zero
+        # enriched rather than repeating the first run's numbers.
         for match in match_edition(edition):
+            result.created_matches += 1
             if max_enrich is not None and enriched >= max_enrich:
                 continue
             enrich_match(match, llm)
             enriched += 1
+    result.created_enriched = enriched
 
     digests = []
     for date in sorted(dates):
@@ -41,4 +59,5 @@ def run_pipeline(
         window = datetime.timedelta(days=settings.REGWATCH_DIGEST_RETRY_DAYS)
         retry_unsent_digests(anchor - window, anchor, sender)
 
-    return digests
+    result.digests = digests
+    return result

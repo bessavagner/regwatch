@@ -23,7 +23,8 @@ def firm(db):
 def test_pipeline_produces_enriched_digest(firm):
     llm = FakeLLMClient(Summary("Licença concedida à Beta Corp.", "grant", 0.95))
     sender = FakeEmailSender()
-    digests = run_pipeline([sample_edition()], llm, sender)
+    result = run_pipeline([sample_edition()], llm, sender)
+    digests = result.digests
 
     assert len(digests) == 1
     assert Match.objects.count() == 1            # only the relevant act matched
@@ -76,3 +77,24 @@ def test_run_pipeline_leaves_digests_older_than_the_retry_window(firm, settings)
 
     ancient.refresh_from_db()
     assert ancient.sent is False
+
+
+@pytest.mark.django_db
+def test_run_result_counts_this_run_not_the_date(firm):
+    """A re-run over an already-processed day did what, exactly? Nothing.
+
+    RunLog's date-scoped totals cannot say so — they report the first run's
+    numbers again, which is how summing them reached 908 matches against an
+    actual 650.
+    """
+    llm = FakeLLMClient(Summary("ok", "grant", 0.9))
+
+    first = run_pipeline([sample_edition()], llm, FakeEmailSender())
+    assert first.ingested_acts == 2
+    assert first.created_matches == 1
+    assert first.created_enriched == 1
+
+    second = run_pipeline([sample_edition()], llm, FakeEmailSender())
+    assert second.ingested_acts == 2, "it did re-ingest the same acts"
+    assert second.created_matches == 0, "but created nothing"
+    assert second.created_enriched == 0, "and spent nothing on the LLM"
