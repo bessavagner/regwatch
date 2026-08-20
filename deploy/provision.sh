@@ -72,7 +72,9 @@ SECRET_FLAGS="--set-secrets=$(secret_flags)"
 ENV_FLAGS="--set-env-vars=REGWATCH_EMAIL_SENDER=digests.smtp.SmtpEmailSender"
 
 echo "== Cloud Run Jobs (bootstrap image; CI redeploys real images) =="
-for job in "regwatch-migrate:migrate" "regwatch-run-daily:run_daily" "regwatch-heartbeat:check_heartbeat"; do
+for job in "regwatch-migrate:migrate" "regwatch-run-daily:run_daily" \
+          "regwatch-heartbeat:check_heartbeat" \
+          "regwatch-prune:prune_act_text,--days,7,--apply,--reclaim"; do
   name="${job%%:*}"; cmd="${job##*:}"
   # run_daily ingests a full DOU day (6 sections + extras) and runs a bulk FTS
   # update, so it needs well beyond Cloud Run's 600s default task timeout and
@@ -109,6 +111,12 @@ mk_sched regwatch-midday    "0 13 * * 1-5" regwatch-run-daily
 # triggers: the midday run is the real safety net for a failed morning run, so
 # alerting at 09:00 paged on days that then self-healed at 13:00.
 mk_sched regwatch-heartbeat "0 14 * * 1-5" regwatch-heartbeat
+# Sunday 04:00: prune_act_text --reclaim takes an ACCESS EXCLUSIVE lock on
+# gazette_act, and the run_daily triggers above are Mon-Fri, so Sunday is the
+# only window with no contention at all. Weekly is not cosmetic — act text
+# accrues ~15 MB/day, which clears Supabase's 500 MB free tier in about six
+# weeks (docs/runbook.md, "Prune act text").
+mk_sched regwatch-prune     "0 4 * * 0"     regwatch-prune
 
 echo "== Alerting: email channel + two policies =="
 CHANNEL=$(gcloud beta monitoring channels create --display-name="RegWatch alerts" \
