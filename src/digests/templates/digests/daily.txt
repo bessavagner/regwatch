@@ -1,5 +1,6 @@
-RegWatch — {{ client.name }} — {{ date }}
+{% autoescape off %}RegWatch — {{ client.name }} — {{ date }}
 
 {% for m in matches %}- [{{ m.category|default:"resumo indisponível" }}] {{ m.ai_summary|default:m.snippet }}
   {{ m.act.title }} ({{ m.act.agency }})
-{% endfor %}
+  {{ m.act.dou_url }}
+{% endfor %}{% endautoescape %}

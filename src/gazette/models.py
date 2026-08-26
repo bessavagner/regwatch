@@ -28,6 +28,35 @@ class Act(models.Model):
     source_anchor = models.TextField(blank=True, default="")
     search_vector_pt = SearchVectorField(null=True)   # config=portuguese
 
+    @property
+    def dou_url(self) -> str:
+        """A public, reader-facing link to this act in the DOU.
+
+        source_anchor is INlabs' pdfPage: a pesquisa.in.gov.br page view of the
+        exact page the act ran on, open to anyone. It arrives as http and
+        in.gov.br 301s to https, so we upgrade it here rather than send readers
+        through a redirect that mail clients and corporate filters flag.
+
+        Edition.source_url is deliberately NOT the fallback -- that is the
+        authenticated INlabs zip endpoint, which serves a login wall and then an
+        archive, not a readable act. When the anchor is missing we fall back to
+        the day's edition on in.gov.br: the right section and date, if not the
+        right page.
+        """
+        if self.source_anchor:
+            if self.source_anchor.startswith("http://"):
+                return "https://" + self.source_anchor[len("http://"):]
+            return self.source_anchor
+        # Editions carry INlabs' pubName ("DO1", "DO1E"); leiturajornal wants it
+        # lowercased. Older rows stored the bare section number.
+        section = self.edition.section.strip().lower()
+        if not section.startswith("do"):
+            section = f"do{section}"
+        return (
+            "https://www.in.gov.br/leiturajornal"
+            f"?data={self.edition.date:%d-%m-%Y}&secao={section}"
+        )
+
     class Meta:
         constraints = [
             models.UniqueConstraint(fields=["edition", "identifier"], name="uq_act_edition_identifier"),

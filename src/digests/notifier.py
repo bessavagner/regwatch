@@ -56,7 +56,7 @@ def build_and_send_digests(
     out: list[Digest] = []
     matches = (
         Match.objects.filter(act__edition__date=date)
-        .select_related("watch__client", "act")
+        .select_related("watch__client", "act__edition")
     )
     if client is not None:
         matches = matches.filter(watch__client=client)

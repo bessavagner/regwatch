@@ -5,6 +5,7 @@ import pytest
 from accounts.models import Workspace
 from watches.models import Client, Watch
 from gazette.contracts import RawEdition, RawItem
+from gazette.models import Act
 from gazette.ingest import ingest_edition
 from matching.matcher import match_edition
 from digests.email import FakeEmailSender, RaisingEmailSender
@@ -242,3 +243,28 @@ def test_unenriched_match_says_the_summary_is_missing(matched):
     # The match was never enriched, so category is "" and ai_summary is None.
     assert "[sem categoria]" not in body
     assert "[resumo indisponível]" in body
+
+
+@pytest.mark.django_db
+def test_digest_links_every_item_to_the_dou(matched):
+    act = Act.objects.get()
+    act.source_anchor = (
+        "http://pesquisa.in.gov.br/imprensa/jsp/visualiza/index.jsp"
+        "?data=26/06/2026&jornal=515&pagina=19"
+    )
+    act.save(update_fields=["source_anchor"])
+    sender = FakeEmailSender()
+    body = build_and_send_digests(DATE, sender)[0].body
+    assert act.dou_url in body
+    # Plain-text mail: the ampersands have to survive as themselves. Django
+    # autoescapes .txt templates too, which would ship &amp; in the query string
+    # and break the link in every client that does not un-escape it.
+    assert "&amp;" not in body
+
+
+@pytest.mark.django_db
+def test_digest_links_an_act_that_has_no_anchor(matched):
+    Act.objects.update(source_anchor="")
+    sender = FakeEmailSender()
+    body = build_and_send_digests(DATE, sender)[0].body
+    assert "https://www.in.gov.br/leiturajornal?data=26-06-2026&secao=do1" in body
