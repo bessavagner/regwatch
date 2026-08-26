@@ -8,6 +8,7 @@ from gazette.contracts import RawEdition, RawItem
 from gazette.models import Act
 from gazette.ingest import ingest_edition
 from matching.matcher import match_edition
+from matching.models import Match
 from digests.email import FakeEmailSender, RaisingEmailSender
 from digests.notifier import build_and_send_digests, deliver_digest
 from digests.models import Digest
@@ -283,3 +284,50 @@ def test_digest_subject_carries_a_brazilian_date(matched):
     build_and_send_digests(DATE, sender)
     subject = sender.sent[0][1]      # (to, subject, body)
     assert subject == "RegWatch — 26 de junho de 2026"
+
+
+def _client_with_watch(name="Beta"):
+    ws = Workspace.objects.create(name=f"WS {name}")
+    client = Client.objects.create(workspace=ws, name=name, email=f"{name}@example.test")
+    Watch.objects.create(
+        client=client, groups=[{"terms": [{"text": "beta corp", "kind": "entity"}]}]
+    )
+    return client
+
+
+@pytest.mark.django_db
+def test_digest_leads_with_the_highest_ranked_match():
+    _client_with_watch()
+    edition = ingest_edition(RawEdition(
+        date=DATE, section="DO1", source_url="https://x.test/s1",
+        items=(
+            RawItem("a1", "Autorizacao rotineira", "Org", "Autorização à BETA CORP.", "#a1"),
+            RawItem("a2", "Revisao tarifaria", "Org", "Revisão tarifária da BETA CORP.", "#a2"),
+        ),
+    ))
+    match_edition(edition)
+    # rank is advisory and comes from the tsvector; pin it so this test is about
+    # ordering rather than about what the matcher happened to score.
+    Match.objects.filter(act__identifier="a1").update(rank=0.1)
+    Match.objects.filter(act__identifier="a2").update(rank=0.9)
+
+    body = build_and_send_digests(DATE, FakeEmailSender())[0].body
+    assert body.index("Revisao tarifaria") < body.index("Autorizacao rotineira")
+
+
+@pytest.mark.django_db
+def test_matches_of_equal_rank_are_ordered_by_section():
+    _client_with_watch()
+    for section, identifier, title in (
+        ("DO2", "b1", "Ato da segunda secao"),
+        ("DO1", "a1", "Ato da primeira secao"),
+    ):
+        edition = ingest_edition(RawEdition(
+            date=DATE, section=section, source_url=f"https://x.test/{section}",
+            items=(RawItem(identifier, title, "Org", "Licença à BETA CORP.", f"#{identifier}"),),
+        ))
+        match_edition(edition)
+    Match.objects.update(rank=0.5)
+
+    body = build_and_send_digests(DATE, FakeEmailSender())[0].body
+    assert body.index("Ato da primeira secao") < body.index("Ato da segunda secao")

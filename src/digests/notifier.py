@@ -62,6 +62,12 @@ def build_and_send_digests(
     matches = (
         Match.objects.filter(act__edition__date=date)
         .select_related("watch__client", "act__edition")
+        # Highest rank first, so the one act a client most needs to see is the
+        # first thing in the mail rather than wherever Postgres happened to put
+        # it. rank is advisory and weak until D4/D5 land; section then id keep
+        # the order stable for equal ranks instead of letting it drift between
+        # runs of the same date.
+        .order_by("-rank", "act__edition__section", "id")
     )
     if client is not None:
         matches = matches.filter(watch__client=client)
