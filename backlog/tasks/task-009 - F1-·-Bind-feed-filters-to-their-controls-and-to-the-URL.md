@@ -1,9 +1,10 @@
 ---
 id: TASK-009
 title: F1 · Bind feed filters to their controls and to the URL
-status: To Do
+status: In Progress
 assignee: []
 created_date: '2026-08-26 17:29'
+updated_date: '2026-08-26 23:33'
 labels:
   - 'track:console'
   - 'size:S'
@@ -22,7 +23,27 @@ initialFilters() reads client, state, section, category, date_from and date_to o
 
 ## Acceptance Criteria
 <!-- AC:BEGIN -->
-- [ ] #1 Every control reflects the active filter on load
-- [ ] #2 Changing a filter updates the query string
-- [ ] #3 Browser back restores the previous filter set
+- [x] #1 Every control reflects the active filter on load
+- [x] #2 Changing a filter updates the query string
+- [x] #3 Browser back restores the previous filter set
 <!-- AC:END -->
+
+## Implementation Notes
+
+<!-- SECTION:NOTES:BEGIN -->
+web/src/lib/feedFilters.ts is the one converter between a query
+string and a feed view; Feed.svelte reads and writes through it. Every select
+and date input now carries a value, so a control can no longer read 'all' over
+an active filter. setFilter pushes a history entry; a popstate listener
+restores the whole view.
+
+The Client select needed a second fix: Svelte matches a select's value against
+the raw option expression, and the option carried a numeric id, so a client id
+read out of the query string never matched and the browser left selectedIndex
+at -1. The option value is now String(c.id).
+
+Included beyond the task text, deliberately: 'ordering' (the Order select had
+the identical defect and sits in the same group) and 'page' (TASK-011 landed
+in the same plan, and Back restoring filters but not the page would half-honour
+AC #3).
+<!-- SECTION:NOTES:END -->
