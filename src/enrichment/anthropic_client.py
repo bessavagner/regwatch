@@ -4,9 +4,9 @@ import re
 
 import httpx
 
+# Re-exported: src/enrichment/openai_client.py imports CATEGORIES from here.
+from enrichment.categories import CATEGORIES  # noqa: F401
 from enrichment.llm import Summary
-
-CATEGORIES = {"grant", "penalty", "appointment", "tender", "regulation", "other"}
 
 _FENCE = re.compile(r"^```(?:json)?\s*|\s*```$", re.IGNORECASE)
 
