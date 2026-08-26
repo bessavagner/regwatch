@@ -4,7 +4,7 @@ from dataclasses import dataclass, field
 from django.conf import settings
 
 from gazette.contracts import RawEdition
-from gazette.ingest import ingest_edition
+from gazette.ingest import ingest_edition_result
 from matching.matcher import match_edition
 from enrichment.enricher import enrich_match
 from enrichment.llm import LLMClient
@@ -34,8 +34,11 @@ def run_pipeline(
     dates = set()
     enriched = 0
     for raw in raw_editions:
-        result.ingested_acts += len(raw.items)
-        edition = ingest_edition(raw)
+        # acts_written, not len(raw.items): a re-run over a day already stored
+        # parses the same acts but writes none, and the counter must say so.
+        ingested = ingest_edition_result(raw)
+        result.ingested_acts += ingested.acts_written
+        edition = ingested.edition
         dates.add(edition.date)
         # match_edition returns only the matches it created, so a re-run over a
         # day already processed correctly reports zero created and zero

@@ -144,7 +144,9 @@ def test_runlog_separates_this_run_from_the_date_total(firm, monkeypatch):
     morning, midday = RunLog.objects.filter(date=DATE).order_by("started_at")
 
     assert (morning.ingested_acts, morning.created_matches, morning.created_enriched) == (1, 1, 1)
-    assert (midday.ingested_acts, midday.created_matches, midday.created_enriched) == (1, 0, 0)
+    # All three zero: the midday run re-parsed the edition but the content was
+    # unchanged, so it wrote no act rows either.
+    assert (midday.ingested_acts, midday.created_matches, midday.created_enriched) == (0, 0, 0)
 
     # The day still holds exactly one match, and both rows report that.
     assert morning.matches == midday.matches == 1

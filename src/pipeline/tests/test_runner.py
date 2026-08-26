@@ -95,6 +95,6 @@ def test_run_result_counts_this_run_not_the_date(firm):
     assert first.created_enriched == 1
 
     second = run_pipeline([sample_edition()], llm, FakeEmailSender())
-    assert second.ingested_acts == 2, "it did re-ingest the same acts"
-    assert second.created_matches == 0, "but created nothing"
+    assert second.ingested_acts == 0, "it re-parsed the same acts but wrote none"
+    assert second.created_matches == 0, "created nothing"
     assert second.created_enriched == 0, "and spent nothing on the LLM"
