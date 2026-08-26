@@ -1,5 +1,6 @@
 <script lang="ts">
   import type { Match } from '../api/types';
+  import { brDate } from '../format';
   import Badge from './Badge.svelte';
 
   let { match, children }: { match: Match; children?: import('svelte').Snippet } = $props();
@@ -12,7 +13,7 @@
   <div class="min-w-0">
     <p class="as-typed truncate text-sm font-medium text-ink">{match.act_detail.title}</p>
     <p class="as-typed mt-0.5 text-xs text-muted">
-      {match.client_name} · {match.act_detail.date} · {match.act_detail.section}
+      {match.client_name} · {brDate(match.act_detail.date)} · {match.act_detail.section}
       {#if match.act_detail.agency} · {match.act_detail.agency}{/if}
     </p>
   </div>

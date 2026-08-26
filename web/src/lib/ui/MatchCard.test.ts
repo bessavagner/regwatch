@@ -31,7 +31,7 @@ test('MatchCard shows the act title, client, date and section', () => {
   render(MatchCard, { props: { match } });
   expect(screen.getByText(/EXTRATO DE CONTRATO Nº 9\/2026/)).toBeInTheDocument();
   expect(screen.getByText(/IFCE Crateús/)).toBeInTheDocument();
-  expect(screen.getByText(/2026-08-11/)).toBeInTheDocument();
+  expect(screen.getByText(/11 de agosto de 2026/)).toBeInTheDocument();
 });
 
 test('MatchCard links to the source edition', () => {

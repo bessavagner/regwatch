@@ -3,6 +3,7 @@
   import type { Client, Digest } from '../lib/api/types';
   import AsyncState from '../lib/ui/AsyncState.svelte';
   import Badge from '../lib/ui/Badge.svelte';
+  import { brDate } from '../lib/format';
 
   let status = $state<'idle' | 'loading' | 'loaded' | 'empty' | 'error'>('idle');
   let digests = $state<Digest[]>([]);
@@ -45,7 +46,7 @@
         {#each digests as d, i (d.id)}
           <li class="row reveal" style="--i: {i}">
             <div class="flex items-center justify-between gap-2">
-              <p class="font-mono text-sm tabular-nums text-ink"><span>{d.date}</span> · <span class="as-typed">{clientName(d.client)}</span></p>
+              <p class="text-sm text-ink"><span>{brDate(d.date)}</span> · <span class="as-typed">{clientName(d.client)}</span></p>
               <Badge label={d.sent ? 'sent' : 'not sent'} tone={d.sent ? 'green' : 'gray'} />
             </div>
             <pre class="as-typed mt-2 whitespace-pre-wrap font-mono text-sm text-muted">{d.body}</pre>

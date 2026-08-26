@@ -3,6 +3,8 @@ import logging
 
 from django.template.loader import render_to_string
 from django.utils import timezone
+
+from config.formatting import br_date
 from watches.models import Client
 from matching.models import Match
 from digests.email import EmailSender
@@ -32,7 +34,10 @@ def deliver_digest(digest: Digest, sender: EmailSender) -> bool:
         return False
 
     try:
-        sender.send(to=email, subject=f"RegWatch — {digest.date}", body=digest.body)
+        # Localised so the subject matches the body, instead of pairing a
+        # Brazilian date with an ISO one in the same message.
+        subject = f"RegWatch — {br_date(digest.date)}"
+        sender.send(to=email, subject=subject, body=digest.body)
     except Exception as exc:
         logger.exception(
             "digest send failed for client %s on %s — leaving it unsent",
@@ -71,7 +76,7 @@ def build_and_send_digests(
         c = clients[client_id]
         body = render_to_string(
             "digests/daily.txt",
-            {"client": c, "date": date, "matches": client_matches},
+            {"client": c, "date": br_date(date), "matches": client_matches},
         )
         digest, _ = Digest.objects.update_or_create(
             client=c, date=date, defaults={"body": body},

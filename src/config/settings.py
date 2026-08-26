@@ -53,6 +53,15 @@ TEMPLATES = [{
 WSGI_APPLICATION = "config.wsgi.application"
 DATABASES = {"default": dj_database_url.parse(resolve_database_url(), conn_max_age=0)}
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+
+# A Brazilian product reading a Brazilian gazette. Without these Django falls
+# back to en-us/UTC and the digest went out with "Aug. 26, 2026" in the body.
+# Rows stay in UTC (USE_TZ); only rendering and timezone.localdate() shift, and
+# localdate is what prune_act_text counts retention from -- a Brasilia-day
+# cutoff there is the intended reading, not a side effect.
+LANGUAGE_CODE = "pt-br"
+TIME_ZONE = "America/Sao_Paulo"
+USE_I18N = True
 USE_TZ = True
 
 STATIC_URL = "/static/"

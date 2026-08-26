@@ -268,3 +268,18 @@ def test_digest_links_an_act_that_has_no_anchor(matched):
     sender = FakeEmailSender()
     body = build_and_send_digests(DATE, sender)[0].body
     assert "https://www.in.gov.br/leiturajornal?data=26-06-2026&secao=do1" in body
+
+
+@pytest.mark.django_db
+def test_digest_header_carries_a_brazilian_date(matched):
+    sender = FakeEmailSender()
+    body = build_and_send_digests(DATE, sender)[0].body
+    assert "26 de junho de 2026" in body
+
+
+@pytest.mark.django_db
+def test_digest_subject_carries_a_brazilian_date(matched):
+    sender = FakeEmailSender()
+    build_and_send_digests(DATE, sender)
+    subject = sender.sent[0][1]      # (to, subject, body)
+    assert subject == "RegWatch — 26 de junho de 2026"
