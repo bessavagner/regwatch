@@ -39,7 +39,7 @@ test('submitting shows a pending state, then a result summary with a link to the
 
   expect(await screen.findByText(/3 matches/i)).toBeInTheDocument();
   expect(screen.getByText(/2 editions/i)).toBeInTheDocument();
-  expect(screen.getByText(/2026-07-01/)).toBeInTheDocument();
+  expect(screen.getByText(/1 de julho de 2026/)).toBeInTheDocument();
   expect(navigateSpy).not.toHaveBeenCalled();
 
   await user.click(screen.getByRole('button', { name: /view in feed/i }));

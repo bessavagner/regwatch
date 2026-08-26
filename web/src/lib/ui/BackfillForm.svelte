@@ -3,6 +3,7 @@
   import { backfillWatch, type BackfillBody, type BackfillResult } from '../api/resources';
   import { ApiError } from '../api/client';
   import { navigate } from '../router/router.svelte';
+  import { brDate } from '../format';
   import Button from './Button.svelte';
 
   let { watch, oncancel }: { watch: Watch; oncancel: () => void } = $props();
@@ -62,7 +63,7 @@
   {#if result}
     <p class="text-sm text-ink-2">
       {result.editions} editions, {result.acts} acts, {result.matches} matches, {result.enriched} enriched.
-      {#if result.skipped_dates.length}Skipped: {result.skipped_dates.join(', ')}.{/if}
+      {#if result.skipped_dates.length}Skipped: {result.skipped_dates.map(brDate).join(', ')}.{/if}
     </p>
   {/if}
   <div class="flex gap-2">
