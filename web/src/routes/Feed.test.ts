@@ -226,3 +226,34 @@ test('an empty feed is page 1 of 1, never page 1 of 0', async () => {
   await waitFor(() => expect(screen.getByText(/no matches/i)).toBeInTheDocument());
   expect(screen.getByText('Page 1 of 1')).toBeInTheDocument();
 });
+
+test('triaging a match out of the active filter lowers the count and the dial', async () => {
+  vi.spyOn(resources, 'listClients').mockResolvedValue({ count: 0, next: null, previous: null, results: [] });
+  vi.spyOn(resources, 'listMatches').mockResolvedValue(page([m(1), m(2)], 2));
+  vi.spyOn(resources, 'markRelevant').mockResolvedValue({ ...m(1), state: 'relevant' });
+  const user = userEvent.setup();
+  window.history.pushState({}, '', '/feed?state=new');
+  render(Feed);
+  await waitFor(() => expect(screen.getByText('snip-1')).toBeInTheDocument());
+  expect(screen.getByText('2 matches')).toBeInTheDocument();
+
+  // One Relevant button per card, so take the first.
+  await user.click(screen.getAllByRole('button', { name: /^relevant$/i })[0]);
+
+  await waitFor(() => expect(screen.getByText('1 match')).toBeInTheDocument());
+  expect(screen.getByLabelText('1 matches tracked')).toBeInTheDocument();
+});
+
+test('triaging within the active filter leaves the count alone', async () => {
+  // No state filter: the match stays in the set, so the total has not changed.
+  vi.spyOn(resources, 'listClients').mockResolvedValue({ count: 0, next: null, previous: null, results: [] });
+  vi.spyOn(resources, 'listMatches').mockResolvedValue(page([m(1), m(2)], 2));
+  vi.spyOn(resources, 'markRelevant').mockResolvedValue({ ...m(1), state: 'relevant' });
+  const user = userEvent.setup();
+  render(Feed);
+  await waitFor(() => expect(screen.getByText('snip-1')).toBeInTheDocument());
+
+  await user.click(screen.getAllByRole('button', { name: /^relevant$/i })[0]);
+  await waitFor(() => expect(screen.getByText('relevant', { selector: 'span' })).toBeInTheDocument());
+  expect(screen.getByText('2 matches')).toBeInTheDocument();
+});

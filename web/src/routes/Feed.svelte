@@ -35,6 +35,10 @@
     // If a state filter is active and no longer matches, drop it from view.
     if (filters.state && updated.state !== filters.state) {
       matches = matches.filter((m) => m.id !== updated.id);
+      // count is the size of the filtered set, not of this page: the match
+      // really has left the set, so the header and the dial -- which both read
+      // count -- must follow it down.
+      count = Math.max(0, count - 1);
     }
   }
 
