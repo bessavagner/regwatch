@@ -1,5 +1,5 @@
 import { api } from './client';
-import type { Client, Digest, Match, Page, Vocabulary, Watch, WatchGroup } from './types';
+import type { Client, Digest, Match, Page, Paged, Vocabulary, Watch, WatchGroup } from './types';
 
 export interface MatchParams {
   client?: string;
@@ -22,7 +22,7 @@ function qs(params: Record<string, string | number | undefined>): string {
 }
 
 export const listMatches = (p: MatchParams = {}) =>
-  api.get<Page<Match>>(`/api/matches${qs(p)}`);
+  api.get<Paged<Match>>(`/api/matches${qs(p)}`);
 export const listClients = () => api.get<Page<Client>>('/api/clients');
 export const getVocabulary = () => api.get<Vocabulary>('/api/vocabulary');
 export const listWatches = (client?: string) =>

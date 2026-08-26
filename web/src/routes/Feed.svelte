@@ -18,6 +18,7 @@
   let status = $state<'idle' | 'loading' | 'loaded' | 'empty' | 'error'>('idle');
   let matches = $state<Match[]>([]);
   let count = $state(0);
+  let totalPages = $state(1);
   let page = $state(initialView.page);
   let hasNext = $state(false);
   let hasPrev = $state(false);
@@ -43,6 +44,7 @@
       const res = await listMatches({ ...filters, page });
       matches = res.results;
       count = res.count;
+      totalPages = res.total_pages;
       status = res.results.length ? 'loaded' : 'empty';
       hasNext = res.next !== null;
       hasPrev = res.previous !== null;
@@ -217,7 +219,7 @@
 
   <div class="mt-4 flex items-center justify-between">
     <Button variant="ghost" disabled={!hasPrev} onclick={() => goToPage(page - 1)}>Prev</Button>
-    <span class="font-mono text-sm tabular-nums text-muted">Page {page}</span>
+    <span class="font-mono text-sm tabular-nums text-muted">Page {page} of {totalPages}</span>
     <Button variant="ghost" disabled={!hasNext} onclick={() => goToPage(page + 1)}>Next</Button>
   </div>
 </section>

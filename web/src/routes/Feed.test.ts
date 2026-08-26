@@ -3,15 +3,15 @@ import userEvent from '@testing-library/user-event';
 import { afterEach, expect, test, vi } from 'vitest';
 import Feed from './Feed.svelte';
 import * as resources from '../lib/api/resources';
-import type { Match, Page } from '../lib/api/types';
+import type { Match, Paged } from '../lib/api/types';
 
 afterEach(() => {
   vi.restoreAllMocks();
   window.history.pushState({}, '', '/feed');
 });
 
-function page(results: Match[], count = results.length): Page<Match> {
-  return { count, next: null, previous: null, results };
+function page(results: Match[], count = results.length): Paged<Match> {
+  return { count, page: 1, total_pages: 1, page_size: 25, next: null, previous: null, results };
 }
 const m = (id: number, state: Match['state'] = 'new'): Match => ({
   id, watch: 1, act: id, snippet: `snip-${id}`, rank: 0.5, ai_summary: '',
@@ -66,7 +66,7 @@ test('changing the state filter refetches with the state param', async () => {
 
 test('Next button advances the page and refetches', async () => {
   vi.spyOn(resources, 'listClients').mockResolvedValue({ count: 0, next: null, previous: null, results: [] });
-  const spy = vi.spyOn(resources, 'listMatches').mockResolvedValue({ count: 30, next: '/api/matches?page=2', previous: null, results: [m(1)] });
+  const spy = vi.spyOn(resources, 'listMatches').mockResolvedValue({ count: 30, page: 1, total_pages: 2, page_size: 25, next: '/api/matches?page=2', previous: null, results: [m(1)] });
   const user = userEvent.setup();
   render(Feed);
   await waitFor(() => expect(screen.getByText('snip-1')).toBeInTheDocument());
@@ -193,4 +193,36 @@ test('with no filters every control reads all', async () => {
   expect((screen.getByLabelText(/state/i) as HTMLSelectElement).value).toBe('');
   expect((screen.getByLabelText(/section/i) as HTMLSelectElement).value).toBe('');
   expect((screen.getByLabelText(/^from$/i) as HTMLInputElement).value).toBe('');
+});
+
+test('says which page of how many', async () => {
+  vi.spyOn(resources, 'listClients').mockResolvedValue({ count: 0, next: null, previous: null, results: [] });
+  vi.spyOn(resources, 'listMatches').mockResolvedValue({
+    count: 429, page: 1, total_pages: 18, page_size: 25,
+    next: '/api/matches?page=2', previous: null, results: [m(1)],
+  });
+  render(Feed);
+  await waitFor(() => expect(screen.getByText('Page 1 of 18')).toBeInTheDocument());
+});
+
+test('the page indicator follows the Next button', async () => {
+  vi.spyOn(resources, 'listClients').mockResolvedValue({ count: 0, next: null, previous: null, results: [] });
+  vi.spyOn(resources, 'listMatches').mockResolvedValue({
+    count: 429, page: 1, total_pages: 18, page_size: 25,
+    next: '/api/matches?page=2', previous: null, results: [m(1)],
+  });
+  const user = userEvent.setup();
+  render(Feed);
+  await waitFor(() => expect(screen.getByText('Page 1 of 18')).toBeInTheDocument());
+  await user.click(screen.getByRole('button', { name: /next/i }));
+  await waitFor(() => expect(screen.getByText('Page 2 of 18')).toBeInTheDocument());
+  expect(window.location.search).toBe('?page=2');
+});
+
+test('an empty feed is page 1 of 1, never page 1 of 0', async () => {
+  vi.spyOn(resources, 'listClients').mockResolvedValue({ count: 0, next: null, previous: null, results: [] });
+  vi.spyOn(resources, 'listMatches').mockResolvedValue(page([], 0));
+  render(Feed);
+  await waitFor(() => expect(screen.getByText(/no matches/i)).toBeInTheDocument());
+  expect(screen.getByText('Page 1 of 1')).toBeInTheDocument();
 });

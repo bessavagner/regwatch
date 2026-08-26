@@ -84,6 +84,19 @@ export interface Page<T> {
   next: string | null;
   previous: string | null;
   results: T[];
+  // Every list endpoint sends these (config.pagination.CountedPageNumberPagination).
+  // Optional on the base type because only the feed consumes them, which keeps
+  // the ~30 existing list fixtures in Watches/Clients/Digests tests valid.
+  page?: number;
+  total_pages?: number;
+  page_size?: number;
+}
+
+/** A page whose position is guaranteed -- what the feed needs to say "N of M". */
+export interface Paged<T> extends Page<T> {
+  page: number;
+  total_pages: number;
+  page_size: number;
 }
 
 export interface VocabularyItem {
