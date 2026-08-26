@@ -15,7 +15,8 @@ function page(results: Match[], count = results.length): Page<Match> {
 }
 const m = (id: number, state: Match['state'] = 'new'): Match => ({
   id, watch: 1, act: id, snippet: `snip-${id}`, rank: 0.5, ai_summary: '',
-  category: '', confidence: 0.5, state, created_at: '2026-07-01T00:00:00Z',
+  category: '', category_label: 'sem categoria', confidence: 0.5, state,
+  created_at: '2026-07-01T00:00:00Z',
   client_id: 1, client_name: 'Beta Corp',
   act_detail: {
     id, title: `Portaria ${id}`, agency: '', identifier: `id-${id}`,

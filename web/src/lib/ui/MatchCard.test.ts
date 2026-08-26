@@ -5,7 +5,8 @@ import type { Match } from '../api/types';
 
 const match: Match = {
   id: 1, watch: 2, act: 3, snippet: 'a relevant snippet', rank: 0.9,
-  ai_summary: 'summary text', category: 'tender', confidence: 0.8,
+  ai_summary: 'summary text', category: 'tender', category_label: 'licitação',
+  confidence: 0.8,
   state: 'new', created_at: '2026-07-01T10:00:00Z',
   client_id: 7, client_name: 'IFCE Crateús',
   act_detail: {
@@ -23,7 +24,7 @@ const match: Match = {
 test('MatchCard shows snippet, summary, category and state', () => {
   render(MatchCard, { props: { match } });
   expect(screen.getByText('summary text')).toBeInTheDocument();
-  expect(screen.getByText(/tender/i)).toBeInTheDocument();
+  expect(screen.getByText(/licitação/i)).toBeInTheDocument();
   expect(screen.getByText(/new/i)).toBeInTheDocument();
 });
 
@@ -58,4 +59,10 @@ test('MatchCard never renders confidence, however high', () => {
   render(MatchCard, { props: { match: { ...match, confidence: 0.99 } } });
   expect(screen.queryByText(/confidence/i)).toBeNull();
   expect(screen.queryByText(/99/)).toBeNull();
+});
+
+test('shows the category in Portuguese, never the storage enum', () => {
+  render(MatchCard, { match });
+  expect(screen.getByText('licitação')).toBeInTheDocument();
+  expect(screen.queryByText('tender')).not.toBeInTheDocument();
 });

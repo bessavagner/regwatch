@@ -28,7 +28,7 @@
 {/if}
 
 <div class="mt-2 flex flex-wrap items-center gap-2 text-xs text-muted">
-  {#if match.category}<Badge label={match.category} tone="gray" />{/if}
+  {#if match.category}<Badge label={match.category_label} tone="gray" />{/if}
   {#if match.act_detail.source_url}
     <a
       class="underline"

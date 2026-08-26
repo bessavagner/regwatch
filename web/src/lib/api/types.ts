@@ -63,6 +63,9 @@ export interface Match {
   // null whenever enrichment never ran for this match.
   ai_summary: string | null;
   category: string;
+  // Portuguese label for `category`, rendered by the API so a badge never
+  // shows the storage enum while a lookup is in flight.
+  category_label: string;
   confidence: number | null;
   state: 'new' | 'relevant' | 'dismissed';
   created_at: string;
