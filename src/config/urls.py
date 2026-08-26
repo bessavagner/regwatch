@@ -4,6 +4,7 @@ from rest_framework.routers import DefaultRouter
 from accounts.api import LoginView, LogoutView, MeView
 from config.spa import spa_index
 from digests.api import DigestViewSet
+from enrichment.api import VocabularyView
 from matching.api import MatchViewSet
 from watches.api import ClientViewSet, WatchViewSet
 
@@ -17,6 +18,7 @@ urlpatterns = [
     path("api/auth/login", LoginView.as_view(), name="login"),
     path("api/auth/logout", LogoutView.as_view(), name="logout"),
     path("api/me", MeView.as_view(), name="me"),
+    path("api/vocabulary", VocabularyView.as_view(), name="vocabulary"),
     path("api/", include(router.urls)),
     re_path(r"^(?!api/).*$", spa_index, name="spa"),
 ]
