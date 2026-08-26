@@ -85,3 +85,12 @@ export interface Page<T> {
   previous: string | null;
   results: T[];
 }
+
+export interface VocabularyItem {
+  value: string;
+  label: string;
+}
+
+export interface Vocabulary {
+  categories: VocabularyItem[];
+}

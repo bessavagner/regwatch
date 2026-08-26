@@ -14,15 +14,3 @@ export const SECTIONS = [
   { value: 'DO2E', label: 'seção 2 extra' },
   { value: 'DO3E', label: 'seção 3 extra' },
 ];
-
-// These are the exact values the enricher writes (see CATEGORIES in
-// src/enrichment/anthropic_client.py). The previous Portuguese seed shared no
-// value with the data, so the filter could never match a single match.
-export const CATEGORIES = [
-  { value: 'tender', label: 'licitação' },
-  { value: 'grant', label: 'fomento' },
-  { value: 'appointment', label: 'pessoal' },
-  { value: 'penalty', label: 'sanção' },
-  { value: 'regulation', label: 'norma' },
-  { value: 'other', label: 'outro' },
-];

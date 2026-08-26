@@ -2,7 +2,8 @@
   import { listMatches, listClients, listWatches, sendDigest, type MatchParams } from '../lib/api/resources';
   import type { Client, Match } from '../lib/api/types';
   import { ApiError } from '../lib/api/client';
-  import { STATES, SECTIONS, CATEGORIES } from '../lib/constants';
+  import { STATES, SECTIONS } from '../lib/constants';
+  import { vocabulary, loadVocabulary } from '../lib/stores/vocabulary.svelte';
   import AsyncState from '../lib/ui/AsyncState.svelte';
   import MatchCard from '../lib/ui/MatchCard.svelte';
   import Button from '../lib/ui/Button.svelte';
@@ -58,6 +59,7 @@
   }
 
   $effect(() => {
+    loadVocabulary();
     listClients().then((r) => { clients = r.results; clientsCount = r.count; }).catch(() => (clients = []));
     listWatches().then((r) => (watchesCount = r.count)).catch(() => (watchesCount = 0));
   });
@@ -141,7 +143,7 @@
     <label class="text-sm text-ink-2">Category
       <select class="mt-1 field" onchange={(e) => setFilter('category', e.currentTarget.value)}>
         <option value="">all</option>
-        {#each CATEGORIES as c}<option value={c.value}>{c.label}</option>{/each}
+        {#each vocabulary.categories as c}<option value={c.value}>{c.label}</option>{/each}
       </select>
     </label>
     <label class="text-sm text-ink-2">From
