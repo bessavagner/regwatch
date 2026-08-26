@@ -407,6 +407,34 @@ pruned dates has to re-download those days from INlabs.
 Run it weekly. Without a schedule the database climbs back over the limit in
 about six weeks.
 
+**Check the trigger can actually fire.** The `regwatch-prune` Cloud Scheduler
+job was created on 2026-08-20 but the scheduler service account was never
+granted `roles/run.invoker` on it, so every weekly attempt returned
+`PERMISSION_DENIED` and produced **no execution at all** — which the
+failed-execution alert policies cannot see. It went unnoticed for six days,
+during which the database went 155 MB → 285 MB. To confirm a trigger is healthy:
+
+```bash
+gcloud scheduler jobs describe regwatch-prune \
+  --location us-east4 --project regwatch-501619 --format='value(status.code)'
+```
+
+Empty output means the last attempt succeeded; `7` means PERMISSION_DENIED. Fix
+with:
+
+```bash
+gcloud run jobs add-iam-policy-binding regwatch-prune \
+  --region=us-east4 --project=regwatch-501619 \
+  --member="serviceAccount:regwatch-scheduler@regwatch-501619.iam.gserviceaccount.com" \
+  --role="roles/run.invoker"
+```
+
+The alert policy `deploy/policy-scheduler-trigger-denied.json` now watches for
+this across *all* scheduler jobs, so a future missing binding pages instead of
+going quiet. Note the growth rate above (~14.7 MB/day) counts act text only —
+measured against the whole database, including the trigram and GIN indexes over
+that text, it is closer to **32 MB per publication day**.
+
 ## What the heartbeat now asserts
 
 `check_heartbeat` used to pass whenever a `status="success"` row existed for the

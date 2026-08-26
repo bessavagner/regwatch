@@ -90,7 +90,12 @@ for job in "regwatch-migrate:migrate" "regwatch-run-daily:run_daily" \
 done
 
 echo "== Scheduler may invoke the scheduled jobs (least-privilege, per-job) =="
-for job in regwatch-run-daily regwatch-heartbeat; do
+# Every job that mk_sched below gives a trigger to must appear here, or the
+# trigger fires into a PERMISSION_DENIED (Scheduler status code 7) that creates
+# no execution at all — so the "failed execution" alert policies never see it.
+# regwatch-prune was missed when it was added (v0.17.0) and went unnoticed for
+# a fortnight while act text accrued past its retention window.
+for job in regwatch-run-daily regwatch-heartbeat regwatch-prune; do
   gcloud run jobs add-iam-policy-binding "${job}" --region="${REGION}" \
     --member="serviceAccount:${SCHED_SA}" --role="roles/run.invoker"
 done

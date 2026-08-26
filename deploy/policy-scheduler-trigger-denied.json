@@ -1,0 +1,18 @@
+{
+  "displayName": "RegWatch scheduler trigger failed (job never started)",
+  "documentation": {
+    "content": "A Cloud Scheduler trigger could not launch its Cloud Run job, so NO execution exists. The two execution-count policies cannot see this: they alert on jobs that ran and failed. PERMISSION_DENIED here means the scheduler service account is missing roles/run.invoker on the target job -- see deploy/provision.sh, the invoker loop. This is how the weekly regwatch-prune trigger failed silently from 2026-08-20 to 2026-08-26.",
+    "mimeType": "text/markdown"
+  },
+  "combiner": "OR",
+  "conditions": [{
+    "displayName": "Cloud Scheduler attempt finished with a non-OK status",
+    "conditionMatchedLog": {
+      "filter": "resource.type=\"cloud_scheduler_job\" AND severity>=ERROR AND jsonPayload.\"@type\"=\"type.googleapis.com/google.cloud.scheduler.logging.AttemptFinished\""
+    }
+  }],
+  "alertStrategy": {
+    "notificationRateLimit": {"period": "3600s"},
+    "autoClose": "604800s"
+  }
+}
