@@ -162,3 +162,24 @@ def test_match_list_does_not_issue_a_query_per_row(firm_a, django_assert_max_num
     # 25 rows must not cost 25 act lookups plus 25 client lookups.
     with django_assert_max_num_queries(8):
         api.get("/api/matches")
+
+
+@pytest.mark.django_db
+def test_match_payload_carries_the_portuguese_category_label(firm_a):
+    ws, user = firm_a
+    _match(ws, date=datetime.date(2026, 8, 26), category="regulation")
+    api = APIClient()
+    api.force_authenticate(user)
+    row = api.get("/api/matches").json()["results"][0]
+    assert row["category"] == "regulation"     # storage enum, unchanged
+    assert row["category_label"] == "norma"
+
+
+@pytest.mark.django_db
+def test_an_unenriched_match_is_labelled_rather_than_left_blank(firm_a):
+    ws, user = firm_a
+    _match(ws, date=datetime.date(2026, 8, 26), category="")
+    api = APIClient()
+    api.force_authenticate(user)
+    row = api.get("/api/matches").json()["results"][0]
+    assert row["category_label"] == "sem categoria"

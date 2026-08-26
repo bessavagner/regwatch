@@ -3,6 +3,7 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 
 from accounts.permissions import WorkspaceScopedQuerysetMixin
+from enrichment.categories import label_for
 from gazette.models import Act
 from matching.models import Match
 
@@ -24,13 +25,19 @@ class MatchSerializer(serializers.ModelSerializer):
     act_detail = ActDetailSerializer(source="act", read_only=True)
     client_id = serializers.IntegerField(source="watch.client_id", read_only=True)
     client_name = serializers.CharField(source="watch.client.name", read_only=True)
+    # The label rides along with the row so a rendered badge never depends on a
+    # second request having landed. category itself stays the storage enum.
+    category_label = serializers.SerializerMethodField()
+
+    def get_category_label(self, obj) -> str:
+        return label_for(obj.category)
 
     class Meta:
         model = Match
         fields = [
             "id", "watch", "act", "act_detail", "client_id", "client_name",
-            "snippet", "rank", "ai_summary", "category", "confidence",
-            "state", "created_at",
+            "snippet", "rank", "ai_summary", "category", "category_label",
+            "confidence", "state", "created_at",
         ]
 
 
