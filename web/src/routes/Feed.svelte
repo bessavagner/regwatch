@@ -19,6 +19,11 @@
   let matches = $state<Match[]>([]);
   let count = $state(0);
   let totalPages = $state(1);
+  // The server's page size, learned from the first response. Only the recount
+  // in advanceAfterEmptying reads it, and that cannot run before a page has
+  // loaded, so there is no reason to guess a default -- guessing 25 would
+  // reintroduce the duplicated constant the new pagination class exists to avoid.
+  let pageSize = $state(0);
   let page = $state(initialView.page);
   let hasNext = $state(false);
   let hasPrev = $state(false);
@@ -30,6 +35,25 @@
 
   let filters = $state<MatchParams>(initialView.filters);
 
+  // Triage removed the last row on this page. Pagination is server-side over a
+  // set that just shrank, so the rows that were on the next page have shifted
+  // down into this one: reloading the current page number is what "advance"
+  // means here, and asking for page + 1 would skip past a whole page of
+  // matches. The one exception is a page that no longer exists -- empty the
+  // last page and it stops being a page -- so step back to the last one that does.
+  function advanceAfterEmptying() {
+    const lastPage = Math.max(1, Math.ceil(count / Math.max(1, pageSize)));
+    if (page > lastPage) {
+      // Assigning page triggers the refetch effect. Replace rather than push:
+      // the user did not navigate here, and a history entry they never chose
+      // would make Back a no-op.
+      page = lastPage;
+      writeView('replace');
+    } else {
+      load();
+    }
+  }
+
   function applyUpdate(updated: Match) {
     matches = matches.map((m) => (m.id === updated.id ? updated : m));
     // If a state filter is active and no longer matches, drop it from view.
@@ -39,6 +63,7 @@
       // really has left the set, so the header and the dial -- which both read
       // count -- must follow it down.
       count = Math.max(0, count - 1);
+      if (matches.length === 0) advanceAfterEmptying();
     }
   }
 
@@ -49,6 +74,7 @@
       matches = res.results;
       count = res.count;
       totalPages = res.total_pages;
+      pageSize = res.page_size;
       status = res.results.length ? 'loaded' : 'empty';
       hasNext = res.next !== null;
       hasPrev = res.previous !== null;

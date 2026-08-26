@@ -257,3 +257,61 @@ test('triaging within the active filter leaves the count alone', async () => {
   await waitFor(() => expect(screen.getByText('relevant', { selector: 'span' })).toBeInTheDocument());
   expect(screen.getByText('2 matches')).toBeInTheDocument();
 });
+
+test('emptying a page that still has matches behind it reloads it', async () => {
+  vi.spyOn(resources, 'listClients').mockResolvedValue({ count: 0, next: null, previous: null, results: [] });
+  // One visible row, 26 in the filtered set: there is a page behind this one.
+  const spy = vi.spyOn(resources, 'listMatches').mockResolvedValue({
+    count: 26, page: 1, total_pages: 2, page_size: 25,
+    next: '/api/matches?page=2', previous: null, results: [m(1)],
+  });
+  vi.spyOn(resources, 'markRelevant').mockResolvedValue({ ...m(1), state: 'relevant' });
+  const user = userEvent.setup();
+  window.history.pushState({}, '', '/feed?state=new');
+  render(Feed);
+  await waitFor(() => expect(screen.getByText('snip-1')).toBeInTheDocument());
+  const before = spy.mock.calls.length;
+
+  await user.click(screen.getAllByRole('button', { name: /^relevant$/i })[0]);
+
+  // count drops to 25, which is still one full page, so page 1 reloads.
+  await waitFor(() => expect(spy.mock.calls.length).toBeGreaterThan(before));
+  expect(spy).toHaveBeenLastCalledWith(expect.objectContaining({ page: 1, state: 'new' }));
+});
+
+test('emptying the last page steps back to the page before it', async () => {
+  vi.spyOn(resources, 'listClients').mockResolvedValue({ count: 0, next: null, previous: null, results: [] });
+  // Page 2 of 2, holding the single 26th match.
+  const spy = vi.spyOn(resources, 'listMatches').mockResolvedValue({
+    count: 26, page: 2, total_pages: 2, page_size: 25,
+    next: null, previous: '/api/matches', results: [m(1)],
+  });
+  vi.spyOn(resources, 'markRelevant').mockResolvedValue({ ...m(1), state: 'relevant' });
+  const user = userEvent.setup();
+  window.history.pushState({}, '', '/feed?state=new&page=2');
+  render(Feed);
+  await waitFor(() => expect(screen.getByText('snip-1')).toBeInTheDocument());
+
+  await user.click(screen.getAllByRole('button', { name: /^relevant$/i })[0]);
+
+  // count drops to 25 -- one page -- so page 2 no longer exists.
+  await waitFor(() => expect(spy).toHaveBeenLastCalledWith(expect.objectContaining({ page: 1 })));
+  await waitFor(() => expect(window.location.search).toBe('?state=new'));
+});
+
+test('emptying the only page just shows the empty state', async () => {
+  vi.spyOn(resources, 'listClients').mockResolvedValue({ count: 0, next: null, previous: null, results: [] });
+  // The set really does shrink: page 1 is still page 1, so it reloads, and the
+  // server now has nothing left under state=new to return.
+  vi.spyOn(resources, 'listMatches')
+    .mockResolvedValue(page([], 0))
+    .mockResolvedValueOnce(page([m(1)], 1));
+  vi.spyOn(resources, 'markRelevant').mockResolvedValue({ ...m(1), state: 'relevant' });
+  const user = userEvent.setup();
+  window.history.pushState({}, '', '/feed?state=new');
+  render(Feed);
+  await waitFor(() => expect(screen.getByText('snip-1')).toBeInTheDocument());
+
+  await user.click(screen.getAllByRole('button', { name: /^relevant$/i })[0]);
+  await waitFor(() => expect(screen.getByText(/no matches/i)).toBeInTheDocument());
+});
