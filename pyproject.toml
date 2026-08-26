@@ -14,7 +14,16 @@ dependencies = [
 ]
 
 [dependency-groups]
-dev = ["pytest>=8.0", "pytest-django>=4.8", "pip-audit>=2.7"]
+dev = [
+    "pytest>=8.0",
+    "pytest-django>=4.8",
+    "pip-audit>=2.7",
+    # Direct only to floor the version pip-audit drags in through pip-api:
+    # PYSEC-2026-3721 affects pip < 26.2 and failed the CI audit gate on
+    # 2026-08-26. Dev-group only -- the image builds with `uv sync --no-dev`,
+    # so pip is never in the runtime environment.
+    "pip>=26.2",
+]
 
 [tool.uv]
 package = false
