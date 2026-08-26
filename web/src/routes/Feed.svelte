@@ -4,16 +4,21 @@
   import { ApiError } from '../lib/api/client';
   import { STATES, SECTIONS } from '../lib/constants';
   import { vocabulary, loadVocabulary } from '../lib/stores/vocabulary.svelte';
+  import { queryFromView, viewFromQuery } from '../lib/feedFilters';
   import AsyncState from '../lib/ui/AsyncState.svelte';
   import MatchCard from '../lib/ui/MatchCard.svelte';
   import Button from '../lib/ui/Button.svelte';
   import TriageActions from '../lib/ui/TriageActions.svelte';
   import SignalDial from '../lib/ui/SignalDial.svelte';
 
+  // Seed both the filters and the page from the address bar, so a shared or
+  // bookmarked link opens the view it describes.
+  const initialView = viewFromQuery(window.location.search);
+
   let status = $state<'idle' | 'loading' | 'loaded' | 'empty' | 'error'>('idle');
   let matches = $state<Match[]>([]);
   let count = $state(0);
-  let page = $state(1);
+  let page = $state(initialView.page);
   let hasNext = $state(false);
   let hasPrev = $state(false);
   let clients = $state<Client[]>([]);
@@ -22,17 +27,7 @@
   let actionError = $state('');
   let digestStatus = $state<'idle' | 'sending' | 'sent' | 'error'>('idle');
 
-  function initialFilters(): MatchParams {
-    const params = new URLSearchParams(window.location.search);
-    const seeded: MatchParams = { ordering: '' };
-    for (const key of ['client', 'state', 'section', 'category', 'date_from', 'date_to'] as const) {
-      const value = params.get(key);
-      if (value) seeded[key] = value;
-    }
-    return seeded;
-  }
-
-  let filters = $state<MatchParams>(initialFilters());
+  let filters = $state<MatchParams>(initialView.filters);
 
   function applyUpdate(updated: Match) {
     matches = matches.map((m) => (m.id === updated.id ? updated : m));
@@ -64,6 +59,19 @@
     listWatches().then((r) => (watchesCount = r.count)).catch(() => (watchesCount = 0));
   });
 
+  // Back and forward restore the whole view. This assigns the state without
+  // calling writeView -- the browser has already moved the history cursor, and
+  // pushing here would strand the user in their own history.
+  $effect(() => {
+    const restore = () => {
+      const view = viewFromQuery(window.location.search);
+      filters = view.filters;
+      page = view.page;
+    };
+    window.addEventListener('popstate', restore);
+    return () => window.removeEventListener('popstate', restore);
+  });
+
   // Refetch whenever a filter or the page changes.
   $effect(() => {
     // touch the reactive deps so the effect re-runs
@@ -87,10 +95,22 @@
     }
   }
 
+  function writeView(mode: 'push' | 'replace') {
+    const url = `${window.location.pathname}${queryFromView({ filters, page })}`;
+    if (mode === 'push') window.history.pushState({}, '', url);
+    else window.history.replaceState({}, '', url);
+  }
+
   function setFilter<K extends keyof MatchParams>(key: K, value: MatchParams[K]) {
     filters = { ...filters, [key]: value };
     page = 1;
     digestStatus = 'idle';
+    writeView('push');
+  }
+
+  function goToPage(next: number) {
+    page = next;
+    writeView('push');
   }
 </script>
 
@@ -193,8 +213,8 @@
   </AsyncState>
 
   <div class="mt-4 flex items-center justify-between">
-    <Button variant="ghost" disabled={!hasPrev} onclick={() => (page -= 1)}>Prev</Button>
+    <Button variant="ghost" disabled={!hasPrev} onclick={() => goToPage(page - 1)}>Prev</Button>
     <span class="font-mono text-sm tabular-nums text-muted">Page {page}</span>
-    <Button variant="ghost" disabled={!hasNext} onclick={() => (page += 1)}>Next</Button>
+    <Button variant="ghost" disabled={!hasNext} onclick={() => goToPage(page + 1)}>Next</Button>
   </div>
 </section>

@@ -118,3 +118,35 @@ test('shows the Send digest action when filtered to one client and one exact dat
   expect(sendSpy).toHaveBeenCalledWith({ client: 3, date: '2026-07-01' });
   await waitFor(() => expect(screen.getByRole('button', { name: /digest sent/i })).toBeInTheDocument());
 });
+
+test('changing a filter writes it to the query string', async () => {
+  vi.spyOn(resources, 'listClients').mockResolvedValue({ count: 0, next: null, previous: null, results: [] });
+  vi.spyOn(resources, 'listMatches').mockResolvedValue(page([m(1)]));
+  const user = userEvent.setup();
+  render(Feed);
+  await waitFor(() => expect(screen.getByText('snip-1')).toBeInTheDocument());
+
+  await user.selectOptions(screen.getByLabelText(/state/i), 'relevant');
+  await waitFor(() => expect(window.location.search).toBe('?state=relevant'));
+});
+
+test('browser back restores the previous filter set and refetches', async () => {
+  vi.spyOn(resources, 'listClients').mockResolvedValue({ count: 0, next: null, previous: null, results: [] });
+  const spy = vi.spyOn(resources, 'listMatches').mockResolvedValue(page([m(1)]));
+  const user = userEvent.setup();
+  render(Feed);
+  await waitFor(() => expect(screen.getByText('snip-1')).toBeInTheDocument());
+
+  await user.selectOptions(screen.getByLabelText(/state/i), 'relevant');
+  await waitFor(() => expect(window.location.search).toBe('?state=relevant'));
+
+  // jsdom moves the history cursor but does not emit popstate for history.back(),
+  // so dispatch it the way a real browser would.
+  window.history.back();
+  window.dispatchEvent(new PopStateEvent('popstate'));
+
+  await waitFor(() => expect(window.location.search).toBe(''));
+  await waitFor(() =>
+    expect(spy).toHaveBeenLastCalledWith(expect.not.objectContaining({ state: 'relevant' })),
+  );
+});
