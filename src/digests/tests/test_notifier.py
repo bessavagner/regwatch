@@ -238,12 +238,16 @@ def test_deliver_digest_skips_a_client_with_no_email(matched):
 
 
 @pytest.mark.django_db
-def test_unenriched_match_says_the_summary_is_missing(matched):
+def test_unenriched_match_falls_back_to_the_act_text(matched):
     build_and_send_digests(DATE, FakeEmailSender())
     body = Digest.objects.get(client=matched, date=DATE).body
-    # The match was never enriched, so category is "" and ai_summary is None.
-    assert "[sem categoria]" not in body
-    assert "[resumo indisponível]" in body
+    # The match was never enriched, so ai_summary is None and the item line
+    # falls back to the matched snippet. "resumo indisponível" used to be
+    # printed in the category slot instead -- a summary message in the wrong
+    # place. The category slot now names the category's absence.
+    assert "[resumo indisponível]" not in body
+    assert "[sem categoria]" in body
+    assert "BETA CORP" in body
 
 
 @pytest.mark.django_db
@@ -331,3 +335,20 @@ def test_matches_of_equal_rank_are_ordered_by_section():
 
     body = build_and_send_digests(DATE, FakeEmailSender())[0].body
     assert body.index("Ato da primeira secao") < body.index("Ato da segunda secao")
+
+
+@pytest.mark.django_db
+def test_digest_prints_the_category_in_portuguese(matched):
+    Match.objects.update(category="regulation")
+    body = build_and_send_digests(DATE, FakeEmailSender())[0].body
+    assert "[norma]" in body
+    assert "regulation" not in body
+
+
+@pytest.mark.django_db
+def test_digest_names_the_unenriched_case_in_the_category_slot(matched):
+    # It used to print "[resumo indisponível]" here -- a summary message in the
+    # category slot.
+    Match.objects.update(category="")
+    body = build_and_send_digests(DATE, FakeEmailSender())[0].body
+    assert "[sem categoria]" in body
