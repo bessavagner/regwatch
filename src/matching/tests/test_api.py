@@ -183,3 +183,56 @@ def test_an_unenriched_match_is_labelled_rather_than_left_blank(firm_a):
     api.force_authenticate(user)
     row = api.get("/api/matches").json()["results"][0]
     assert row["category_label"] == "sem categoria"
+
+
+@pytest.mark.django_db
+def test_the_match_list_reports_its_page_size_page_and_total(firm_a):
+    ws, user = firm_a
+    for _ in range(26):                      # PAGE_SIZE is 25, so this is two pages
+        _match(ws, date=datetime.date(2026, 8, 26))
+    api = APIClient()
+    api.force_authenticate(user)
+    body = api.get("/api/matches").json()
+    assert body["count"] == 26
+    assert body["page"] == 1
+    assert body["total_pages"] == 2
+    assert body["page_size"] == 25
+    assert len(body["results"]) == 25
+
+
+@pytest.mark.django_db
+def test_page_two_says_it_is_page_two(firm_a):
+    ws, user = firm_a
+    for _ in range(26):
+        _match(ws, date=datetime.date(2026, 8, 26))
+    api = APIClient()
+    api.force_authenticate(user)
+    body = api.get("/api/matches?page=2").json()
+    assert body["page"] == 2
+    assert body["total_pages"] == 2
+    assert len(body["results"]) == 1
+
+
+@pytest.mark.django_db
+def test_an_empty_list_is_one_page_not_zero(firm_a):
+    # Django's Paginator counts an empty first page as a page (num_pages is 1
+    # when count is 0). The feed therefore renders "Page 1 of 1", never "of 0".
+    ws, user = firm_a
+    api = APIClient()
+    api.force_authenticate(user)
+    body = api.get("/api/matches").json()
+    assert body["count"] == 0
+    assert body["total_pages"] == 1
+
+
+@pytest.mark.django_db
+def test_the_other_list_endpoints_report_the_same_fields(firm_a):
+    # DEFAULT_PAGINATION_CLASS is global: one pagination contract, not a
+    # special case for matches.
+    ws, user = firm_a
+    api = APIClient()
+    api.force_authenticate(user)
+    body = api.get("/api/clients").json()
+    assert body["page"] == 1
+    assert body["total_pages"] == 1
+    assert body["page_size"] == 25
