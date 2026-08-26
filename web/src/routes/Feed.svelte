@@ -143,41 +143,44 @@
 
   <div class="mb-4 grid grid-cols-2 gap-3 rounded-card border border-rule bg-paper-2/50 p-3 sm:grid-cols-3">
     <label class="text-sm text-ink-2">Client
-      <select class="mt-1 field" onchange={(e) => setFilter('client', e.currentTarget.value)}>
+      <select class="mt-1 field" value={String(filters.client ?? '')} onchange={(e) => setFilter('client', e.currentTarget.value)}>
         <option value="">all</option>
-        {#each clients as c}<option value={c.id}>{c.name}</option>{/each}
+        <!-- String(c.id): Svelte matches the select's value against the raw
+             option expression, so a numeric id would never equal a filter
+             value read out of the query string. -->
+        {#each clients as c}<option value={String(c.id)}>{c.name}</option>{/each}
       </select>
     </label>
     <label class="text-sm text-ink-2">State
-      <select class="mt-1 field" onchange={(e) => setFilter('state', e.currentTarget.value)}>
+      <select class="mt-1 field" value={filters.state ?? ''} onchange={(e) => setFilter('state', e.currentTarget.value)}>
         <option value="">all</option>
         {#each STATES as s}<option value={s.value}>{s.label}</option>{/each}
       </select>
     </label>
     <label class="text-sm text-ink-2">Section
-      <select class="mt-1 field" onchange={(e) => setFilter('section', e.currentTarget.value)}>
+      <select class="mt-1 field" value={filters.section ?? ''} onchange={(e) => setFilter('section', e.currentTarget.value)}>
         <option value="">all</option>
         {#each SECTIONS as s}<option value={s.value}>{s.label}</option>{/each}
       </select>
     </label>
     <label class="text-sm text-ink-2">Category
-      <select class="mt-1 field" onchange={(e) => setFilter('category', e.currentTarget.value)}>
+      <select class="mt-1 field" value={filters.category ?? ''} onchange={(e) => setFilter('category', e.currentTarget.value)}>
         <option value="">all</option>
         {#each vocabulary.categories as c}<option value={c.value}>{c.label}</option>{/each}
       </select>
     </label>
     <label class="text-sm text-ink-2">From
-      <input type="date" class="mt-1 field" onchange={(e) => setFilter('date_from', e.currentTarget.value)} />
+      <input type="date" class="mt-1 field" value={filters.date_from ?? ''} onchange={(e) => setFilter('date_from', e.currentTarget.value)} />
     </label>
     <label class="text-sm text-ink-2">To
-      <input type="date" class="mt-1 field" onchange={(e) => setFilter('date_to', e.currentTarget.value)} />
+      <input type="date" class="mt-1 field" value={filters.date_to ?? ''} onchange={(e) => setFilter('date_to', e.currentTarget.value)} />
     </label>
   </div>
 
   <div class="mb-3 flex items-center justify-between text-sm text-muted">
     <span class="font-mono tabular-nums">{count} match{count === 1 ? '' : 'es'}</span>
     <label>Order
-      <select class="ml-1 field inline-flex w-auto min-h-9" onchange={(e) => setFilter('ordering', e.currentTarget.value)}>
+      <select class="ml-1 field inline-flex w-auto min-h-9" value={filters.ordering ?? ''} onchange={(e) => setFilter('ordering', e.currentTarget.value)}>
         <option value="">most recent</option>
         <option value="rank">highest rank</option>
       </select>

@@ -150,3 +150,47 @@ test('browser back restores the previous filter set and refetches', async () => 
     expect(spy).toHaveBeenLastCalledWith(expect.not.objectContaining({ state: 'relevant' })),
   );
 });
+
+test('every control shows the filter the URL asked for', async () => {
+  window.history.pushState({}, '', '/feed?state=relevant&section=DO2&category=tender&date_from=2026-07-01&date_to=2026-07-02&ordering=rank');
+  vi.spyOn(resources, 'listClients').mockResolvedValue({ count: 0, next: null, previous: null, results: [] });
+  vi.spyOn(resources, 'listMatches').mockResolvedValue(page([m(1)]));
+  vi.spyOn(resources, 'getVocabulary').mockResolvedValue({
+    categories: [{ value: 'tender', label: 'licitação' }],
+  });
+  render(Feed);
+  await waitFor(() => expect(screen.getByText('snip-1')).toBeInTheDocument());
+
+  await waitFor(() =>
+    expect((screen.getByLabelText(/category/i) as HTMLSelectElement).value).toBe('tender'),
+  );
+  expect((screen.getByLabelText(/state/i) as HTMLSelectElement).value).toBe('relevant');
+  expect((screen.getByLabelText(/section/i) as HTMLSelectElement).value).toBe('DO2');
+  expect((screen.getByLabelText(/order/i) as HTMLSelectElement).value).toBe('rank');
+  expect((screen.getByLabelText(/^from$/i) as HTMLInputElement).value).toBe('2026-07-01');
+  expect((screen.getByLabelText(/^to$/i) as HTMLInputElement).value).toBe('2026-07-02');
+});
+
+test('the client control shows the seeded client once its options arrive', async () => {
+  window.history.pushState({}, '', '/feed?client=3');
+  vi.spyOn(resources, 'listClients').mockResolvedValue({
+    count: 1, next: null, previous: null,
+    results: [{ id: 3, name: 'Beta', is_house: false, email: '' }],
+  });
+  vi.spyOn(resources, 'listMatches').mockResolvedValue(page([m(1)]));
+  render(Feed);
+  await waitFor(() => expect(screen.getByText('snip-1')).toBeInTheDocument());
+  await waitFor(() =>
+    expect((screen.getByLabelText(/client/i) as HTMLSelectElement).value).toBe('3'),
+  );
+});
+
+test('with no filters every control reads all', async () => {
+  vi.spyOn(resources, 'listClients').mockResolvedValue({ count: 0, next: null, previous: null, results: [] });
+  vi.spyOn(resources, 'listMatches').mockResolvedValue(page([m(1)]));
+  render(Feed);
+  await waitFor(() => expect(screen.getByText('snip-1')).toBeInTheDocument());
+  expect((screen.getByLabelText(/state/i) as HTMLSelectElement).value).toBe('');
+  expect((screen.getByLabelText(/section/i) as HTMLSelectElement).value).toBe('');
+  expect((screen.getByLabelText(/^from$/i) as HTMLInputElement).value).toBe('');
+});
