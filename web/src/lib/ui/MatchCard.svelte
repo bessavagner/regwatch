@@ -27,6 +27,14 @@
   <p class="as-typed mt-1 text-sm text-muted">{match.snippet}</p>
 {/if}
 
+{#if match.matched_terms.length}
+  <p class="mt-2 text-xs text-muted">
+    encontrado por <span class="as-typed font-medium text-ink"
+      >{match.matched_terms.join(', ')}</span
+    >
+  </p>
+{/if}
+
 <div class="mt-2 flex flex-wrap items-center gap-2 text-xs text-muted">
   {#if match.category}<Badge label={match.category_label} tone="gray" />{/if}
   {#if match.act_detail.source_url}

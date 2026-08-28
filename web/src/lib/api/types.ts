@@ -59,6 +59,10 @@ export interface Match {
   client_id: number;
   client_name: string;
   snippet: string;
+  // Which of the watch's terms fired, as the client typed them. Empty for
+  // every match created before v0.20.0 -- the card hides the line, it does not
+  // print an empty one.
+  matched_terms: string[];
   rank: number;
   // null whenever enrichment never ran for this match.
   ai_summary: string | null;

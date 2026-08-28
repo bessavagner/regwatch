@@ -14,7 +14,7 @@ function page(results: Match[], count = results.length): Paged<Match> {
   return { count, page: 1, total_pages: 1, page_size: 25, next: null, previous: null, results };
 }
 const m = (id: number, state: Match['state'] = 'new'): Match => ({
-  id, watch: 1, act: id, snippet: `snip-${id}`, rank: 0.5, ai_summary: '',
+  id, watch: 1, act: id, snippet: `snip-${id}`, matched_terms: [], rank: 0.5, ai_summary: '',
   category: '', category_label: 'sem categoria', confidence: 0.5, state,
   created_at: '2026-07-01T00:00:00Z',
   client_id: 1, client_name: 'Beta Corp',
