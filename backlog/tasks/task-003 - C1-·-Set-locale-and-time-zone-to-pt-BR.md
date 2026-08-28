@@ -1,10 +1,10 @@
 ---
 id: TASK-003
 title: C1 · Set locale and time zone to pt-BR
-status: In Progress
+status: Done
 assignee: []
 created_date: '2026-08-26 17:29'
-updated_date: '2026-08-26 19:06'
+updated_date: '2026-08-28 10:52'
 labels:
   - 'track:ptbr'
   - 'size:XS'
@@ -46,3 +46,9 @@ Side effect worth knowing: prune_act_text counts retention from timezone.localda
 
 Python 277 passed; SPA 62 passed, eslint clean, build clean.
 <!-- SECTION:NOTES:END -->
+
+## Final Summary
+
+<!-- SECTION:FINAL_SUMMARY:BEGIN -->
+LANGUAGE_CODE=pt-br, TIME_ZONE=America/Sao_Paulo, br_date in email and SPA. On main, ships in TASK-034.
+<!-- SECTION:FINAL_SUMMARY:END -->

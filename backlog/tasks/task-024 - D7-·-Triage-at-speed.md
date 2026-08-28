@@ -4,9 +4,11 @@ title: D7 · Triage at speed
 status: To Do
 assignee: []
 created_date: '2026-08-26 17:30'
+updated_date: '2026-08-28 10:52'
 labels:
   - 'track:signal'
   - 'size:M'
+milestone: m-0
 dependencies:
   - TASK-009
 documentation:

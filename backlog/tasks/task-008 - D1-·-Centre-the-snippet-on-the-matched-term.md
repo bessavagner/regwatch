@@ -4,10 +4,13 @@ title: D1 · Centre the snippet on the matched term
 status: To Do
 assignee: []
 created_date: '2026-08-26 17:29'
+updated_date: '2026-08-28 10:52'
 labels:
   - 'track:signal'
   - 'size:S'
-dependencies: []
+milestone: m-0
+dependencies:
+  - TASK-021
 documentation:
   - docs/backlog.md
 priority: medium

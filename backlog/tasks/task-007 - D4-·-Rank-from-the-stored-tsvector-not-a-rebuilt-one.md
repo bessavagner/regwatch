@@ -4,9 +4,11 @@ title: 'D4 · Rank from the stored tsvector, not a rebuilt one'
 status: To Do
 assignee: []
 created_date: '2026-08-26 17:29'
+updated_date: '2026-08-28 10:52'
 labels:
   - 'track:signal'
   - 'size:S'
+milestone: m-0
 dependencies: []
 documentation:
   - docs/backlog.md

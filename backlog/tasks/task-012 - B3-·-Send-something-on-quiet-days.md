@@ -4,9 +4,11 @@ title: B3 · Send something on quiet days
 status: To Do
 assignee: []
 created_date: '2026-08-26 17:29'
+updated_date: '2026-08-28 10:52'
 labels:
   - 'track:digest'
   - 'size:S'
+milestone: m-0
 dependencies:
   - TASK-003
 documentation:

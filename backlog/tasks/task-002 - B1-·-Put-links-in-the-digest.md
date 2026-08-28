@@ -1,10 +1,10 @@
 ---
 id: TASK-002
 title: B1 · Put links in the digest
-status: In Progress
+status: Done
 assignee: []
 created_date: '2026-08-26 17:29'
-updated_date: '2026-08-26 18:56'
+updated_date: '2026-08-28 10:52'
 labels:
   - 'track:digest'
   - 'size:XS'
@@ -42,3 +42,9 @@ Widened the notifier select_related to act__edition so the fallback branch does 
 
 10 new tests; full suite 270 passed (was 260).
 <!-- SECTION:NOTES:END -->
+
+## Final Summary
+
+<!-- SECTION:FINAL_SUMMARY:BEGIN -->
+Every digest item links to its act via Act.dou_url, using source_anchor where present. On main, ships in TASK-034.
+<!-- SECTION:FINAL_SUMMARY:END -->

@@ -1,10 +1,10 @@
 ---
 id: TASK-009
 title: F1 · Bind feed filters to their controls and to the URL
-status: In Progress
+status: Done
 assignee: []
 created_date: '2026-08-26 17:29'
-updated_date: '2026-08-26 23:33'
+updated_date: '2026-08-28 10:52'
 labels:
   - 'track:console'
   - 'size:S'
@@ -47,3 +47,9 @@ the identical defect and sits in the same group) and 'page' (TASK-011 landed
 in the same plan, and Back restoring filters but not the page would half-honour
 AC #3).
 <!-- SECTION:NOTES:END -->
+
+## Final Summary
+
+<!-- SECTION:FINAL_SUMMARY:BEGIN -->
+feedFilters.ts round-trips the whole feed view through the query string; every control carries a value and popstate restores. On main, ships in TASK-034.
+<!-- SECTION:FINAL_SUMMARY:END -->

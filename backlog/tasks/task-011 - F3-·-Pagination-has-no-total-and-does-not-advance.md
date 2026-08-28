@@ -1,10 +1,10 @@
 ---
 id: TASK-011
 title: F3 · Pagination has no total and does not advance
-status: In Progress
+status: Done
 assignee: []
 created_date: '2026-08-26 17:29'
-updated_date: '2026-08-26 23:33'
+updated_date: '2026-08-28 10:52'
 labels:
   - 'track:console'
   - 'size:S'
@@ -39,3 +39,9 @@ emptying a page reloads the current page number -- the rows behind it have
 shifted down into it, and page + 1 would skip a whole page. Only a page that no
 longer exists steps back.
 <!-- SECTION:NOTES:END -->
+
+## Final Summary
+
+<!-- SECTION:FINAL_SUMMARY:BEGIN -->
+API reports page, total_pages and page_size; the feed shows Page N of M and advances when triage empties a page. On main, ships in TASK-034.
+<!-- SECTION:FINAL_SUMMARY:END -->

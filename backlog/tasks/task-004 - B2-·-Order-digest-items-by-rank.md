@@ -1,10 +1,10 @@
 ---
 id: TASK-004
 title: B2 · Order digest items by rank
-status: In Progress
+status: Done
 assignee: []
 created_date: '2026-08-26 17:29'
-updated_date: '2026-08-26 21:07'
+updated_date: '2026-08-28 10:52'
 labels:
   - 'track:digest'
   - 'size:XS'
@@ -40,3 +40,9 @@ Ordering only; rank stays the weak signal the description calls out until D4 (TA
 
 Two tests: highest rank leads the mail, and equal ranks fall back to section. Full suite 279 passed.
 <!-- SECTION:NOTES:END -->
+
+## Final Summary
+
+<!-- SECTION:FINAL_SUMMARY:BEGIN -->
+Digest orders by -rank, then section, then id. On main, ships in TASK-034. rank stays a weak signal until TASK-007 and TASK-022.
+<!-- SECTION:FINAL_SUMMARY:END -->

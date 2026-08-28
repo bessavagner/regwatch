@@ -1,10 +1,10 @@
 ---
 id: TASK-005
 title: 'C2 · One category vocabulary, in Portuguese'
-status: In Progress
+status: Done
 assignee: []
 created_date: '2026-08-26 17:29'
-updated_date: '2026-08-26 22:01'
+updated_date: '2026-08-28 10:52'
 labels:
   - 'track:ptbr'
   - 'size:S'
@@ -50,3 +50,9 @@ Stored values stay English per decision-002.
 Python 294 passed; SPA 65 passed, lint and vite build clean, svelte-check at
 its pre-existing baseline of 9 errors (all in e2e/config files, none in src).
 <!-- SECTION:NOTES:END -->
+
+## Final Summary
+
+<!-- SECTION:FINAL_SUMMARY:BEGIN -->
+enrichment/categories.py::CATEGORY_LABELS is the single source; digest filter, match API and /api/vocabulary read it. On main, ships in TASK-034.
+<!-- SECTION:FINAL_SUMMARY:END -->
