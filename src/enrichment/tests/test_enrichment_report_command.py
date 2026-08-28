@@ -77,3 +77,22 @@ def test_report_ignores_matches_outside_the_window_and_unenriched_ones(watch):
     call_command("enrichment_report", "--date-from=2026-08-27", "--date-to=2026-08-27",
                  "--json", stdout=out)
     assert json.loads(out.getvalue())["enriched_matches"] == 0
+
+
+@pytest.mark.django_db
+def test_report_shows_the_signal_score_has_spread(watch):
+    day = datetime.date(2026, 8, 27)
+    for i, score in enumerate([0, 1, 2, 3, 3]):
+        m = _match(watch, day, f"Resumo {i}", "tender", 0.99, f"d{i}")
+        m.signal_score = score
+        m.names_party = score >= 1
+        m.save(update_fields=["signal_score", "names_party"])
+
+    out = StringIO()
+    call_command("enrichment_report", "--date-from=2026-08-27", "--date-to=2026-08-27",
+                 "--json", stdout=out)
+    payload = json.loads(out.getvalue())
+
+    assert payload["signal_histogram"] == {"0": 1, "1": 1, "2": 1, "3": 2}
+    assert payload["signal_modal_share"] == 0.4
+    assert payload["flag_rates"]["names_party"] == 0.8

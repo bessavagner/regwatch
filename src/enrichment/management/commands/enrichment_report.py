@@ -46,22 +46,33 @@ class Command(BaseCommand):
         )
         if options["client"]:
             qs = qs.filter(watch__client_id=options["client"])
-        rows = list(qs.values_list("ai_summary", "category", "confidence"))
+        rows = list(
+            qs.values_list(
+                "ai_summary", "category", "confidence",
+                "signal_score", "names_party", "has_amount", "has_deadline",
+            )
+        )
 
         clusters = cluster_summaries(
-            [(summary, category) for summary, category, _ in rows],
-            min_size=options["min_cluster"],
+            [(row[0], row[1]) for row in rows], min_size=options["min_cluster"]
         )
         # Two decimal places: the values sit between 0.98 and 0.99, and rounding
         # any coarser would hide exactly the absence of spread being measured.
-        conf = histogram([round(c, 2) for _, _, c in rows if c is not None])
+        conf = histogram([round(row[2], 2) for row in rows if row[2] is not None])
+        signal = histogram([row[3] for row in rows])
+        total = len(rows) or 1
+        flag_rates = {
+            "names_party": round(sum(1 for row in rows if row[4]) / total, 4),
+            "has_amount": round(sum(1 for row in rows if row[5]) / total, 4),
+            "has_deadline": round(sum(1 for row in rows if row[6]) / total, 4),
+        }
 
         payload = {
             "date_from": str(date_from),
             "date_to": str(date_to),
             "min_cluster": options["min_cluster"],
             "enriched_matches": len(rows),
-            "categories": histogram([category for _, category, _ in rows]),
+            "categories": histogram([row[1] for row in rows]),
             "clusters_measured": len(clusters),
             "inconsistency_rate": round(inconsistency_rate(clusters), 4),
             "split_clusters": [
@@ -71,6 +82,9 @@ class Command(BaseCommand):
             ],
             "confidence_histogram": {str(k): v for k, v in sorted(conf.items())},
             "confidence_modal_share": round(modal_share(conf), 4),
+            "signal_histogram": {str(k): v for k, v in sorted(signal.items())},
+            "signal_modal_share": round(modal_share(signal), 4),
+            "flag_rates": flag_rates,
         }
 
         if options["json"]:
@@ -99,3 +113,12 @@ class Command(BaseCommand):
         )
         for value, count in p["confidence_histogram"].items():
             self.stdout.write(f"  {value:<6} {count}")
+
+        self.stdout.write(
+            f"\nD5 — signal_score modal share {p['signal_modal_share']:.2%} "
+            f"across {len(p['signal_histogram'])} bucket(s)"
+        )
+        for value, count in p["signal_histogram"].items():
+            self.stdout.write(f"  score {value}  {count}")
+        for flag, rate in p["flag_rates"].items():
+            self.stdout.write(f"  {flag:<14} true on {rate:.1%}")
