@@ -4,6 +4,7 @@ title: D9 · Feed the fired terms to the enrichment prompt
 status: To Do
 assignee: []
 created_date: '2026-08-28 13:33'
+updated_date: '2026-08-28 15:44'
 labels:
   - 'track:signal'
   - 'size:S'
@@ -24,3 +25,9 @@ enrich_match still passes term_texts(match.watch.groups) -- every term on the wa
 - [ ] #2 Falls back to the full watch terms for pre-v0.20.0 matches with an empty list
 - [ ] #3 D3 and D5 baselines are recorded before this lands
 <!-- AC:END -->
+
+## Implementation Notes
+
+<!-- SECTION:NOTES:BEGIN -->
+Harness: enrichment_report + reenrich_matches, both documented in docs/runbook.md. AC#3 baseline (docs/analysis/2026-08-28-enrichment-baseline.md) is pending the operator running enrichment_report against production.
+<!-- SECTION:NOTES:END -->
