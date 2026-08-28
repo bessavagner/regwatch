@@ -214,6 +214,7 @@
     <label>Order
       <select class="ml-1 field inline-flex w-auto min-h-9" value={filters.ordering ?? ''} onchange={(e) => setFilter('ordering', e.currentTarget.value)}>
         <option value="">most recent</option>
+        <option value="signal">most signals</option>
         <option value="rank">highest rank</option>
       </select>
     </label>

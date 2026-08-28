@@ -18,6 +18,18 @@ class Match(models.Model):
     ai_summary = models.TextField(null=True, blank=True)
     category = models.CharField(max_length=50, blank=True, default="")
     confidence = models.FloatField(null=True, blank=True)
+    # What the enricher could check in the act text. Each is independently
+    # verifiable by the client reading the digest, which is the whole point:
+    # `confidence` was 0.98-0.99 for everything, including the `other` bucket,
+    # and could order nothing.
+    names_party = models.BooleanField(default=False)
+    has_amount = models.BooleanField(default=False)
+    has_deadline = models.BooleanField(default=False)
+    signal_score = models.SmallIntegerField(
+        default=0,
+        db_index=True,
+        help_text="Sum of the three signal flags, 0-3. What the feed and the digest order on.",
+    )
     state = models.CharField(max_length=20, default="new")  # new | relevant | dismissed
     created_at = models.DateTimeField(auto_now_add=True)
 

@@ -248,3 +248,50 @@ def test_match_payload_carries_the_matched_terms(firm_a):
     api.force_authenticate(user)
     body = api.get("/api/matches").json()
     assert body["results"][0]["matched_terms"] == ["saneamento"]
+
+
+def _scored(ws, *, date, rank, score, names_party=False):
+    # _match() predates the signal columns; set them after creation rather than
+    # widening a helper a dozen other tests already call.
+    match = _match(ws, date=date, rank=rank)
+    match.signal_score = score
+    match.names_party = names_party
+    match.save(update_fields=["signal_score", "names_party"])
+    return match
+
+
+@pytest.fixture
+def signal_feed(firm_a):
+    ws, user = firm_a
+    day = datetime.date(2026, 8, 27)
+    _scored(ws, date=day, rank=2.0, score=3, names_party=True)
+    _scored(ws, date=day, rank=8.0, score=3, names_party=True)
+    _scored(ws, date=day, rank=9.0, score=1)
+    _scored(ws, date=day, rank=4.0, score=0)
+    api = APIClient()
+    api.force_authenticate(user=user)
+    return api
+
+
+@pytest.mark.django_db
+def test_ordering_by_signal_puts_the_richest_act_first(signal_feed):
+    rows = signal_feed.get("/api/matches?ordering=signal").data["results"]
+    scores = [row["signal_score"] for row in rows]
+    assert scores == sorted(scores, reverse=True)
+    assert scores[0] == 3
+
+
+@pytest.mark.django_db
+def test_ordering_by_signal_falls_back_to_rank_within_a_score(signal_feed):
+    rows = signal_feed.get("/api/matches?ordering=signal").data["results"]
+    tied = [r for r in rows if r["signal_score"] == rows[0]["signal_score"]]
+    assert len(tied) == 2
+    ranks = [r["rank"] for r in tied]
+    assert ranks == sorted(ranks, reverse=True)
+
+
+@pytest.mark.django_db
+def test_the_serializer_carries_the_signals(signal_feed):
+    row = signal_feed.get("/api/matches").data["results"][0]
+    for key in ("names_party", "has_amount", "has_deadline", "signal_score"):
+        assert key in row

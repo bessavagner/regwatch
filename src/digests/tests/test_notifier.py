@@ -371,3 +371,26 @@ def test_digest_omits_the_line_when_no_term_was_recorded(matched):
 
     body = Digest.objects.get(client=matched, date=DATE).body
     assert "encontrado por" not in body
+
+
+@pytest.mark.django_db
+def test_digest_leads_with_the_act_carrying_the_most_signals():
+    # The exact inversion of test_digest_leads_with_the_highest_ranked_match:
+    # here the *lower*-ranked act carries two signals, so it must lead. rank is
+    # the tiebreaker now, not the sort.
+    _client_with_watch()
+    edition = ingest_edition(RawEdition(
+        date=DATE, section="DO1", source_url="https://x.test/s1",
+        items=(
+            RawItem("a1", "Autorizacao rotineira", "Org", "Autorização à BETA CORP.", "#a1"),
+            RawItem("a2", "Revisao tarifaria", "Org", "Revisão tarifária da BETA CORP.", "#a2"),
+        ),
+    ))
+    match_edition(edition)
+    Match.objects.filter(act__identifier="a1").update(rank=0.9, signal_score=0)
+    Match.objects.filter(act__identifier="a2").update(
+        rank=0.1, signal_score=2, names_party=True, has_amount=True
+    )
+
+    body = build_and_send_digests(DATE, FakeEmailSender())[0].body
+    assert body.index("Revisao tarifaria") < body.index("Autorizacao rotineira")

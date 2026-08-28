@@ -70,3 +70,11 @@ def test_openai_sends_the_rubric_as_its_system_message():
 
     OpenAILLMClient("sk-test", transport=httpx.MockTransport(handler)).summarize("a", [])
     assert captured["body"]["messages"][0] == {"role": "system", "content": SYSTEM_PROMPT}
+
+
+def test_each_signal_is_asked_for_as_something_checkable():
+    for key in ("names_party", "has_amount", "has_deadline"):
+        assert f'"{key}"' in SYSTEM_PROMPT
+    # The point of D5: the model is asked what the text says, not how sure it is.
+    assert "valor em reais" in SYSTEM_PROMPT
+    assert "prazo" in SYSTEM_PROMPT

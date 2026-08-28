@@ -8,6 +8,7 @@ const match: Match = {
   matched_terms: ['saneamento'],
   ai_summary: 'summary text', category: 'tender', category_label: 'licitação',
   confidence: 0.8,
+  names_party: true, has_amount: true, has_deadline: false, signal_score: 2,
   state: 'new', created_at: '2026-07-01T10:00:00Z',
   client_id: 7, client_name: 'IFCE Crateús',
   act_detail: {
@@ -108,4 +109,11 @@ test('renders the snippet as text, never as markup', () => {
   });
   expect(document.querySelector('img')).toBeNull();
   expect(screen.getByText(/onerror=1/)).toBeInTheDocument();
+});
+
+test('MatchCard names the signals that fired, and only those', () => {
+  render(MatchCard, { props: { match } });
+  expect(screen.getByText(/parte nomeada/i)).toBeInTheDocument();
+  expect(screen.getByText(/^valor$/i)).toBeInTheDocument();
+  expect(screen.queryByText(/^prazo$/i)).not.toBeInTheDocument();
 });

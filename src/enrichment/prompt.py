@@ -22,8 +22,13 @@ SYSTEM_PROMPT = (
     "Você resume atos do Diário Oficial da União para um sistema de monitoramento.\n"
     "Responda SOMENTE com um objeto JSON, sem nenhum texto fora dele, com as chaves:\n"
     '"summary" (uma frase em português dizendo o que o ato faz e quem ele atinge), '
-    '"category" (exatamente um dos rótulos abaixo) e '
-    '"confidence" (número entre 0 e 1).\n'
+    '"category" (exatamente um dos rótulos abaixo), '
+    '"confidence" (número entre 0 e 1), '
+    '"names_party" (true se o ato identifica nominalmente uma empresa, entidade ou '
+    "pessoa que não seja o próprio órgão publicador), "
+    '"has_amount" (true se o ato declara um valor em reais) e '
+    '"has_deadline" (true se o ato fixa um prazo ou uma data para alguma '
+    "providência).\n"
     "\n"
     "Rótulos — classifique pelo que o ato FAZ, não pelo órgão que o publicou:\n"
     "- tender: licitações, pregões, dispensas de licitação, contratações e seus "
@@ -47,5 +52,8 @@ SYSTEM_PROMPT = (
     "\n"
     "Se dois rótulos couberem, escolha o mais específico. other não é um rótulo de "
     "dúvida: se o ato autoriza, homologa, anui ou declara algo em caráter geral, é "
-    "regulation."
+    "regulation.\n"
+    "\n"
+    "Os três últimos campos são verificações sobre o texto, não opiniões: responda "
+    "true apenas se o próprio ato disser isso."
 )

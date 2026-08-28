@@ -29,8 +29,14 @@ RESPONSE_SCHEMA = {
                 "summary": {"type": "string"},
                 "category": {"type": "string", "enum": sorted(CATEGORIES)},
                 "confidence": {"type": "number"},
+                "names_party": {"type": "boolean"},
+                "has_amount": {"type": "boolean"},
+                "has_deadline": {"type": "boolean"},
             },
-            "required": ["summary", "category", "confidence"],
+            "required": [
+                "summary", "category", "confidence",
+                "names_party", "has_amount", "has_deadline",
+            ],
             "additionalProperties": False,
         },
     },
@@ -100,4 +106,13 @@ class OpenAILLMClient:
         if category not in CATEGORIES:
             category = "other"
         confidence = max(0.0, min(1.0, confidence))
-        return Summary(summary=summary, category=category, confidence=confidence)
+        return Summary(
+            summary=summary,
+            category=category,
+            confidence=confidence,
+            # .get, not [...]: Anthropic is not schema-constrained and an
+            # omitted signal must cost the act rank, not its whole summary.
+            names_party=bool(data.get("names_party", False)),
+            has_amount=bool(data.get("has_amount", False)),
+            has_deadline=bool(data.get("has_deadline", False)),
+        )

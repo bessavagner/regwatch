@@ -7,6 +7,18 @@ class Summary:
     summary: str
     category: str
     confidence: float
+    # What the model could check in the act text, as opposed to its opinion of
+    # itself. Defaulted so a provider that omits one produces a lower-ranked
+    # match rather than an enrichment failure -- and so the ~40 existing
+    # Summary(...) constructions in the tests stay valid.
+    names_party: bool = False
+    has_amount: bool = False
+    has_deadline: bool = False
+
+    @property
+    def signal_score(self) -> int:
+        """0-3. One orderable column instead of three sorts."""
+        return sum((self.names_party, self.has_amount, self.has_deadline))
 
 
 class LLMClient(Protocol):

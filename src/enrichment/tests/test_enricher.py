@@ -68,3 +68,24 @@ def test_enricher_passes_every_group_term_to_the_llm():
     llm = _RecordingLLM()
     enrich_match(match, llm)
     assert llm.seen_terms == ["sebrae", "contrato"]
+
+
+@pytest.mark.django_db
+def test_enrich_stores_the_signals_and_their_score(a_match):
+    fake = FakeLLMClient(Summary(
+        "Contrato de R$ 1.000,00 com a Beta Corp até 30/09.", "tender", 0.9,
+        names_party=True, has_amount=True, has_deadline=False,
+    ))
+    enrich_match(a_match, fake)
+    a_match.refresh_from_db()
+    assert a_match.names_party is True
+    assert a_match.has_amount is True
+    assert a_match.has_deadline is False
+    assert a_match.signal_score == 2
+
+
+@pytest.mark.django_db
+def test_a_failed_enrichment_leaves_the_score_at_zero(a_match):
+    enrich_match(a_match, RaisingLLMClient())
+    a_match.refresh_from_db()
+    assert a_match.signal_score == 0

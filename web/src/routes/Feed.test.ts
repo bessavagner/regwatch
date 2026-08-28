@@ -16,6 +16,7 @@ function page(results: Match[], count = results.length): Paged<Match> {
 const m = (id: number, state: Match['state'] = 'new'): Match => ({
   id, watch: 1, act: id, snippet: `snip-${id}`, matched_terms: [], rank: 0.5, ai_summary: '',
   category: '', category_label: 'sem categoria', confidence: 0.5, state,
+  names_party: false, has_amount: false, has_deadline: false, signal_score: 0,
   created_at: '2026-07-01T00:00:00Z',
   client_id: 1, client_name: 'Beta Corp',
   act_detail: {
@@ -314,4 +315,17 @@ test('emptying the only page just shows the empty state', async () => {
 
   await user.click(screen.getAllByRole('button', { name: /^relevant$/i })[0]);
   await waitFor(() => expect(screen.getByText(/no matches/i)).toBeInTheDocument());
+});
+
+test('the order control offers sorting by signal and puts it in the URL', async () => {
+  vi.spyOn(resources, 'listClients').mockResolvedValue({ count: 0, next: null, previous: null, results: [] });
+  const list = vi.spyOn(resources, 'listMatches').mockResolvedValue(page([m(1)]));
+  render(Feed);
+  await waitFor(() => expect(screen.getByText('snip-1')).toBeInTheDocument());
+
+  await userEvent.selectOptions(screen.getByLabelText(/order/i), 'signal');
+  await waitFor(() =>
+    expect(list).toHaveBeenLastCalledWith(expect.objectContaining({ ordering: 'signal' })),
+  );
+  expect(window.location.search).toContain('ordering=signal');
 });

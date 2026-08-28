@@ -10,6 +10,7 @@ const match: Match = {
   id: 7, watch: 1, act: 1, snippet: 's', matched_terms: [], rank: 0.5, ai_summary: '', category: '',
   category_label: 'sem categoria',
   confidence: 0.5, state: 'new', created_at: '2026-07-01T00:00:00Z',
+  names_party: false, has_amount: false, has_deadline: false, signal_score: 0,
   client_id: 1, client_name: 'Beta Corp',
   act_detail: {
     id: 1, title: 'Portaria 1', agency: '', identifier: 'id-1',

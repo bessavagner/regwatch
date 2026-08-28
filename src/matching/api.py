@@ -37,7 +37,9 @@ class MatchSerializer(serializers.ModelSerializer):
         fields = [
             "id", "watch", "act", "act_detail", "client_id", "client_name",
             "snippet", "matched_terms", "rank", "ai_summary", "category",
-            "category_label", "confidence", "state", "created_at",
+            "category_label", "confidence",
+            "names_party", "has_amount", "has_deadline", "signal_score",
+            "state", "created_at",
         ]
 
 
@@ -61,7 +63,13 @@ class MatchViewSet(WorkspaceScopedQuerysetMixin, viewsets.ReadOnlyModelViewSet):
             qs = qs.filter(act__edition__date__gte=value)
         if value := p.get("date_to"):
             qs = qs.filter(act__edition__date__lte=value)
-        if p.get("ordering") == "rank":
+        ordering = p.get("ordering")
+        if ordering == "signal":
+            # rank is the tiebreaker now, not the sort: it measures textual
+            # match strength, which says nothing about whether an act is worth
+            # a client's attention.
+            return qs.order_by("-signal_score", "-rank", "-id")
+        if ordering == "rank":
             return qs.order_by("-rank", "-id")
         return qs.order_by("-created_at", "-id")
 
