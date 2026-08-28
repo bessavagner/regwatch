@@ -2,6 +2,7 @@
   import type { Match } from '../api/types';
   import { brDate } from '../format';
   import Badge from './Badge.svelte';
+  import { highlight } from '../highlight';
 
   let { match, children }: { match: Match; children?: import('svelte').Snippet } = $props();
   const tone = $derived(
@@ -24,7 +25,11 @@
   <p class="as-typed mt-2 text-sm text-muted">{match.ai_summary}</p>
 {:else}
   <p class="mt-2 text-sm text-muted">resumo indisponível — mostrando o texto do ato</p>
-  <p class="as-typed mt-1 text-sm text-muted">{match.snippet}</p>
+  <p class="as-typed mt-1 text-sm text-muted">
+    {#each highlight(match.snippet, match.matched_terms) as part}{#if part.hit}<mark
+          class="rounded-sm bg-accent-bg px-0.5 text-ink">{part.text}</mark
+        >{:else}{part.text}{/if}{/each}
+  </p>
 {/if}
 
 {#if match.matched_terms.length}

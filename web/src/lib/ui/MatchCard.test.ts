@@ -78,3 +78,34 @@ test('MatchCard says nothing when no term was recorded', () => {
   render(MatchCard, { props: { match: { ...match, matched_terms: [] } } });
   expect(screen.queryByText(/encontrado por/i)).toBeNull();
 });
+
+test('marks the matched term inside the fallback snippet', () => {
+  render(MatchCard, {
+    props: {
+      match: {
+        ...match,
+        ai_summary: null,
+        snippet: 'autorizar as obras de saneamento básico',
+        matched_terms: ['saneamento'],
+      },
+    },
+  });
+  const marked = document.querySelector('mark');
+  expect(marked).not.toBeNull();
+  expect(marked!.textContent).toBe('saneamento');
+});
+
+test('renders the snippet as text, never as markup', () => {
+  render(MatchCard, {
+    props: {
+      match: {
+        ...match,
+        ai_summary: null,
+        snippet: 'contrato <img src=x onerror=1> firmado',
+        matched_terms: ['contrato'],
+      },
+    },
+  });
+  expect(document.querySelector('img')).toBeNull();
+  expect(screen.getByText(/onerror=1/)).toBeInTheDocument();
+});
