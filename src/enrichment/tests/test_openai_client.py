@@ -128,3 +128,43 @@ def test_act_text_is_truncated_before_sending():
     client = OpenAILLMClient("sk-test", transport=httpx.MockTransport(handler))
     client.summarize("x" * 20000, [])
     assert len(captured["body"]["messages"][1]["content"]) < 7000
+
+
+def test_summarize_reads_the_three_signals():
+    def handler(request):
+        return _chat_response(json.dumps({
+            "summary": "Contrato com a Beta Corp no valor de R$ 1.000,00 até 30/09.",
+            "category": "tender", "confidence": 0.9,
+            "names_party": True, "has_amount": True, "has_deadline": True,
+        }))
+
+    result = OpenAILLMClient("sk-test", transport=httpx.MockTransport(handler)).summarize("a", [])
+    assert (result.names_party, result.has_amount, result.has_deadline) == (True, True, True)
+    assert result.signal_score == 3
+
+
+def test_absent_signals_default_to_false_rather_than_raising():
+    # Anthropic is not schema-constrained and can omit a key; a missing signal
+    # is "we could not check", which sorts the act down, not an enrichment
+    # failure that loses the summary entirely.
+    def handler(request):
+        return _chat_response(json.dumps(
+            {"summary": "s", "category": "other", "confidence": 0.5}))
+
+    result = OpenAILLMClient("sk-test", transport=httpx.MockTransport(handler)).summarize("a", [])
+    assert result.signal_score == 0
+
+
+def test_the_strict_schema_requires_the_three_signals():
+    def handler(request):
+        schema = json.loads(request.content)["response_format"]["json_schema"]["schema"]
+        assert schema["properties"]["names_party"]["type"] == "boolean"
+        assert schema["properties"]["has_amount"]["type"] == "boolean"
+        assert schema["properties"]["has_deadline"]["type"] == "boolean"
+        assert set(schema["required"]) >= {"names_party", "has_amount", "has_deadline"}
+        return _chat_response(json.dumps({
+            "summary": "s", "category": "other", "confidence": 0.5,
+            "names_party": False, "has_amount": False, "has_deadline": False,
+        }))
+
+    OpenAILLMClient("sk-test", transport=httpx.MockTransport(handler)).summarize("a", [])

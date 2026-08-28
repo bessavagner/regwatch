@@ -107,3 +107,15 @@ def test_error_status_reports_the_providers_explanation():
     assert "credit balance is too low" in message
     assert "claude-haiku-4-5-20251001" in message
     assert "sk-secret-value" not in message, "the key must never reach a log line"
+
+
+def test_summarize_reads_the_three_signals():
+    def handler(request):
+        return _messages_response(json.dumps({
+            "summary": "Multa de R$ 500,00.", "category": "penalty", "confidence": 0.9,
+            "names_party": True, "has_amount": True, "has_deadline": False,
+        }))
+
+    result = AnthropicLLMClient("sk-test", transport=httpx.MockTransport(handler)).summarize("a", [])
+    assert (result.names_party, result.has_amount, result.has_deadline) == (True, True, False)
+    assert result.signal_score == 2
