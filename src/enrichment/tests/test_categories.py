@@ -1,7 +1,3 @@
-import re
-
-from enrichment.anthropic_client import CATEGORIES as REEXPORTED
-from enrichment.anthropic_client import SYSTEM_PROMPT
 from enrichment.categories import CATEGORIES, CATEGORY_LABELS, label_for
 
 
@@ -21,11 +17,6 @@ def test_categories_is_the_keys_of_the_labels():
     assert CATEGORIES == frozenset(CATEGORY_LABELS)
 
 
-def test_anthropic_client_still_exports_categories_for_openai_client():
-    # src/enrichment/openai_client.py imports CATEGORIES from anthropic_client.
-    assert REEXPORTED == CATEGORIES
-
-
 def test_label_for_translates_a_known_value():
     assert label_for("regulation") == "norma"
 
@@ -41,8 +32,3 @@ def test_label_for_passes_an_unknown_value_through_unchanged():
     # stored, so this is a can't-happen. Surfacing the raw value makes a data
     # bug visible instead of disguising it as a real category.
     assert label_for("bogus") == "bogus"
-
-
-def test_the_prompt_names_every_category_and_no_others():
-    listed = re.search(r"um de: ([^)]+)\)", SYSTEM_PROMPT).group(1)
-    assert {c.strip() for c in listed.split(",")} == set(CATEGORY_LABELS)

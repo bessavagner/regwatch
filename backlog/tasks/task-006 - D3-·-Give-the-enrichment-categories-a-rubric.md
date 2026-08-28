@@ -1,10 +1,10 @@
 ---
 id: TASK-006
 title: D3 · Give the enrichment categories a rubric
-status: To Do
+status: In Progress
 assignee: []
 created_date: '2026-08-26 17:29'
-updated_date: '2026-08-28 10:52'
+updated_date: '2026-08-28 15:41'
 labels:
   - 'track:signal'
   - 'size:S'
@@ -27,3 +27,9 @@ The system prompt names six categories and defines none, so the model has no cri
 - [ ] #1 Each category defined in one line with one example in the prompt
 - [ ] #2 The measured phrase clusters come back single-valued
 <!-- AC:END -->
+
+## Implementation Notes
+
+<!-- SECTION:NOTES:BEGIN -->
+Plan: docs/superpowers/plans/2026-08-28-enrichment-signal-quality.md. Task 1 builds the measurement harness the AC is judged on.
+<!-- SECTION:NOTES:END -->

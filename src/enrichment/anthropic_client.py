@@ -4,9 +4,11 @@ import re
 
 import httpx
 
-# Re-exported: src/enrichment/openai_client.py imports CATEGORIES from here.
-from enrichment.categories import CATEGORIES  # noqa: F401
+# CATEGORIES is used below to coerce an unknown label; it is no longer
+# re-exported -- openai_client.py imports it from enrichment.categories direct.
+from enrichment.categories import CATEGORIES
 from enrichment.llm import Summary
+from enrichment.prompt import SYSTEM_PROMPT
 
 _FENCE = re.compile(r"^```(?:json)?\s*|\s*```$", re.IGNORECASE)
 
@@ -18,14 +20,6 @@ def _unwrap_json(text: str) -> str:
     if text.startswith("```"):
         text = _FENCE.sub("", text).strip()
     return text
-
-SYSTEM_PROMPT = (
-    "Você resume atos do Diário Oficial da União para um sistema de monitoramento. "
-    "Responda SOMENTE com um objeto JSON com as chaves: "
-    '"summary" (uma frase em português), '
-    '"category" (um de: grant, penalty, appointment, tender, regulation, other) e '
-    '"confidence" (número entre 0 e 1). Sem texto fora do JSON.'
-)
 
 
 class AnthropicLLMClient:

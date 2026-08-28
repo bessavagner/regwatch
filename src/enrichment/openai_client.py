@@ -3,8 +3,10 @@ import os
 
 import httpx
 
-from enrichment.anthropic_client import CATEGORIES, SYSTEM_PROMPT, _unwrap_json
+from enrichment.anthropic_client import _unwrap_json
+from enrichment.categories import CATEGORIES
 from enrichment.llm import Summary
+from enrichment.prompt import SYSTEM_PROMPT
 
 # The cost-optimised tier of the current (5.6) generation: $0.20/MTok in,
 # $1.20/MTok out, against $5/$30 for the sol flagship. Enrichment is a
