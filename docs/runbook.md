@@ -231,6 +231,11 @@ print(OpenAILLMClient(os.environ['OPENAI_API_KEY'], model='gpt-5.6-luna').summar
 "
 ```
 
+The reply must name a category from the rubric in `src/enrichment/prompt.py`. A
+model that returns a label outside the six is coerced to `other` — if a smoke
+test comes back `other` for an obvious licitação, the model is ignoring the
+rubric and is the wrong model, not a prompt bug.
+
 To switch, set the env var rather than editing the default — no redeploy of the
 image is needed, just a Job/Service update:
 
