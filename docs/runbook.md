@@ -247,6 +247,65 @@ truncated JSON, which surfaces as `could not parse LLM reply into Summary`.
 Check `usage.completion_tokens_details.reasoning_tokens` on a test call; it is 0
 for `luna`.
 
+## Measure enrichment quality
+
+Read-only. Answers the two questions the D3/D5 acceptance criteria are written
+against: do identical act types get the same category, and does the ranking
+signal have any spread at all.
+
+```bash
+gcloud run jobs execute regwatch-run-daily --region=us-east4 --wait \
+  --args=enrichment_report,--date-from,2026-08-21,--date-to,2026-08-28
+```
+
+```
+2026-08-21 -> 2026-08-28 — 284 enriched match(es)
+
+categories:
+  regulation   118
+  tender        79
+  other         41
+  ...
+
+D3 — 23 cluster(s) of >= 3 act(s); inconsistency rate 29.30%
+  'declarou de utilidade publica a' (12) -> {'regulation': 10, 'other': 2}
+
+D5 — confidence modal share 96.10% across 3 distinct value(s)
+  0.98   11
+  0.99   273
+```
+
+`--json` gives the same payload machine-readably, which is what to paste into a
+`docs/analysis/` note. `--client N` narrows to one client; `--min-cluster N`
+(default 3) sets how many acts a phrase needs before it counts as a cluster.
+
+**The one failure mode:** a window with no enrichment in it reports
+`0 enriched match(es)` and every rate as `0.00%` — that is an empty measurement,
+not a perfect score. Check the window covers publication days.
+
+## Re-enrich a sample after a prompt change
+
+A prompt change only means something if the before and after are the *same*
+acts. This re-runs enrichment over a date range and overwrites the stored
+summary, category and signals.
+
+```bash
+# Always dry-run first: it prints how many acts would be sent, and sends nothing.
+gcloud run jobs execute regwatch-run-daily --region=us-east4 --wait \
+  --args=reenrich_matches,--date-from,2026-08-27,--date-to,2026-08-28
+
+gcloud run jobs execute regwatch-run-daily --region=us-east4 --wait \
+  --args=reenrich_matches,--date-from,2026-08-27,--date-to,2026-08-28,--limit,150,--apply
+```
+
+**This costs money and overwrites client-visible summaries.** `--limit` (default
+100) is the cap; there is no undo.
+
+**The one failure mode:** far fewer acts than expected. Only the last 7 days of
+act bodies are retained (see "Prune act text") — `prune_act_text` empties
+`raw_text`, and an act with no body is skipped rather than re-guessed from its
+title.
+
 ## Prune stale matches
 
 A watch's definition can change after it has already produced matches — the
