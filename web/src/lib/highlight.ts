@@ -14,6 +14,10 @@ export interface Part {
 
 function foldChar(ch: string): string {
   const base = ch.toLowerCase().normalize('NFKD').replace(/\p{M}/gu, '');
+  // Width-changing folds are refused rather than truncated, so this diverges
+  // from matching/snippet.py on ligatures ('ﬁ' folds to 'f' there, stays here).
+  // The server still centres the snippet correctly; only the mark is missed,
+  // and DOU text does not use ligatures.
   return base.length === ch.length ? base : ch;
 }
 
@@ -41,6 +45,9 @@ export function highlight(text: string, terms: string[]): Part[] {
     return [{ text: text ?? '', hit: false }];
   }
 
+  // Leftmost-first, not longest-match: with both 'saneamento' and 'saneamento
+  // básico' on a watch, only the shorter is marked. Cosmetic -- the text itself
+  // round-trips unchanged either way.
   const re = new RegExp(patterns.join('|'), 'g');
   const folded = fold(text);
   const parts: Part[] = [];
