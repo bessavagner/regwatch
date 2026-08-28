@@ -352,3 +352,22 @@ def test_digest_names_the_unenriched_case_in_the_category_slot(matched):
     Match.objects.update(category="")
     body = build_and_send_digests(DATE, FakeEmailSender())[0].body
     assert "[sem categoria]" in body
+
+
+@pytest.mark.django_db
+def test_digest_says_which_term_matched(matched):
+    build_and_send_digests(DATE, FakeEmailSender())
+    body = Digest.objects.get(client=matched, date=DATE).body
+    assert "encontrado por: beta corp" in body
+
+
+@pytest.mark.django_db
+def test_digest_omits_the_line_when_no_term_was_recorded(matched):
+    # A match created before v0.20.0: the terms were never persisted and the
+    # act's text is long gone, so the line has nothing honest to say.
+    Match.objects.update(matched_terms=[])
+
+    build_and_send_digests(DATE, FakeEmailSender())
+
+    body = Digest.objects.get(client=matched, date=DATE).body
+    assert "encontrado por" not in body

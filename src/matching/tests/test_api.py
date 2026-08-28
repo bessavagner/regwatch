@@ -236,3 +236,15 @@ def test_the_other_list_endpoints_report_the_same_fields(firm_a):
     assert body["page"] == 1
     assert body["total_pages"] == 1
     assert body["page_size"] == 25
+
+
+@pytest.mark.django_db
+def test_match_payload_carries_the_matched_terms(firm_a):
+    ws, user = firm_a
+    match = _match(ws, date=datetime.date(2026, 7, 1))
+    match.matched_terms = ["saneamento"]
+    match.save(update_fields=["matched_terms"])
+    api = APIClient()
+    api.force_authenticate(user)
+    body = api.get("/api/matches").json()
+    assert body["results"][0]["matched_terms"] == ["saneamento"]

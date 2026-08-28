@@ -2,5 +2,6 @@
 
 {% for m in matches %}- [{{ m.category|category_label }}] {{ m.ai_summary|default:m.snippet }}
   {{ m.act.title }} ({{ m.act.agency }})
-  {{ m.act.dou_url }}
+{% if m.matched_terms %}  encontrado por: {{ m.matched_terms|join:", " }}
+{% endif %}  {{ m.act.dou_url }}
 {% endfor %}{% endautoescape %}
