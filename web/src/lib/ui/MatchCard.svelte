@@ -42,6 +42,9 @@
 
 <div class="mt-2 flex flex-wrap items-center gap-2 text-xs text-muted">
   {#if match.category}<Badge label={match.category_label} tone="gray" />{/if}
+  {#if match.names_party}<Badge label="parte nomeada" tone="gray" />{/if}
+  {#if match.has_amount}<Badge label="valor" tone="gray" />{/if}
+  {#if match.has_deadline}<Badge label="prazo" tone="gray" />{/if}
   {#if match.act_detail.source_url}
     <a
       class="underline"

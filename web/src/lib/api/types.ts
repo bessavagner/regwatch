@@ -71,6 +71,12 @@ export interface Match {
   // shows the storage enum while a lookup is in flight.
   category_label: string;
   confidence: number | null;
+  // What the enricher could check in the act text. `signal_score` is their sum,
+  // 0-3, and is what `ordering=signal` sorts on.
+  names_party: boolean;
+  has_amount: boolean;
+  has_deadline: boolean;
+  signal_score: number;
   state: 'new' | 'relevant' | 'dismissed';
   created_at: string;
 }
