@@ -1,10 +1,10 @@
 ---
 id: TASK-035
 title: D8 · Put the publishing agency into the search fields
-status: To Do
+status: In Progress
 assignee: []
 created_date: '2026-08-28 10:51'
-updated_date: '2026-08-28 10:52'
+updated_date: '2026-08-28 13:20'
 labels:
   - 'track:signal'
   - 'size:S'
@@ -22,7 +22,13 @@ search_text is normalize_text(title + raw_text) and search_vector_pt is SearchVe
 
 ## Acceptance Criteria
 <!-- AC:BEGIN -->
-- [ ] #1 agency is included in search_text and in search_vector_pt at ingest
-- [ ] #2 Existing retained acts are backfilled so old and new rows agree
+- [x] #1 agency is included in search_text and in search_vector_pt at ingest
+- [x] #2 Existing retained acts are backfilled so old and new rows agree
 - [ ] #3 Watch 9 reaches its measured volume without the Ceara helper group
 <!-- AC:END -->
+
+## Implementation Notes
+
+<!-- SECTION:NOTES:BEGIN -->
+agency folded into search_text and search_vector_pt at ingest (gazette/ingest.py) and in reindex_search, which now rebuilds both columns and skips pruned acts. Verified: uv run pytest src/gazette -q -> 67 passed. AC#3 (watch 9 volume) needs production data -- see Task 5 of the plan.
+<!-- SECTION:NOTES:END -->

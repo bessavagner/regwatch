@@ -31,7 +31,12 @@ def _content_of(item) -> dict:
         "title": item.title,
         "agency": item.agency,
         "raw_text": item.raw_text,
-        "search_text": normalize_text(f"{item.title} {item.raw_text}"),
+        # agency is in here on purpose: it is the single most discriminating
+        # field the DOU publishes. Without it a watch on "Hidrolândia" cannot
+        # tell the Ceará municipality from the Goiás one, and needs a second
+        # ANDed group on the word "ceará" that drops every legitimate act whose
+        # body never names the state (measured 2026-08-27: 138 matches, 29 real).
+        "search_text": normalize_text(f"{item.title} {item.agency} {item.raw_text}"),
         "source_anchor": item.source_anchor,
     }
 
@@ -74,7 +79,10 @@ def ingest_edition_result(raw: RawEdition) -> IngestResult:
             # some upstream text arrives NFD-decomposed, which would otherwise stem
             # differently and silently miss.
             search_vector_pt=SearchVector(
-                NormalizeNFC(F("title")), NormalizeNFC(F("raw_text")), config="portuguese"
+                NormalizeNFC(F("title")),
+                NormalizeNFC(F("agency")),
+                NormalizeNFC(F("raw_text")),
+                config="portuguese",
             ),
         )
     return IngestResult(edition, len(written))

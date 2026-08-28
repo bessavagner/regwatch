@@ -6,8 +6,11 @@ Operator procedures. Copy-paste as written; nothing here is memorised.
 
 ## Reindex the Portuguese search vector
 
-Run after deploying a change to how `Act.search_vector_pt` is built, or once
-after the column is first added, to backfill existing acts.
+Run after deploying a change to how `Act.search_text` or `Act.search_vector_pt`
+is built, or once after the column is first added, to backfill existing acts.
+Rebuilds both columns: `search_text` (lowercased, accent-stripped, used by
+substring/entity terms) and `search_vector_pt` (the `portuguese` tsvector used
+by concept terms and by ranking).
 
 ```bash
 gcloud run jobs execute regwatch-migrate \
@@ -24,10 +27,12 @@ reindexed 500/25495
 reindex_search: 25495 acts
 ```
 
-Common failure: the job times out on a large backlog. Re-run it. The command
-only touches acts whose vector is still null, so re-running resumes rather than
-restarting. Use `--all` to force a full rebuild after changing the vector
-definition.
+Common failure: the job times out on a large backlog. Re-run it. Without
+`--all` the command only touches acts whose vector is still null, so re-running
+resumes rather than restarting. Use `--all` to force a full rebuild after
+changing the *definition* of either column — as v0.20.0 did when it folded
+`agency` in. Acts whose text has been pruned (`prune_act_text`) are skipped in
+both modes and stay pruned; that is deliberate, not a miss.
 
 ## Roll back v0.14.0
 

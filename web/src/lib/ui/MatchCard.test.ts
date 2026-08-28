@@ -5,6 +5,7 @@ import type { Match } from '../api/types';
 
 const match: Match = {
   id: 1, watch: 2, act: 3, snippet: 'a relevant snippet', rank: 0.9,
+  matched_terms: ['saneamento'],
   ai_summary: 'summary text', category: 'tender', category_label: 'licitação',
   confidence: 0.8,
   state: 'new', created_at: '2026-07-01T10:00:00Z',
@@ -65,4 +66,46 @@ test('shows the category in Portuguese, never the storage enum', () => {
   render(MatchCard, { match });
   expect(screen.getByText('licitação')).toBeInTheDocument();
   expect(screen.queryByText('tender')).not.toBeInTheDocument();
+});
+
+test('MatchCard says which term matched', () => {
+  render(MatchCard, { props: { match } });
+  expect(screen.getByText(/encontrado por/i)).toBeInTheDocument();
+  expect(screen.getByText('saneamento')).toBeInTheDocument();
+});
+
+test('MatchCard says nothing when no term was recorded', () => {
+  render(MatchCard, { props: { match: { ...match, matched_terms: [] } } });
+  expect(screen.queryByText(/encontrado por/i)).toBeNull();
+});
+
+test('marks the matched term inside the fallback snippet', () => {
+  render(MatchCard, {
+    props: {
+      match: {
+        ...match,
+        ai_summary: null,
+        snippet: 'autorizar as obras de saneamento básico',
+        matched_terms: ['saneamento'],
+      },
+    },
+  });
+  const marked = document.querySelector('mark');
+  expect(marked).not.toBeNull();
+  expect(marked!.textContent).toBe('saneamento');
+});
+
+test('renders the snippet as text, never as markup', () => {
+  render(MatchCard, {
+    props: {
+      match: {
+        ...match,
+        ai_summary: null,
+        snippet: 'contrato <img src=x onerror=1> firmado',
+        matched_terms: ['contrato'],
+      },
+    },
+  });
+  expect(document.querySelector('img')).toBeNull();
+  expect(screen.getByText(/onerror=1/)).toBeInTheDocument();
 });

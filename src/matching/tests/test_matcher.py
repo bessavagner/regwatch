@@ -1,3 +1,4 @@
+import unicodedata
 import datetime
 import pytest
 from accounts.models import Workspace
@@ -207,3 +208,83 @@ def test_entity_substring_lookup_stays_sargable_against_the_trigram_index():
     sql = str(qs.query)
     assert "UPPER(" not in sql
     assert "LIKE" in sql
+
+
+@pytest.mark.django_db
+def test_rank_is_stable_for_nfd_decomposed_text():
+    # The same word delivered with combining accents, the way some upstream
+    # gazette text actually arrives. Ingest NFC-normalises it into the stored
+    # vector; a rank rebuilt from the raw column does not, and scores 0.
+    nfd = unicodedata.normalize("NFD", "licitações")
+    _watch(_group("licitação", kind="concept"))
+    matches = match_edition(_edition_with(f"Aviso de {nfd} para a obra."))
+    assert len(matches) == 1
+    assert matches[0].rank > 0
+
+
+@pytest.mark.django_db
+def test_rank_covers_the_agency_the_match_used():
+    # After D8 a watch can match on the publishing body alone. A rank rebuilt
+    # from title+raw_text would score that match 0 and bury it at the bottom of
+    # the digest, which orders by -rank.
+    edition = ingest_edition(RawEdition(
+        date=datetime.date(2026, 6, 26), section="1",
+        source_url="https://example.test/s1",
+        items=(RawItem("a1", "Portaria Nº 3", "Ministério da Educação",
+                       "Texto sem o nome do órgão.", "#a1"),),
+    ))
+    _watch(_group("educação", kind="concept"))
+    matches = match_edition(edition)
+    assert len(matches) == 1
+    assert matches[0].rank > 0
+
+
+@pytest.mark.django_db
+def test_match_records_the_term_that_fired():
+    _watch(_group("beta corp", "gama ltda"))
+    matches = match_edition(_edition_with("Licença concedida à BETA CORP nesta data."))
+    assert matches[0].matched_terms == ["beta corp"]
+
+
+@pytest.mark.django_db
+def test_match_records_every_term_that_fired_across_groups():
+    _watch(_group("beta corp"), _group("licença", kind="concept"))
+    matches = match_edition(_edition_with("Licenças concedidas à BETA CORP."))
+    # Order follows the watch's own group order, so the client reads it back the
+    # way they wrote it. 'licenças' fires the concept term through the stemmer.
+    assert matches[0].matched_terms == ["beta corp", "licença"]
+
+
+@pytest.mark.django_db
+def test_matched_terms_are_deduplicated():
+    # The same text can legitimately appear in two groups.
+    _watch(_group("beta corp"), _group("beta corp", "alfa"))
+    matches = match_edition(_edition_with("Licença concedida à BETA CORP."))
+    assert matches[0].matched_terms == ["beta corp"]
+
+
+@pytest.mark.django_db
+def test_matched_terms_defaults_to_empty_for_an_old_match():
+    watch = _watch(_group("beta corp"))
+    edition = _edition_with("Licença concedida à BETA CORP.")
+    act = Act.objects.get(edition=edition)
+    match = Match.objects.create(watch=watch, act=act, rank=0.0, snippet="x")
+    assert match.matched_terms == []
+
+
+@pytest.mark.django_db
+def test_snippet_is_centred_on_the_matched_term():
+    header = (
+        "DESPACHO Nº 431, DE 21 DE AGOSTO DE 2026 A SUPERINTENDENTE DO "
+        "DEPARTAMENTO NACIONAL DE OBRAS CONTRA AS SECAS, no uso das "
+        "atribuições que lhe confere o Regimento Interno, e considerando o "
+        "que consta do processo administrativo em epígrafe, resolve: "
+    )
+    tail = "Publique-se. " * 30
+    _watch(_group("beta corp"))
+    matches = match_edition(
+        _edition_with(header + "Autorizar o contrato com a BETA CORP. " + tail)
+    )
+    snippet = matches[0].snippet
+    assert "BETA CORP" in snippet
+    assert not snippet.startswith("DESPACHO")

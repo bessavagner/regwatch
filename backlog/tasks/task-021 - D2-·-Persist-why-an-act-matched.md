@@ -1,10 +1,10 @@
 ---
 id: TASK-021
 title: D2 · Persist why an act matched
-status: To Do
+status: Done
 assignee: []
 created_date: '2026-08-26 17:30'
-updated_date: '2026-08-28 10:52'
+updated_date: '2026-08-28 13:26'
 labels:
   - 'track:signal'
   - 'size:M'
@@ -25,6 +25,18 @@ The matched terms are already handed to the LLM at enrichment time (enrich_match
 
 ## Acceptance Criteria
 <!-- AC:BEGIN -->
-- [ ] #1 Every new match records which term fired
-- [ ] #2 The matched term is shown in the app and in the digest
+- [x] #1 Every new match records which term fired
+- [x] #2 The matched term is shown in the app and in the digest
 <!-- AC:END -->
+
+## Implementation Notes
+
+<!-- SECTION:NOTES:BEGIN -->
+Match.matched_terms (JSONField, default list) populated from per-term boolean annotations built out of the same _term_q predicates that produced the match, so stemmed concept hits are recorded correctly (verified: 'licenca' concept term recorded against body text 'Licenças'). Rendered in MatchCard and in daily.txt. Not backfilled: acts past the 7-day text window cannot be re-evaluated. Verified: pytest 311 passed, vitest 88 passed.
+<!-- SECTION:NOTES:END -->
+
+## Final Summary
+
+<!-- SECTION:FINAL_SUMMARY:BEGIN -->
+Every new match records and displays which of the watch's terms fired, in the app and in the digest.
+<!-- SECTION:FINAL_SUMMARY:END -->

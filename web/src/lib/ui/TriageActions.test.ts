@@ -7,7 +7,7 @@ import type { Match } from '../api/types';
 
 afterEach(() => vi.restoreAllMocks());
 const match: Match = {
-  id: 7, watch: 1, act: 1, snippet: 's', rank: 0.5, ai_summary: '', category: '',
+  id: 7, watch: 1, act: 1, snippet: 's', matched_terms: [], rank: 0.5, ai_summary: '', category: '',
   category_label: 'sem categoria',
   confidence: 0.5, state: 'new', created_at: '2026-07-01T00:00:00Z',
   client_id: 1, client_name: 'Beta Corp',
