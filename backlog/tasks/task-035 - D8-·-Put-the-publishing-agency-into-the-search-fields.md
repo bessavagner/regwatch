@@ -4,7 +4,7 @@ title: D8 · Put the publishing agency into the search fields
 status: In Progress
 assignee: []
 created_date: '2026-08-28 10:51'
-updated_date: '2026-08-28 13:20'
+updated_date: '2026-08-28 14:22'
 labels:
   - 'track:signal'
   - 'size:S'
@@ -30,5 +30,7 @@ search_text is normalize_text(title + raw_text) and search_vector_pt is SearchVe
 ## Implementation Notes
 
 <!-- SECTION:NOTES:BEGIN -->
-agency folded into search_text and search_vector_pt at ingest (gazette/ingest.py) and in reindex_search, which now rebuilds both columns and skips pruned acts. Verified: uv run pytest src/gazette -q -> 67 passed. AC#3 (watch 9 volume) needs production data -- see Task 5 of the plan.
+PRODUCTION (2026-08-28, v0.20.0): deploy green (run 33178622723, all three jobs); image regwatch:v0.20.0 confirmed on regwatch-migrate; migration 0003 applied ([X] in showmigrations). reindex_search --all rebuilt BOTH columns over 28193 acts in 56 batches, exit 0; a follow-up run without --all reported 'reindex_search: 0 acts', proving no non-pruned act is left without a vector. AC#1 and AC#2 now verified in production, not just in tests.
+
+AC#3 NOT verified and deliberately left open. Watch 9 is Cactarus: 13 CE municipalities in one group plus a 'Ceará' helper group. watch_term_contexts now reports only 3 matched acts still holding text -- the 7-day retention window has pruned the corpus the original 2026-08-27 measurement (138 acts / 29 from a CE body) was taken on, so that measurement cannot be reproduced as-is. Reproducing it needs: (a) editing a live pilot client's watch to swap the 'Ceará' helper for an entity term on the agency, and (b) a backfill over a 7-day range, which re-fetches pruned dates from INlabs and writes new matches into a real client's feed. Both need explicit sign-off. Noted meanwhile: the helper term currently fires on 'universidade federal do ceara' in 2 of the 3 retained acts -- the exact false positive D8 is meant to remove.
 <!-- SECTION:NOTES:END -->
