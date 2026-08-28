@@ -10,6 +10,7 @@ from gazette.normalize import normalize_pt, normalize_text
 from watches.grouping import KIND_CONCEPT, KIND_ENTITY, MIN_SUBSTRING_LEN, iter_terms, term_texts
 from watches.models import Watch
 from matching.models import Match
+from matching.snippet import build_snippet
 
 logger = logging.getLogger(__name__)
 
@@ -138,7 +139,7 @@ def match_edition(edition: Edition) -> list[Match]:
                 defaults={
                     "rank": act.rank,
                     "matched_terms": matched,
-                    "snippet": act.raw_text[:280],
+                    "snippet": build_snippet(act.raw_text, matched),
                 },
             )
             if was_created:

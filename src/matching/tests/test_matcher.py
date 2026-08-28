@@ -270,3 +270,21 @@ def test_matched_terms_defaults_to_empty_for_an_old_match():
     act = Act.objects.get(edition=edition)
     match = Match.objects.create(watch=watch, act=act, rank=0.0, snippet="x")
     assert match.matched_terms == []
+
+
+@pytest.mark.django_db
+def test_snippet_is_centred_on_the_matched_term():
+    header = (
+        "DESPACHO Nº 431, DE 21 DE AGOSTO DE 2026 A SUPERINTENDENTE DO "
+        "DEPARTAMENTO NACIONAL DE OBRAS CONTRA AS SECAS, no uso das "
+        "atribuições que lhe confere o Regimento Interno, e considerando o "
+        "que consta do processo administrativo em epígrafe, resolve: "
+    )
+    tail = "Publique-se. " * 30
+    _watch(_group("beta corp"))
+    matches = match_edition(
+        _edition_with(header + "Autorizar o contrato com a BETA CORP. " + tail)
+    )
+    snippet = matches[0].snippet
+    assert "BETA CORP" in snippet
+    assert not snippet.startswith("DESPACHO")
