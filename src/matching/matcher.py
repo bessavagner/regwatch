@@ -3,7 +3,7 @@ from functools import reduce
 from operator import or_
 
 from django.contrib.postgres.search import SearchQuery, SearchRank
-from django.db.models import F, Q
+from django.db.models import BooleanField, ExpressionWrapper, F, Q
 
 from gazette.models import Act, Edition
 from gazette.normalize import normalize_pt, normalize_text
@@ -86,6 +86,28 @@ def _rank_query(watch: Watch) -> SearchQuery:
     return reduce(or_, (_pt(t) for t in term_texts(watch.groups)))
 
 
+def _term_annotations(terms) -> dict:
+    """One boolean annotation per term, using the very predicate that matched.
+
+    Re-deriving the fired terms in Python is not an option: a concept term
+    matches through the Portuguese stemmer ('licitação' finds 'licitações'),
+    which only Postgres can evaluate. Asking the database the same question it
+    already answered is one extra expression per term over the same scan.
+    """
+    return {
+        f"term_{i}": ExpressionWrapper(_term_q(text, kind), output_field=BooleanField())
+        for i, (text, kind) in enumerate(terms)
+    }
+
+
+def _matched_terms(act, terms) -> list[str]:
+    out: list[str] = []
+    for i, (text, _) in enumerate(terms):
+        if getattr(act, f"term_{i}", False) and text not in out:
+            out.append(text)
+    return out
+
+
 def match_edition(edition: Edition) -> list[Match]:
     created: list[Match] = []
     acts = Act.objects.filter(edition=edition)
@@ -99,18 +121,25 @@ def match_edition(edition: Edition) -> list[Match]:
                 watch.pk, watch.client.name,
             )
             continue
+        terms = list(iter_terms(watch.groups))
         hits = acts.annotate(
             # The stored column, not a rebuilt vector: rebuilding recomputed a
             # full-body tsvector for every act on every watch (~20,000 per run
             # at six watches over ~3,400 acts) and, worse, omitted both the
             # NormalizeNFC wrapper and the agency that ingest applies -- so the
             # rank disagreed with the predicate that produced the match.
-            rank=SearchRank(F("search_vector_pt"), _rank_query(watch))
+            rank=SearchRank(F("search_vector_pt"), _rank_query(watch)),
+            **_term_annotations(terms),
         ).filter(query)
         for act in hits:
+            matched = _matched_terms(act, terms)
             match, was_created = Match.objects.get_or_create(
                 watch=watch, act=act,
-                defaults={"rank": act.rank, "snippet": act.raw_text[:280]},
+                defaults={
+                    "rank": act.rank,
+                    "matched_terms": matched,
+                    "snippet": act.raw_text[:280],
+                },
             )
             if was_created:
                 created.append(match)

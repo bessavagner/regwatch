@@ -237,3 +237,36 @@ def test_rank_covers_the_agency_the_match_used():
     matches = match_edition(edition)
     assert len(matches) == 1
     assert matches[0].rank > 0
+
+
+@pytest.mark.django_db
+def test_match_records_the_term_that_fired():
+    _watch(_group("beta corp", "gama ltda"))
+    matches = match_edition(_edition_with("Licença concedida à BETA CORP nesta data."))
+    assert matches[0].matched_terms == ["beta corp"]
+
+
+@pytest.mark.django_db
+def test_match_records_every_term_that_fired_across_groups():
+    _watch(_group("beta corp"), _group("licença", kind="concept"))
+    matches = match_edition(_edition_with("Licenças concedidas à BETA CORP."))
+    # Order follows the watch's own group order, so the client reads it back the
+    # way they wrote it. 'licenças' fires the concept term through the stemmer.
+    assert matches[0].matched_terms == ["beta corp", "licença"]
+
+
+@pytest.mark.django_db
+def test_matched_terms_are_deduplicated():
+    # The same text can legitimately appear in two groups.
+    _watch(_group("beta corp"), _group("beta corp", "alfa"))
+    matches = match_edition(_edition_with("Licença concedida à BETA CORP."))
+    assert matches[0].matched_terms == ["beta corp"]
+
+
+@pytest.mark.django_db
+def test_matched_terms_defaults_to_empty_for_an_old_match():
+    watch = _watch(_group("beta corp"))
+    edition = _edition_with("Licença concedida à BETA CORP.")
+    act = Act.objects.get(edition=edition)
+    match = Match.objects.create(watch=watch, act=act, rank=0.0, snippet="x")
+    assert match.matched_terms == []
