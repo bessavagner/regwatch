@@ -1,0 +1,26 @@
+---
+id: TASK-037
+title: D9 · Feed the fired terms to the enrichment prompt
+status: To Do
+assignee: []
+created_date: '2026-08-28 13:33'
+labels:
+  - 'track:signal'
+  - 'size:S'
+dependencies: []
+priority: medium
+ordinal: 37000
+---
+
+## Description
+
+<!-- SECTION:DESCRIPTION:BEGIN -->
+enrich_match still passes term_texts(match.watch.groups) -- every term on the watch -- to the LLM, even though v0.20.0 (TASK-021) now persists exactly which terms fired on match.matched_terms. Narrowing the prompt to the terms that actually matched should sharpen both the summary and the category. Deliberately deferred out of TASK-021 so it would not change enrichment output mid-flight and contaminate the D3 (TASK-006) category-rubric and D5 (TASK-022) confidence measurements, which are measured against the current prompt. Do this after those two have their baselines.
+<!-- SECTION:DESCRIPTION:END -->
+
+## Acceptance Criteria
+<!-- AC:BEGIN -->
+- [ ] #1 enrich_match passes match.matched_terms when it is non-empty
+- [ ] #2 Falls back to the full watch terms for pre-v0.20.0 matches with an empty list
+- [ ] #3 D3 and D5 baselines are recorded before this lands
+<!-- AC:END -->
