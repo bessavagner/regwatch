@@ -2,8 +2,8 @@ import logging
 from functools import reduce
 from operator import or_
 
-from django.contrib.postgres.search import SearchQuery, SearchRank, SearchVector
-from django.db.models import Q
+from django.contrib.postgres.search import SearchQuery, SearchRank
+from django.db.models import F, Q
 
 from gazette.models import Act, Edition
 from gazette.normalize import normalize_pt, normalize_text
@@ -100,7 +100,12 @@ def match_edition(edition: Edition) -> list[Match]:
             )
             continue
         hits = acts.annotate(
-            rank=SearchRank(SearchVector("title", "raw_text", config="portuguese"), _rank_query(watch))
+            # The stored column, not a rebuilt vector: rebuilding recomputed a
+            # full-body tsvector for every act on every watch (~20,000 per run
+            # at six watches over ~3,400 acts) and, worse, omitted both the
+            # NormalizeNFC wrapper and the agency that ingest applies -- so the
+            # rank disagreed with the predicate that produced the match.
+            rank=SearchRank(F("search_vector_pt"), _rank_query(watch))
         ).filter(query)
         for act in hits:
             match, was_created = Match.objects.get_or_create(

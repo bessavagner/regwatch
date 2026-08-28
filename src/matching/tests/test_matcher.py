@@ -1,3 +1,4 @@
+import unicodedata
 import datetime
 import pytest
 from accounts.models import Workspace
@@ -207,3 +208,32 @@ def test_entity_substring_lookup_stays_sargable_against_the_trigram_index():
     sql = str(qs.query)
     assert "UPPER(" not in sql
     assert "LIKE" in sql
+
+
+@pytest.mark.django_db
+def test_rank_is_stable_for_nfd_decomposed_text():
+    # The same word delivered with combining accents, the way some upstream
+    # gazette text actually arrives. Ingest NFC-normalises it into the stored
+    # vector; a rank rebuilt from the raw column does not, and scores 0.
+    nfd = unicodedata.normalize("NFD", "licitações")
+    _watch(_group("licitação", kind="concept"))
+    matches = match_edition(_edition_with(f"Aviso de {nfd} para a obra."))
+    assert len(matches) == 1
+    assert matches[0].rank > 0
+
+
+@pytest.mark.django_db
+def test_rank_covers_the_agency_the_match_used():
+    # After D8 a watch can match on the publishing body alone. A rank rebuilt
+    # from title+raw_text would score that match 0 and bury it at the bottom of
+    # the digest, which orders by -rank.
+    edition = ingest_edition(RawEdition(
+        date=datetime.date(2026, 6, 26), section="1",
+        source_url="https://example.test/s1",
+        items=(RawItem("a1", "Portaria Nº 3", "Ministério da Educação",
+                       "Texto sem o nome do órgão.", "#a1"),),
+    ))
+    _watch(_group("educação", kind="concept"))
+    matches = match_edition(edition)
+    assert len(matches) == 1
+    assert matches[0].rank > 0
