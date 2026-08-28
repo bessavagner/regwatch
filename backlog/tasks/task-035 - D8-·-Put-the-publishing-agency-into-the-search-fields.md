@@ -4,7 +4,7 @@ title: D8 · Put the publishing agency into the search fields
 status: In Progress
 assignee: []
 created_date: '2026-08-28 10:51'
-updated_date: '2026-08-28 14:22'
+updated_date: '2026-08-28 14:51'
 labels:
   - 'track:signal'
   - 'size:S'
@@ -30,7 +30,15 @@ search_text is normalize_text(title + raw_text) and search_vector_pt is SearchVe
 ## Implementation Notes
 
 <!-- SECTION:NOTES:BEGIN -->
-PRODUCTION (2026-08-28, v0.20.0): deploy green (run 33178622723, all three jobs); image regwatch:v0.20.0 confirmed on regwatch-migrate; migration 0003 applied ([X] in showmigrations). reindex_search --all rebuilt BOTH columns over 28193 acts in 56 batches, exit 0; a follow-up run without --all reported 'reindex_search: 0 acts', proving no non-pruned act is left without a vector. AC#1 and AC#2 now verified in production, not just in tests.
+AC#3 MEASURED 2026-08-28 post-deploy, read-only, over the 28193 retained acts. Watch 9 (Cactarus) = [13 CE municipios ORed] AND ['Ceara'].
+  municipios only, no state filter: 177
+  current config (municipios AND 'Ceara'): 49
+  proposed swap (municipios AND agency 'Prefeituras/Estado do Ceara'): 29
+  set comparison: both=29, only_old=20, only_new=0 -- the swap is a STRICT SUBSET.
 
-AC#3 NOT verified and deliberately left open. Watch 9 is Cactarus: 13 CE municipalities in one group plus a 'Ceará' helper group. watch_term_contexts now reports only 3 matched acts still holding text -- the 7-day retention window has pruned the corpus the original 2026-08-27 measurement (138 acts / 29 from a CE body) was taken on, so that measurement cannot be reproduced as-is. Reproducing it needs: (a) editing a live pilot client's watch to swap the 'Ceará' helper for an entity term on the agency, and (b) a backfill over a 7-day range, which re-fetches pruned dates from INlabs and writes new matches into a real client's feed. Both need explicit sign-off. Noted meanwhile: the helper term currently fires on 'universidade federal do ceara' in 2 of the 3 retained acts -- the exact false positive D8 is meant to remove.
+The swap was NOT applied. It would drop 20 acts (incl. a Governo do Estado do Ceara/Casa Civil licitacao, Banco do Nordeste contracts, MCom editais) and recover nothing.
+
+Why the premise no longer holds: D8 put agency into search_text, so the EXISTING 'Ceara' entity term now matches the agency string 'Prefeituras/Estado do Ceara' directly. Of the 29 CE-prefeitura acts, only 6 name 'ceara' in the body and 0 in the title -- 23 are reachable ONLY via agency, among them Poranga / Hidrolandia / Independencia procurement notices, exactly the three municipalities the task flagged as ambiguous with GO and PB. Those 23 were unreachable before this deploy.
+
+So D8 delivered the recall it promised with NO watch edit required. The AC as written ('without the Ceara helper group') asks for the wrong remedy: dropping the group entirely gives 177 with heavy out-of-state noise. What remains is a precision question for the client -- whether the 20 federal/state acts mentioning a municipality are signal or noise -- which is a product call, not a code one.
 <!-- SECTION:NOTES:END -->
