@@ -194,3 +194,34 @@ def test_ingest_edition_still_returns_the_edition():
     """~20 call sites unpack a bare Edition; the counted variant is additive."""
     edition = ingest_edition(_raw())
     assert isinstance(edition, Edition)
+
+
+@pytest.mark.django_db
+def test_ingest_puts_the_agency_into_search_text():
+    # 'Hidrolândia' exists in both Ceará and Goiás; the publishing body is the
+    # only field that separates them, so it has to be searchable.
+    edition = ingest_edition(RawEdition(
+        date=datetime.date(2026, 6, 26), section="1",
+        source_url="https://example.test/s1",
+        items=(RawItem("a1", "Portaria Nº 3",
+                       "Prefeituras/Estado do Ceará/Prefeitura Municipal de Hidrolândia",
+                       "Dispensa de licitação.", "#a1"),),
+    ))
+    act = Act.objects.get(edition=edition, identifier="a1")
+    assert "estado do ceara" in act.search_text
+    assert "dispensa de licitacao" in act.search_text
+
+
+@pytest.mark.django_db
+def test_ingest_puts_the_agency_into_the_portuguese_vector():
+    edition = ingest_edition(RawEdition(
+        date=datetime.date(2026, 6, 26), section="1",
+        source_url="https://example.test/s1",
+        items=(RawItem("a1", "Portaria Nº 3", "Ministério da Educação",
+                       "Texto sem o nome do órgão.", "#a1"),),
+    ))
+    act = Act.objects.get(edition=edition, identifier="a1")
+    assert Act.objects.filter(
+        pk=act.pk,
+        search_vector_pt=SearchQuery("educação", config="portuguese", search_type="phrase"),
+    ).exists()
