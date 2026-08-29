@@ -3,6 +3,8 @@ import datetime
 from django.core.management.base import BaseCommand, CommandError
 from django.db.models import Count, Q
 
+from matching.models import Match
+from matching.stale import stale_match_ids
 from pipeline import adapters
 from pipeline.backfill import backfill_watch
 from watches.models import Client
@@ -73,6 +75,21 @@ class Command(BaseCommand):
                 "dry run, nothing written -- re-run with --apply"
             )
             return
+
+        # Editing a watch does not delete the rows its old terms produced, so a
+        # per-watch count would mix two term sets and report the pre-edit answer
+        # unchanged -- precisely when the number is being used to judge an edit.
+        # Untriaged rows only; a human verdict outranks a term change.
+        cleared = 0
+        for watch in client.watches.all():
+            doomed = stale_match_ids(watch, date_from=date_from, date_to=date_to)
+            if doomed:
+                Match.objects.filter(id__in=doomed).delete()
+                cleared += len(doomed)
+        if cleared:
+            self.stdout.write(
+                f"cleared {cleared} stale match(es) the current terms no longer make"
+            )
 
         llm = _NoEnrichment() if enrich == 0 else adapters.get_llm_client()
         result = backfill_watch(

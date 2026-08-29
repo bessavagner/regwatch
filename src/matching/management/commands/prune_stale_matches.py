@@ -1,8 +1,7 @@
 from django.core.management.base import BaseCommand
 
-from gazette.models import Act
-from matching.matcher import _watch_q
 from matching.models import Match
+from matching.stale import stale_match_ids
 from watches.models import Watch
 
 
@@ -23,29 +22,9 @@ class Command(BaseCommand):
 
         total = 0
         for watch in watches.select_related("client"):
-            # Only untriaged matches: a relevant/dismissed verdict is a human
-            # decision, and rewriting history under it would be worse than a
-            # stale row.
-            stale_ids = list(
-                Match.objects.filter(watch=watch, state="new").values_list("id", "act_id")
-            )
-            if not stale_ids:
-                continue
-
-            query = _watch_q(watch)
-            if query is None:
-                # The watch can never match anything; every match it holds is stale.
-                keep: set[int] = set()
-            else:
-                keep = set(
-                    Act.objects.filter(query, id__in=[a for _, a in stale_ids])
-                    .values_list("id", flat=True)
-                )
-
-            doomed = [m for m, a in stale_ids if a not in keep]
+            doomed = stale_match_ids(watch)
             if not doomed:
                 continue
-
             total += len(doomed)
             self.stdout.write(
                 f"watch {watch.pk} ({watch.client.name}): {len(doomed)} stale"

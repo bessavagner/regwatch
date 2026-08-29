@@ -263,6 +263,13 @@ watches' coverage. Check when prune last ran (`gcloud run jobs executions list
 complete and free to evaluate; dates before it will re-fetch, which is correct
 but re-ingests ~3,500 acts per day and grows storage until prune runs again.
 
+**It clears stale matches first.** Editing a watch does not delete the rows its
+old terms produced, so without this the per-watch count would mix two term sets
+and report the pre-edit answer unchanged — exactly when you are using the number
+to judge an edit. Untriaged rows only; a `relevant`/`dismissed` verdict is a
+human decision and survives a term change. The count is reported as
+`cleared N stale match(es) ...`.
+
 **Dry-run first** — without `--apply` it names the range and the day count and
 writes nothing.
 

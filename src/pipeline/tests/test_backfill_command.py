@@ -92,3 +92,40 @@ def test_a_reversed_date_range_is_an_error(firm):
     with pytest.raises(CommandError, match="date-from"):
         _call("--client", str(firm.pk), "--date-from", "2026-06-27",
               "--date-to", "2026-06-26", "--apply")
+
+
+@pytest.mark.django_db
+def test_it_clears_matches_the_current_terms_would_no_longer_make(firm, monkeypatch):
+    # The defect this closes: editing a watch does not delete the rows made
+    # under its old terms, so a per-watch count after an edit mixed two term
+    # sets -- and reported the old answer unchanged, exactly when the number
+    # was being used to judge the edit.
+    _fake_fetch(monkeypatch)
+    hit, _ = firm.watches.order_by("pk")
+    _call("--client", str(firm.pk), "--date-from", "2026-06-26", "--date-to", "2026-06-26",
+          "--apply")
+    assert Match.objects.filter(watch=hit).count() == 1
+
+    hit.groups = [{"terms": [{"text": "jamais-jamais", "kind": "entity"}]}]
+    hit.save(update_fields=["groups"])
+
+    out = _call("--client", str(firm.pk), "--date-from", "2026-06-26",
+                "--date-to", "2026-06-26", "--apply")
+    assert Match.objects.filter(watch=hit).count() == 0
+    assert "stale" in out
+    assert f"watch {hit.pk}     0 match(es)" in out
+
+
+@pytest.mark.django_db
+def test_a_triaged_match_survives_a_term_change(firm, monkeypatch):
+    _fake_fetch(monkeypatch)
+    hit, _ = firm.watches.order_by("pk")
+    _call("--client", str(firm.pk), "--date-from", "2026-06-26", "--date-to", "2026-06-26",
+          "--apply")
+    Match.objects.filter(watch=hit).update(state="relevant")
+
+    hit.groups = [{"terms": [{"text": "jamais-jamais", "kind": "entity"}]}]
+    hit.save(update_fields=["groups"])
+    _call("--client", str(firm.pk), "--date-from", "2026-06-26", "--date-to", "2026-06-26",
+          "--apply")
+    assert Match.objects.filter(watch=hit, state="relevant").count() == 1
