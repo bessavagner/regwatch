@@ -196,6 +196,53 @@ took down the entire daily run, and missing `INLABS_*` on the API service broke
 the "Run on past editions" backfill endpoint. If you find yourself adding a
 secret name to a second place, that is the bug coming back.
 
+## Create a watch from the command line
+
+The SPA has no watch builder yet (TASK-016). This creates one directly, and is
+what provisions a client's watches until it does.
+
+Groups are **ANDed**; the terms inside one group are **ORed**. A group is one
+dimension of the query — the places, the funding words — so the optional
+`KIND:` prefix applies to the whole group. `entity` (the default) matches as a
+substring, which is what proper names want; `concept` is stemmed, so
+`convênio` also matches `convênios`.
+
+```bash
+gcloud run jobs execute regwatch-run-daily --region=us-east4 --wait \
+  --args='^|^create_watch|--client|7|--group|entity:Pentecoste~Coreaú|--group|concept:convênio~termo de fomento|--section|DO1|--apply'
+```
+
+`gcloud` splits `--args` on commas, and term lists contain them; `^|^` at the
+front switches the delimiter to `|`. That means the term separator inside a
+group cannot also be `|` on the command line — use the local form below when a
+group has several terms, or pass one `--group` per term and accept the AND.
+
+Locally, where the delimiter problem does not arise:
+
+```bash
+DJANGO_SETTINGS_MODULE=config.settings_test uv run python manage.py create_watch \
+  --client 7 \
+  --group "entity:Pentecoste|Coreaú|Redenção" \
+  --group "concept:convênio|termo de fomento" \
+  --exclude "aviso de licitacao" \
+  --section DO1 --apply
+```
+
+It prints `created watch <id> for <client> (N group(s), M exclude(s), section DO1)`.
+
+**Dry-run by default** — without `--apply` it prints the parsed groups and writes
+nothing. Always dry-run first: a wrong group silently changes what a client
+receives every morning.
+
+**The common failure** is `client <name> already has an identical watch (same
+groups and section); nothing created`. That guard is deliberate — re-running a
+provisioning command must not quietly double a client's digest volume. Change
+the groups, or delete the existing watch first.
+
+Second failure: `unknown term kind 'x'; use one of entity, concept`. A typo in
+the prefix is rejected rather than falling through to `entity`, because that
+would silently change the matching semantics of the whole group.
+
 ## Change the enrichment model
 
 Enrichment runs OpenAI first and falls back to Anthropic (`FallbackLLMClient`).

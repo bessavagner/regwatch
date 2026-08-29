@@ -295,3 +295,43 @@ def test_the_serializer_carries_the_signals(signal_feed):
     row = signal_feed.get("/api/matches").data["results"][0]
     for key in ("names_party", "has_amount", "has_deadline", "signal_score"):
         assert key in row
+
+
+@pytest.fixture
+def triaged_feed(firm_a):
+    ws, user = firm_a
+    day = datetime.date(2026, 8, 27)
+    _match(ws, date=day, state="new")
+    _match(ws, date=day, state="relevant")
+    _match(ws, date=day, state="dismissed")
+    api = APIClient()
+    api.force_authenticate(user=user)
+    return api
+
+
+@pytest.mark.django_db
+def test_the_feed_hides_dismissed_matches_by_default(triaged_feed):
+    # Dismissing has to visibly shrink the pile, or triage is unpaid work: the
+    # default view returns what still needs a decision plus what was kept.
+    rows = triaged_feed.get("/api/matches").data["results"]
+    assert {r["state"] for r in rows} == {"new", "relevant"}
+
+
+@pytest.mark.django_db
+def test_the_count_excludes_dismissed_too(triaged_feed):
+    # count drives the header and the dial; if it still counted dismissed rows
+    # the number would never fall and triage would look ineffective.
+    assert triaged_feed.get("/api/matches").data["count"] == 2
+
+
+@pytest.mark.django_db
+def test_dismissed_matches_are_still_reachable_by_asking_for_them(triaged_feed):
+    # Hidden by default is not deleted: the state filter still reaches them.
+    rows = triaged_feed.get("/api/matches?state=dismissed").data["results"]
+    assert [r["state"] for r in rows] == ["dismissed"]
+
+
+@pytest.mark.django_db
+def test_an_explicit_state_filter_is_unaffected(triaged_feed):
+    rows = triaged_feed.get("/api/matches?state=new").data["results"]
+    assert [r["state"] for r in rows] == ["new"]
