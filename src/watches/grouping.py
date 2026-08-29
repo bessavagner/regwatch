@@ -42,3 +42,41 @@ def iter_terms(groups) -> Iterator[tuple[str, str]]:
 
 def term_texts(groups) -> list[str]:
     return [text for text, _ in iter_terms(groups)]
+
+
+def group_from_spec(spec: str) -> dict:
+    """Turn "concept:convênio|termo de fomento" into a groups entry.
+
+    The kind prefix is optional and applies to every term in the group, which is
+    how watches are actually written: a group is one dimension (the places, the
+    funding words), and a dimension does not usually mix entity and concept
+    semantics.
+
+    Raises ValueError; the management commands turn that into a CommandError.
+    Kept here so create_watch and update_watch cannot drift apart on the syntax.
+    """
+    kind = KIND_ENTITY
+    body = spec
+    head, sep, rest = spec.partition(":")
+    if sep and head.strip().lower() in VALID_KINDS:
+        kind, body = head.strip().lower(), rest
+    elif sep and " " not in head and head.strip() and not head.strip().isdigit():
+        # A prefix was clearly intended -- naming an unknown kind must not
+        # silently fall through to entity and quietly change the semantics.
+        raise ValueError(
+            f"unknown term kind {head.strip()!r}; use one of {', '.join(VALID_KINDS)}"
+        )
+
+    terms = [{"text": t.strip(), "kind": kind} for t in body.split("|") if t.strip()]
+    if not terms:
+        raise ValueError(
+            f"group {spec!r} has no terms; the matcher fails closed on an empty "
+            "group, so the watch would match nothing while looking active"
+        )
+    return {"terms": terms}
+
+
+def groups_from_specs(specs: list[str], joined: str = "") -> list[dict]:
+    """Every group, from repeated --group flags and/or one ';'-joined --groups."""
+    all_specs = list(specs) + [g for g in joined.split(";") if g.strip()]
+    return [group_from_spec(s) for s in all_specs]

@@ -2,36 +2,9 @@ import json
 
 from django.core.management.base import BaseCommand, CommandError
 
-from watches.grouping import KIND_ENTITY, VALID_KINDS
+from watches.grouping import groups_from_specs
 from watches.models import Client, Watch
 
-
-def _parse_group(spec: str) -> dict:
-    """Turn "concept:convênio|termo de fomento" into a groups entry.
-
-    The kind prefix is optional and applies to every term in the group, which is
-    how watches are actually written: a group is one dimension (the places, the
-    funding words), and a dimension does not mix entity and concept semantics.
-    """
-    kind = KIND_ENTITY
-    body = spec
-    head, sep, rest = spec.partition(":")
-    if sep and head.strip().lower() in VALID_KINDS:
-        kind, body = head.strip().lower(), rest
-    elif sep and " " not in head and head.strip() and not head.strip().isdigit():
-        # A prefix was clearly intended -- naming an unknown kind must not
-        # silently fall through to entity and quietly change the semantics.
-        raise CommandError(
-            f"unknown term kind {head.strip()!r}; use one of {', '.join(VALID_KINDS)}"
-        )
-
-    terms = [{"text": t.strip(), "kind": kind} for t in body.split("|") if t.strip()]
-    if not terms:
-        raise CommandError(
-            f"group {spec!r} has no terms; the matcher fails closed on an empty "
-            "group, so the watch would match nothing while looking active"
-        )
-    return {"terms": terms}
 
 
 class Command(BaseCommand):
@@ -70,12 +43,12 @@ class Command(BaseCommand):
         except Client.DoesNotExist as exc:
             raise CommandError(f"no client with id {options['client']}") from exc
 
-        specs = list(options["group"]) + [
-            g for g in options["groups"].split(";") if g.strip()
-        ]
-        if not specs:
+        if not options["group"] and not options["groups"].strip():
             raise CommandError("at least one group is required (--group or --groups)")
-        groups = [_parse_group(spec) for spec in specs]
+        try:
+            groups = groups_from_specs(options["group"], options["groups"])
+        except ValueError as exc:
+            raise CommandError(str(exc)) from exc
 
         exclude = [
             e.strip()

@@ -196,6 +196,40 @@ took down the entire daily run, and missing `INLABS_*` on the API service broke
 the "Run on past editions" backfill endpoint. If you find yourself adding a
 secret name to a second place, that is the bug coming back.
 
+## Change an existing watch
+
+Re-point a watch's terms, tighten its excludes, or stop it matching. Only the
+fields you name are touched.
+
+```bash
+gcloud run jobs execute regwatch-run-daily --region=us-east4 --wait \
+  --args='^@^update_watch@--watch@14@--groups@entity:Crateús|Ipueiras;concept:convênio@--apply'
+```
+
+The same two separator rules as `create_watch` apply: `^@^` for gcloud's own
+delimiter, and the singular-flag forms `--groups` / `--excludes` because gcloud
+refuses a repeated flag inside `--args`.
+
+**Always dry-run first.** Without `--apply` it prints before and after for every
+field it would change:
+
+```
+watch 14 (Cactarus):
+  groups:
+    before [{"terms": [{"text": "Pentecoste", "kind": "entity"}]}]
+    after  [{"terms": [{"text": "Crateús", "kind": "entity"}]}]
+dry run, nothing written -- re-run with --apply
+```
+
+`--excludes` replaces the list; to empty it use `--clear-excludes`, since an
+empty string cannot express "remove them all". `--inactive` stops a watch
+matching without deleting it or its history — the right way to retire a watch
+that turned out to be wrong.
+
+**The common failure** is `nothing to change; name at least one of ...`, which
+means every flag you passed was a no-op — usually `--excludes ""` where
+`--clear-excludes` was meant.
+
 ## Evaluate a watch against past publications
 
 Answers "would this watch have fired, and on what" before a new watch is left
