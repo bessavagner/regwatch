@@ -196,6 +196,51 @@ took down the entire daily run, and missing `INLABS_*` on the API service broke
 the "Run on past editions" backfill endpoint. If you find yourself adding a
 secret name to a second place, that is the bug coming back.
 
+## Evaluate a watch against past publications
+
+Answers "would this watch have fired, and on what" before a new watch is left
+running for a week. Matches only — it sends nothing to the LLM and needs no
+provider credentials.
+
+```bash
+gcloud run jobs execute regwatch-run-daily --region=us-east4 --wait \
+  --args=backfill_watches,--client,7,--date-from,2026-08-24,--date-to,2026-08-28,--apply
+```
+
+It prints the totals, then the line that matters — one row per watch, including
+the ones that matched nothing:
+
+```
+per watch, 2026-08-24 -> 2026-08-28:
+  watch 14      6 match(es)  [DO1] Pentecoste, Coreaú, ...
+  watch 15      0 match(es)  [DO1] sistema eletrônico, ...
+```
+
+A zero is a result, not an error: it means the terms never fired, which is what
+you want to learn before the watch has been live for a week.
+
+**Where the acts come from matters for what the number means.** `backfill_watch`
+uses stored editions when they exist and are unpruned, and re-fetches from
+INlabs otherwise. `prune_act_text` *deletes* acts no watch matched, so for a date
+older than the last prune cutoff the stored corpus only contains what the
+watches of the day hit — evaluating a new watch against it would measure the old
+watches' coverage. Check when prune last ran (`gcloud run jobs executions list
+--job=regwatch-prune`) and subtract its `--days`: dates after that cutoff are
+complete and free to evaluate; dates before it will re-fetch, which is correct
+but re-ingests ~3,500 acts per day and grows storage until prune runs again.
+
+**Dry-run first** — without `--apply` it names the range and the day count and
+writes nothing.
+
+**To include enrichment**, pass `--max-enrich N`. The default is 0, which skips
+the provider entirely. Only raise it when the summaries themselves are what you
+are judging; N is a hard cap on acts sent, shared across all clients.
+
+**The common failure** is every date landing in `skipped (no edition or fetch
+failed)`. Weekends and holidays have no DOU and are skipped normally; a run where
+*weekdays* are skipped too is a fetch failure, and the INlabs diagnostic in the
+log says which.
+
 ## Create a watch from the command line
 
 The SPA has no watch builder yet (TASK-016). This creates one directly, and is
