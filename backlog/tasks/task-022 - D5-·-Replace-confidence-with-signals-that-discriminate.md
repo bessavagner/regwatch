@@ -4,7 +4,7 @@ title: D5 · Replace confidence with signals that discriminate
 status: In Progress
 assignee: []
 created_date: '2026-08-26 17:30'
-updated_date: '2026-08-28 16:56'
+updated_date: '2026-08-29 00:04'
 labels:
   - 'track:signal'
   - 'size:M'
@@ -27,11 +27,11 @@ The prompt asks for 'um numero entre 0 e 1' with no rubric and gets 0.98 to 0.99
 <!-- AC:BEGIN -->
 - [ ] #1 The new signals have measurable spread across a day of matches
 - [x] #2 Feed and digest can sort by them
-- [ ] #3 confidence is removed from the model contract or given a real rubric
+- [x] #3 confidence is removed from the model contract or given a real rubric
 <!-- AC:END -->
 
 ## Implementation Notes
 
 <!-- SECTION:NOTES:BEGIN -->
-Signals stored, ordered and rendered: Summary + Match gain names_party/has_amount/has_deadline and a derived signal_score 0-3 (migration 0004, additive, all defaults). ordering=signal on the feed, -signal_score before -rank in the digest, badges on MatchCard in pt-BR. enrichment_report now prints signal spread and per-flag rates beside confidence's. AC#1 (measured spread) needs the v0.22.0 deploy plus a few days of real matches; AC#3 is Task 4 (confidence leaves the contract).
+confidence removed from Summary, from both provider request bodies (including OpenAI's strict json_schema), from the enricher, the serializer, the report command and the TS type. Column dropped in migration 0005_remove_match_confidence -- verified forward and reverse against Postgres; note the reverse restores the column but not the values. AC#1 (measured spread) still needs a few days of real matches: run enrichment_report once 2026-09-04 has passed.
 <!-- SECTION:NOTES:END -->
