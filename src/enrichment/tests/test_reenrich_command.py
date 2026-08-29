@@ -63,7 +63,7 @@ def test_apply_re_enriches_the_retained_match(two_matches, monkeypatch):
 
     class _Fake:
         def summarize(self, act_text, terms):
-            return Summary(summary="Resumo novo.", category="tender", confidence=0.9)
+            return Summary(summary="Resumo novo.", category="tender")
 
     monkeypatch.setattr(
         fallback.FallbackLLMClient, "from_env", staticmethod(lambda: _Fake())
@@ -84,7 +84,7 @@ def test_limit_caps_the_spend(two_matches, monkeypatch):
     class _Counting:
         def summarize(self, act_text, terms):
             sent.append(act_text)
-            return Summary(summary="s", category="other", confidence=0.5)
+            return Summary(summary="s", category="other")
 
     monkeypatch.setattr(
         fallback.FallbackLLMClient, "from_env", staticmethod(lambda: _Counting())

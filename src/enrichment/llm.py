@@ -6,7 +6,6 @@ from typing import Protocol
 class Summary:
     summary: str
     category: str
-    confidence: float
     # What the model could check in the act text, as opposed to its opinion of
     # itself. Defaulted so a provider that omits one produces a lower-ranked
     # match rather than an enrichment failure -- and so the ~40 existing

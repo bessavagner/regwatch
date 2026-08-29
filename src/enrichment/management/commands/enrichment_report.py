@@ -48,7 +48,7 @@ class Command(BaseCommand):
             qs = qs.filter(watch__client_id=options["client"])
         rows = list(
             qs.values_list(
-                "ai_summary", "category", "confidence",
+                "ai_summary", "category",
                 "signal_score", "names_party", "has_amount", "has_deadline",
             )
         )
@@ -56,15 +56,12 @@ class Command(BaseCommand):
         clusters = cluster_summaries(
             [(row[0], row[1]) for row in rows], min_size=options["min_cluster"]
         )
-        # Two decimal places: the values sit between 0.98 and 0.99, and rounding
-        # any coarser would hide exactly the absence of spread being measured.
-        conf = histogram([round(row[2], 2) for row in rows if row[2] is not None])
-        signal = histogram([row[3] for row in rows])
+        signal = histogram([row[2] for row in rows])
         total = len(rows) or 1
         flag_rates = {
-            "names_party": round(sum(1 for row in rows if row[4]) / total, 4),
-            "has_amount": round(sum(1 for row in rows if row[5]) / total, 4),
-            "has_deadline": round(sum(1 for row in rows if row[6]) / total, 4),
+            "names_party": round(sum(1 for row in rows if row[3]) / total, 4),
+            "has_amount": round(sum(1 for row in rows if row[4]) / total, 4),
+            "has_deadline": round(sum(1 for row in rows if row[5]) / total, 4),
         }
 
         payload = {
@@ -80,8 +77,6 @@ class Command(BaseCommand):
                 for c in clusters
                 if not c.single_valued
             ],
-            "confidence_histogram": {str(k): v for k, v in sorted(conf.items())},
-            "confidence_modal_share": round(modal_share(conf), 4),
             "signal_histogram": {str(k): v for k, v in sorted(signal.items())},
             "signal_modal_share": round(modal_share(signal), 4),
             "flag_rates": flag_rates,
@@ -106,13 +101,6 @@ class Command(BaseCommand):
         )
         for c in p["split_clusters"]:
             self.stdout.write(f"  {c['key']!r} ({c['size']}) -> {c['categories']}")
-
-        self.stdout.write(
-            f"\nD5 — confidence modal share {p['confidence_modal_share']:.2%} "
-            f"across {len(p['confidence_histogram'])} distinct value(s)"
-        )
-        for value, count in p["confidence_histogram"].items():
-            self.stdout.write(f"  {value:<6} {count}")
 
         self.stdout.write(
             f"\nD5 — signal_score modal share {p['signal_modal_share']:.2%} "

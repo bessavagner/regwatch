@@ -37,7 +37,7 @@ class MatchSerializer(serializers.ModelSerializer):
         fields = [
             "id", "watch", "act", "act_detail", "client_id", "client_name",
             "snippet", "matched_terms", "rank", "ai_summary", "category",
-            "category_label", "confidence",
+            "category_label",
             "names_party", "has_amount", "has_deadline", "signal_score",
             "state", "created_at",
         ]

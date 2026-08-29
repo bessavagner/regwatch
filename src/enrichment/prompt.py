@@ -23,7 +23,6 @@ SYSTEM_PROMPT = (
     "Responda SOMENTE com um objeto JSON, sem nenhum texto fora dele, com as chaves:\n"
     '"summary" (uma frase em português dizendo o que o ato faz e quem ele atinge), '
     '"category" (exatamente um dos rótulos abaixo), '
-    '"confidence" (número entre 0 e 1), '
     '"names_party" (true se o ato identifica nominalmente uma empresa, entidade ou '
     "pessoa que não seja o próprio órgão publicador), "
     '"has_amount" (true se o ato declara um valor em reais) e '

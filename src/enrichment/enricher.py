@@ -15,12 +15,11 @@ def enrich_match(match: Match, client: LLMClient) -> None:
         return
     match.ai_summary = result.summary
     match.category = result.category
-    match.confidence = result.confidence
     match.names_party = result.names_party
     match.has_amount = result.has_amount
     match.has_deadline = result.has_deadline
     match.signal_score = result.signal_score
     match.save(update_fields=[
-        "ai_summary", "category", "confidence",
+        "ai_summary", "category",
         "names_party", "has_amount", "has_deadline", "signal_score",
     ])

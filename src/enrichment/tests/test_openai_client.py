@@ -20,7 +20,7 @@ def test_summarize_parses_model_json_into_summary():
         captured["headers"] = request.headers
         captured["body"] = json.loads(request.content)
         return _chat_response(json.dumps(
-            {"summary": "Concede licença à Beta Corp.", "category": "grant", "confidence": 0.9}
+            {"summary": "Concede licença à Beta Corp.", "category": "grant"}
         ))
 
     client = OpenAILLMClient("sk-test", transport=httpx.MockTransport(handler))
@@ -29,7 +29,6 @@ def test_summarize_parses_model_json_into_summary():
     assert isinstance(result, Summary)
     assert result.summary == "Concede licença à Beta Corp."
     assert result.category == "grant"
-    assert result.confidence == 0.9
     assert captured["url"] == "https://api.openai.com/v1/chat/completions"
     assert captured["headers"].get("authorization") == "Bearer sk-test"
     assert captured["body"]["model"] == "gpt-5.6-luna"
@@ -46,7 +45,7 @@ def test_summarize_asks_for_a_strict_json_schema():
         assert fmt["json_schema"]["strict"] is True
         assert fmt["json_schema"]["schema"]["additionalProperties"] is False
         return _chat_response(json.dumps(
-            {"summary": "s", "category": "other", "confidence": 0.5}
+            {"summary": "s", "category": "other"}
         ))
 
     OpenAILLMClient("sk-test", transport=httpx.MockTransport(handler)).summarize("ato", [])
@@ -55,21 +54,12 @@ def test_summarize_asks_for_a_strict_json_schema():
 def test_unknown_category_falls_back_to_other():
     def handler(request):
         return _chat_response(json.dumps(
-            {"summary": "s", "category": "licitação", "confidence": 0.5}
+            {"summary": "s", "category": "licitação"}
         ))
 
     result = OpenAILLMClient("sk-test", transport=httpx.MockTransport(handler)).summarize("a", [])
     assert result.category == "other"
 
-
-def test_confidence_is_clamped_into_range():
-    def handler(request):
-        return _chat_response(json.dumps(
-            {"summary": "s", "category": "grant", "confidence": 4.2}
-        ))
-
-    result = OpenAILLMClient("sk-test", transport=httpx.MockTransport(handler)).summarize("a", [])
-    assert result.confidence == 1.0
 
 
 def test_unparseable_reply_raises_value_error():
@@ -122,7 +112,7 @@ def test_act_text_is_truncated_before_sending():
     def handler(request):
         captured["body"] = json.loads(request.content)
         return _chat_response(json.dumps(
-            {"summary": "s", "category": "other", "confidence": 0.5}
+            {"summary": "s", "category": "other"}
         ))
 
     client = OpenAILLMClient("sk-test", transport=httpx.MockTransport(handler))
@@ -134,7 +124,7 @@ def test_summarize_reads_the_three_signals():
     def handler(request):
         return _chat_response(json.dumps({
             "summary": "Contrato com a Beta Corp no valor de R$ 1.000,00 até 30/09.",
-            "category": "tender", "confidence": 0.9,
+            "category": "tender",
             "names_party": True, "has_amount": True, "has_deadline": True,
         }))
 
@@ -149,7 +139,7 @@ def test_absent_signals_default_to_false_rather_than_raising():
     # failure that loses the summary entirely.
     def handler(request):
         return _chat_response(json.dumps(
-            {"summary": "s", "category": "other", "confidence": 0.5}))
+            {"summary": "s", "category": "other"}))
 
     result = OpenAILLMClient("sk-test", transport=httpx.MockTransport(handler)).summarize("a", [])
     assert result.signal_score == 0
@@ -163,7 +153,20 @@ def test_the_strict_schema_requires_the_three_signals():
         assert schema["properties"]["has_deadline"]["type"] == "boolean"
         assert set(schema["required"]) >= {"names_party", "has_amount", "has_deadline"}
         return _chat_response(json.dumps({
-            "summary": "s", "category": "other", "confidence": 0.5,
+            "summary": "s", "category": "other",
+            "names_party": False, "has_amount": False, "has_deadline": False,
+        }))
+
+    OpenAILLMClient("sk-test", transport=httpx.MockTransport(handler)).summarize("a", [])
+
+
+def test_the_strict_schema_no_longer_asks_for_confidence():
+    def handler(request):
+        schema = json.loads(request.content)["response_format"]["json_schema"]["schema"]
+        assert "confidence" not in schema["properties"]
+        assert "confidence" not in schema["required"]
+        return _chat_response(json.dumps({
+            "summary": "s", "category": "other",
             "names_party": False, "has_amount": False, "has_deadline": False,
         }))
 

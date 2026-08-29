@@ -21,7 +21,7 @@ def firm(db):
 
 @pytest.mark.django_db
 def test_pipeline_produces_enriched_digest(firm):
-    llm = FakeLLMClient(Summary("Licença concedida à Beta Corp.", "grant", 0.95))
+    llm = FakeLLMClient(Summary("Licença concedida à Beta Corp.", "grant"))
     sender = FakeEmailSender()
     result = run_pipeline([sample_edition()], llm, sender)
     digests = result.digests
@@ -37,7 +37,7 @@ def test_pipeline_produces_enriched_digest(firm):
 
 @pytest.mark.django_db
 def test_pipeline_is_idempotent(firm):
-    llm = FakeLLMClient(Summary("ok", "grant", 0.9))
+    llm = FakeLLMClient(Summary("ok", "grant"))
     run_pipeline([sample_edition()], llm, FakeEmailSender())
     run_pipeline([sample_edition()], llm, FakeEmailSender())
     assert Match.objects.count() == 1
@@ -47,7 +47,7 @@ def test_pipeline_is_idempotent(firm):
 @pytest.mark.django_db
 def test_run_pipeline_respects_max_enrich(firm):
     # sample_edition has one matching act ("beta corp"); cap of 0 enriches nothing.
-    run_pipeline([sample_edition()], FakeLLMClient(Summary("x", "grant", 0.9)),
+    run_pipeline([sample_edition()], FakeLLMClient(Summary("x", "grant")),
                  FakeEmailSender(), max_enrich=0)
     assert Match.objects.count() == 1
     assert Match.objects.get().ai_summary is None     # capped out -> never enriched
@@ -60,7 +60,7 @@ def test_run_pipeline_retries_recent_unsent_digests(firm):
     )
 
     sender = FakeEmailSender()
-    run_pipeline([], FakeLLMClient(Summary("ok", "grant", 0.9)), sender, today=DATE)
+    run_pipeline([], FakeLLMClient(Summary("ok", "grant")), sender, today=DATE)
 
     stale.refresh_from_db()
     assert stale.sent is True, "a digest stranded by an earlier outage must be retried"
@@ -73,7 +73,7 @@ def test_run_pipeline_leaves_digests_older_than_the_retry_window(firm, settings)
         client=firm, date=DATE - datetime.timedelta(days=30), body="ancient", sent=False
     )
 
-    run_pipeline([], FakeLLMClient(Summary("ok", "grant", 0.9)), FakeEmailSender(), today=DATE)
+    run_pipeline([], FakeLLMClient(Summary("ok", "grant")), FakeEmailSender(), today=DATE)
 
     ancient.refresh_from_db()
     assert ancient.sent is False
@@ -87,7 +87,7 @@ def test_run_result_counts_this_run_not_the_date(firm):
     numbers again, which is how summing them reached 908 matches against an
     actual 650.
     """
-    llm = FakeLLMClient(Summary("ok", "grant", 0.9))
+    llm = FakeLLMClient(Summary("ok", "grant"))
 
     first = run_pipeline([sample_edition()], llm, FakeEmailSender())
     assert first.ingested_acts == 2

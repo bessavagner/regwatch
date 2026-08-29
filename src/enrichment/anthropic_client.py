@@ -75,17 +75,14 @@ class AnthropicLLMClient:
             data = json.loads(text)
             summary = str(data["summary"])
             category = str(data["category"])
-            confidence = float(data["confidence"])
         except (KeyError, IndexError, ValueError, TypeError) as exc:
             raise ValueError("could not parse LLM reply into Summary") from exc
 
         if category not in CATEGORIES:
             category = "other"
-        confidence = max(0.0, min(1.0, confidence))
         return Summary(
             summary=summary,
             category=category,
-            confidence=confidence,
             # .get, not [...]: Anthropic is not schema-constrained and an
             # omitted signal must cost the act rank, not its whole summary.
             names_party=bool(data.get("names_party", False)),

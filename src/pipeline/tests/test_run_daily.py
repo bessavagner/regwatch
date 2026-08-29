@@ -35,7 +35,7 @@ def test_run_daily_runs_pipeline_and_writes_runlog(firm, monkeypatch):
     monkeypatch.setattr("pipeline.management.commands.run_daily.fetch_editions",
                         lambda date: [_edition()])
     monkeypatch.setattr("pipeline.management.commands.run_daily.get_llm_client",
-                        lambda: FakeLLMClient(Summary("ok", "grant", 0.9)))
+                        lambda: FakeLLMClient(Summary("ok", "grant")))
     monkeypatch.setattr("pipeline.management.commands.run_daily.get_email_sender",
                         lambda: sender)
 
@@ -84,7 +84,7 @@ def _no_editions(monkeypatch, sender):
     )
     monkeypatch.setattr(
         "pipeline.management.commands.run_daily.get_llm_client",
-        lambda: FakeLLMClient(Summary("ok", "grant", 0.9)),
+        lambda: FakeLLMClient(Summary("ok", "grant")),
     )
     monkeypatch.setattr(
         "pipeline.management.commands.run_daily.get_email_sender", lambda: sender
@@ -132,7 +132,7 @@ def test_runlog_separates_this_run_from_the_date_total(firm, monkeypatch):
         "pipeline.management.commands.run_daily.fetch_editions",
         lambda date: [_edition()],
     )
-    llm = FakeLLMClient(Summary("ok", "grant", 0.9))
+    llm = FakeLLMClient(Summary("ok", "grant"))
     monkeypatch.setattr("pipeline.management.commands.run_daily.get_llm_client", lambda: llm)
     monkeypatch.setattr(
         "pipeline.management.commands.run_daily.get_email_sender", lambda: FakeEmailSender()

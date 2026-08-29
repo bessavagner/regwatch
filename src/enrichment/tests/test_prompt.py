@@ -54,7 +54,7 @@ def test_anthropic_sends_the_rubric_as_its_system_prompt():
     def handler(request):
         captured["body"] = json.loads(request.content)
         return httpx.Response(200, json={"content": [{"type": "text", "text": json.dumps(
-            {"summary": "s", "category": "other", "confidence": 0.5})}]})
+            {"summary": "s", "category": "other"})}]})
 
     AnthropicLLMClient("sk-test", transport=httpx.MockTransport(handler)).summarize("a", [])
     assert captured["body"]["system"] == SYSTEM_PROMPT
@@ -66,7 +66,7 @@ def test_openai_sends_the_rubric_as_its_system_message():
     def handler(request):
         captured["body"] = json.loads(request.content)
         return httpx.Response(200, json={"choices": [{"message": {"content": json.dumps(
-            {"summary": "s", "category": "other", "confidence": 0.5})}}]})
+            {"summary": "s", "category": "other"})}}]})
 
     OpenAILLMClient("sk-test", transport=httpx.MockTransport(handler)).summarize("a", [])
     assert captured["body"]["messages"][0] == {"role": "system", "content": SYSTEM_PROMPT}
@@ -78,3 +78,9 @@ def test_each_signal_is_asked_for_as_something_checkable():
     # The point of D5: the model is asked what the text says, not how sure it is.
     assert "valor em reais" in SYSTEM_PROMPT
     assert "prazo" in SYSTEM_PROMPT
+
+
+def test_confidence_is_gone_from_the_contract():
+    # It returned 0.98-0.99 for everything, including the `other` bucket, and
+    # ordering by it ordered nothing. The three signals replaced it.
+    assert "confidence" not in SYSTEM_PROMPT

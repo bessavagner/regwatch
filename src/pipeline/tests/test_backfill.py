@@ -34,7 +34,7 @@ def firm(db):
 @pytest.mark.django_db
 def test_backfill_fetches_and_matches_a_missing_date(firm, monkeypatch):
     monkeypatch.setattr("pipeline.backfill.fetch_editions", lambda date: [_raw_edition(date)])
-    llm = FakeLLMClient(Summary("ok", "grant", 0.9))
+    llm = FakeLLMClient(Summary("ok", "grant"))
 
     result = backfill_watch(DATE, DATE, llm, firm.id, max_enrich=10)
 
@@ -57,7 +57,7 @@ def test_backfill_reuses_an_already_ingested_date_without_refetching(firm, monke
         raise AssertionError("fetch_editions must not be called for an already-ingested date")
     monkeypatch.setattr("pipeline.backfill.fetch_editions", boom)
 
-    result = backfill_watch(DATE, DATE, FakeLLMClient(Summary("ok", "grant", 0.9)), firm.id, max_enrich=10)
+    result = backfill_watch(DATE, DATE, FakeLLMClient(Summary("ok", "grant")), firm.id, max_enrich=10)
 
     assert result.editions == 1
     # both the original watch and the new one match (matching is global), but the
@@ -70,7 +70,7 @@ def test_backfill_reuses_an_already_ingested_date_without_refetching(firm, monke
 @pytest.mark.django_db
 def test_backfill_records_skipped_date_when_nothing_published(firm, monkeypatch):
     monkeypatch.setattr("pipeline.backfill.fetch_editions", lambda date: [])
-    result = backfill_watch(DATE, DATE, FakeLLMClient(Summary("ok", "grant", 0.9)), firm.id)
+    result = backfill_watch(DATE, DATE, FakeLLMClient(Summary("ok", "grant")), firm.id)
     assert result.skipped_dates == [DATE.isoformat()]
     assert result.editions == 0
     assert Edition.objects.count() == 0
@@ -84,7 +84,7 @@ def test_backfill_skips_a_failing_date_and_continues_the_range(firm, monkeypatch
         return [_raw_edition(date)]
     monkeypatch.setattr("pipeline.backfill.fetch_editions", fake_fetch)
 
-    result = backfill_watch(DATE, DATE2, FakeLLMClient(Summary("ok", "grant", 0.9)), firm.id, max_enrich=10)
+    result = backfill_watch(DATE, DATE2, FakeLLMClient(Summary("ok", "grant")), firm.id, max_enrich=10)
 
     assert result.skipped_dates == [DATE.isoformat()]
     assert result.editions == 1          # only DATE2 succeeded
@@ -98,7 +98,7 @@ def test_backfill_respects_max_enrich_across_the_whole_range(firm, monkeypatch):
         lambda date: [_raw_edition(date, identifier=f"a-{date}")],
     )
 
-    result = backfill_watch(DATE, DATE2, FakeLLMClient(Summary("ok", "grant", 0.9)), firm.id, max_enrich=1)
+    result = backfill_watch(DATE, DATE2, FakeLLMClient(Summary("ok", "grant")), firm.id, max_enrich=1)
 
     assert result.matches == 2      # one match per date
     assert result.enriched == 1     # capped
@@ -113,7 +113,7 @@ def test_backfill_is_idempotent_on_rerun(firm, monkeypatch):
         calls.append(date)
         return [_raw_edition(date)]
     monkeypatch.setattr("pipeline.backfill.fetch_editions", fake_fetch)
-    llm = FakeLLMClient(Summary("ok", "grant", 0.9))
+    llm = FakeLLMClient(Summary("ok", "grant"))
 
     first = backfill_watch(DATE, DATE, llm, firm.id, max_enrich=10)
     second = backfill_watch(DATE, DATE, llm, firm.id, max_enrich=10)
@@ -127,7 +127,7 @@ def test_backfill_is_idempotent_on_rerun(firm, monkeypatch):
 @pytest.mark.django_db
 def test_backfill_never_sends_a_digest(firm, monkeypatch):
     monkeypatch.setattr("pipeline.backfill.fetch_editions", lambda date: [_raw_edition(date)])
-    backfill_watch(DATE, DATE, FakeLLMClient(Summary("ok", "grant", 0.9)), firm.id, max_enrich=10)
+    backfill_watch(DATE, DATE, FakeLLMClient(Summary("ok", "grant")), firm.id, max_enrich=10)
     assert Digest.objects.count() == 0
 
 
@@ -141,7 +141,7 @@ def test_backfill_response_counts_are_scoped_to_the_callers_client(firm, monkeyp
     Watch.objects.create(client=other_client, groups=[{"terms": [{"text": "beta corp", "kind": "entity"}]}])
     monkeypatch.setattr("pipeline.backfill.fetch_editions", lambda date: [_raw_edition(date)])
 
-    result = backfill_watch(DATE, DATE, FakeLLMClient(Summary("ok", "grant", 0.9)), firm.id, max_enrich=10)
+    result = backfill_watch(DATE, DATE, FakeLLMClient(Summary("ok", "grant")), firm.id, max_enrich=10)
 
     assert Match.objects.count() == 2                                    # both clients matched
     assert result.matches == 1                                           # only the caller's counted
@@ -157,7 +157,7 @@ def test_backfill_enrich_cap_is_shared_across_all_clients_not_per_caller(firm, m
     Watch.objects.create(client=other_client, groups=[{"terms": [{"text": "beta corp", "kind": "entity"}]}])
     monkeypatch.setattr("pipeline.backfill.fetch_editions", lambda date: [_raw_edition(date)])
 
-    backfill_watch(DATE, DATE, FakeLLMClient(Summary("ok", "grant", 0.9)), firm.id, max_enrich=1)
+    backfill_watch(DATE, DATE, FakeLLMClient(Summary("ok", "grant")), firm.id, max_enrich=1)
 
     assert Match.objects.count() == 2
     # exactly one of the two matches was enriched, globally — proves the cap is a single
@@ -186,7 +186,7 @@ def test_backfill_refetches_a_pruned_date_instead_of_matching_empty_bodies(firm,
         return [_raw_edition(date)]
 
     monkeypatch.setattr("pipeline.backfill.fetch_editions", _fetch)
-    llm = FakeLLMClient(Summary("ok", "grant", 0.9))
+    llm = FakeLLMClient(Summary("ok", "grant"))
 
     result = backfill_watch(DATE, DATE, llm, firm.id, max_enrich=10)
 
