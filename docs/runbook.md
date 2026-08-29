@@ -209,13 +209,13 @@ substring, which is what proper names want; `concept` is stemmed, so
 
 ```bash
 gcloud run jobs execute regwatch-run-daily --region=us-east4 --wait \
-  --args='^|^create_watch|--client|7|--group|entity:Pentecoste~Coreaú|--group|concept:convênio~termo de fomento|--section|DO1|--apply'
+  --args='^@^create_watch@--client@7@--group@entity:Pentecoste|Coreaú@--group@concept:convênio|termo de fomento@--section@DO1@--apply'
 ```
 
-`gcloud` splits `--args` on commas, and term lists contain them; `^|^` at the
-front switches the delimiter to `|`. That means the term separator inside a
-group cannot also be `|` on the command line — use the local form below when a
-group has several terms, or pass one `--group` per term and accept the AND.
+`gcloud` splits `--args` on commas, and terms contain them. `^@^` at the front
+switches gcloud's own delimiter to `@`, which leaves `|` free to do its real job
+of separating terms inside a group. Do **not** use `^|^` here: it would consume
+the term separator and collapse each group into one long term.
 
 Locally, where the delimiter problem does not arise:
 
