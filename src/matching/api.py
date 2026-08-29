@@ -55,6 +55,12 @@ class MatchViewSet(WorkspaceScopedQuerysetMixin, viewsets.ReadOnlyModelViewSet):
             qs = qs.filter(watch__client_id=value)
         if value := p.get("state"):
             qs = qs.filter(state=value)
+        else:
+            # Dismissing has to visibly shrink the feed, or triage is unpaid
+            # work -- which is how 947 of 950 matches stayed untriaged. The
+            # dismissed rows are hidden, not deleted: ?state=dismissed reaches
+            # them, and the state filter still names all three explicitly.
+            qs = qs.exclude(state="dismissed")
         if value := p.get("section"):
             qs = qs.filter(act__edition__section=value)
         if value := p.get("category"):

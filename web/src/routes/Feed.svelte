@@ -56,8 +56,14 @@
 
   function applyUpdate(updated: Match) {
     matches = matches.map((m) => (m.id === updated.id ? updated : m));
-    // If a state filter is active and no longer matches, drop it from view.
-    if (filters.state && updated.state !== filters.state) {
+    // Drop the card when it has left the set the server would return: either a
+    // state filter is active and it no longer matches, or we are on the default
+    // view, which excludes dismissed. Leaving it would show a row the next load
+    // won't, which is a worse lie than never moving it.
+    const goneFromSet = filters.state
+      ? updated.state !== filters.state
+      : updated.state === 'dismissed';
+    if (goneFromSet) {
       matches = matches.filter((m) => m.id !== updated.id);
       // count is the size of the filtered set, not of this page: the match
       // really has left the set, so the header and the dial -- which both read
@@ -185,7 +191,7 @@
     </label>
     <label class="text-sm text-ink-2">State
       <select class="mt-1 field" value={filters.state ?? ''} onchange={(e) => setFilter('state', e.currentTarget.value)}>
-        <option value="">all</option>
+        <option value="">active</option>
         {#each STATES as s}<option value={s.value}>{s.label}</option>{/each}
       </select>
     </label>

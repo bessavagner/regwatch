@@ -329,3 +329,22 @@ test('the order control offers sorting by signal and puts it in the URL', async 
   );
   expect(window.location.search).toContain('ordering=signal');
 });
+
+test('dismissing a match removes it from the default feed and lowers the count', async () => {
+  // The API hides dismissed rows unless asked for them, so a dismissed card
+  // that stayed on screen would misreport the set the server holds -- and would
+  // reappear gone on the next load, which is worse than never moving.
+  vi.spyOn(resources, 'listClients').mockResolvedValue({ count: 0, next: null, previous: null, results: [] });
+  vi.spyOn(resources, 'listMatches').mockResolvedValue(page([m(1), m(2)]));
+  vi.spyOn(resources, 'dismissMatch').mockResolvedValue({ ...m(1), state: 'dismissed' });
+  const user = userEvent.setup();
+  render(Feed);
+  await waitFor(() => expect(screen.getByText('snip-1')).toBeInTheDocument());
+  expect(screen.getByText('2 matches')).toBeInTheDocument();
+
+  await user.click(screen.getAllByRole('button', { name: /dismiss/i })[0]);
+
+  await waitFor(() => expect(screen.queryByText('snip-1')).toBeNull());
+  expect(screen.getByText('snip-2')).toBeInTheDocument();
+  expect(screen.getByText('1 match')).toBeInTheDocument();
+});
