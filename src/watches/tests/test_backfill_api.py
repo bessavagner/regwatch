@@ -116,7 +116,7 @@ def test_backfill_runs_and_writes_a_backfill_runlog(firm_a, monkeypatch):
         client=client, groups=[{"terms": [{"text": "beta corp", "kind": "entity"}]}]
     )
     monkeypatch.setattr("pipeline.backfill.fetch_editions", lambda date: [_raw_edition(date)])
-    monkeypatch.setattr("watches.api.get_llm_client", lambda: FakeLLMClient(Summary("ok", "grant", 0.9)))
+    monkeypatch.setattr("watches.api.get_llm_client", lambda: FakeLLMClient(Summary("ok", "grant")))
 
     api = APIClient()
     api.force_authenticate(user=user)
@@ -147,7 +147,7 @@ def test_backfill_reports_skipped_dates_on_partial_failure(firm_a, monkeypatch):
             raise RuntimeError("inlabs down")
         return [_raw_edition(date)]
     monkeypatch.setattr("pipeline.backfill.fetch_editions", fake_fetch)
-    monkeypatch.setattr("watches.api.get_llm_client", lambda: FakeLLMClient(Summary("ok", "grant", 0.9)))
+    monkeypatch.setattr("watches.api.get_llm_client", lambda: FakeLLMClient(Summary("ok", "grant")))
 
     api = APIClient()
     api.force_authenticate(user=user)
@@ -171,7 +171,7 @@ def test_backfill_respects_the_enrich_cap(firm_a, monkeypatch, settings):
     )
     settings.REGWATCH_MAX_ENRICH_PER_BACKFILL = 0
     monkeypatch.setattr("pipeline.backfill.fetch_editions", lambda date: [_raw_edition(date)])
-    monkeypatch.setattr("watches.api.get_llm_client", lambda: FakeLLMClient(Summary("ok", "grant", 0.9)))
+    monkeypatch.setattr("watches.api.get_llm_client", lambda: FakeLLMClient(Summary("ok", "grant")))
 
     api = APIClient()
     api.force_authenticate(user=user)
@@ -198,7 +198,7 @@ def test_backfill_uses_the_backfill_specific_enrich_cap_not_the_run_daily_one(fi
     settings.REGWATCH_MAX_ENRICH_PER_RUN = 200
     settings.REGWATCH_MAX_ENRICH_PER_BACKFILL = 0
     monkeypatch.setattr("pipeline.backfill.fetch_editions", lambda date: [_raw_edition(date)])
-    monkeypatch.setattr("watches.api.get_llm_client", lambda: FakeLLMClient(Summary("ok", "grant", 0.9)))
+    monkeypatch.setattr("watches.api.get_llm_client", lambda: FakeLLMClient(Summary("ok", "grant")))
 
     api = APIClient()
     api.force_authenticate(user=user)
@@ -220,7 +220,7 @@ def test_backfill_is_idempotent_across_requests(firm_a, monkeypatch):
         client=client, groups=[{"terms": [{"text": "beta corp", "kind": "entity"}]}]
     )
     monkeypatch.setattr("pipeline.backfill.fetch_editions", lambda date: [_raw_edition(date)])
-    monkeypatch.setattr("watches.api.get_llm_client", lambda: FakeLLMClient(Summary("ok", "grant", 0.9)))
+    monkeypatch.setattr("watches.api.get_llm_client", lambda: FakeLLMClient(Summary("ok", "grant")))
 
     api = APIClient()
     api.force_authenticate(user=user)
@@ -249,7 +249,7 @@ def test_backfill_response_does_not_reveal_other_workspaces_match_counts(firm_a,
         client=client_b, groups=[{"terms": [{"text": "beta corp", "kind": "entity"}]}]
     )
     monkeypatch.setattr("pipeline.backfill.fetch_editions", lambda date: [_raw_edition(date)])
-    monkeypatch.setattr("watches.api.get_llm_client", lambda: FakeLLMClient(Summary("ok", "grant", 0.9)))
+    monkeypatch.setattr("watches.api.get_llm_client", lambda: FakeLLMClient(Summary("ok", "grant")))
 
     api = APIClient()
     api.force_authenticate(user=user_a)

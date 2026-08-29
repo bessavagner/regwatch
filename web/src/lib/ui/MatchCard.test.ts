@@ -7,7 +7,6 @@ const match: Match = {
   id: 1, watch: 2, act: 3, snippet: 'a relevant snippet', rank: 0.9,
   matched_terms: ['saneamento'],
   ai_summary: 'summary text', category: 'tender', category_label: 'licitação',
-  confidence: 0.8,
   names_party: true, has_amount: true, has_deadline: false, signal_score: 2,
   state: 'new', created_at: '2026-07-01T10:00:00Z',
   client_id: 7, client_name: 'IFCE Crateús',
@@ -44,23 +43,13 @@ test('MatchCard links to the source edition', () => {
   expect(link.rel).toContain('noopener');
 });
 
-test('MatchCard does not claim 0% confidence when enrichment never ran', () => {
+test('MatchCard falls back to the raw snippet when enrichment never ran', () => {
   render(MatchCard, {
-    props: { match: { ...match, ai_summary: null, category: '', confidence: null } },
+    props: { match: { ...match, ai_summary: null, category: '' } },
   });
-  expect(screen.queryByText(/confidence/i)).toBeNull();
   expect(screen.getByText(/resumo indisponível/i)).toBeInTheDocument();
   // The raw snippet stands in for the missing summary.
   expect(screen.getByText('a relevant snippet')).toBeInTheDocument();
-});
-
-// The model returns 0.98-0.99 for every category including `other`, so the
-// number ranked and warned about nothing while looking like a verdict. It is
-// still collected on the Match; it is just not shown.
-test('MatchCard never renders confidence, however high', () => {
-  render(MatchCard, { props: { match: { ...match, confidence: 0.99 } } });
-  expect(screen.queryByText(/confidence/i)).toBeNull();
-  expect(screen.queryByText(/99/)).toBeNull();
 });
 
 test('shows the category in Portuguese, never the storage enum', () => {

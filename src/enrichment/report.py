@@ -81,10 +81,11 @@ def histogram(values: Iterable[object]) -> dict[object, int]:
 def modal_share(hist: dict[object, int]) -> float:
     """Share of rows in the most common bucket. 1.0 means no spread at all.
 
-    The one metric that compares the old confidence float against the new
-    signal score on equal terms: confidence rounded to two places sits at
-    0.98-0.99 for everything, so its modal share is near 1.0 and it cannot
-    order a feed.
+    This is what condemned the confidence float it replaced: rounded to two
+    places it sat at 0.98-0.99 for everything, a modal share near 1.0, and so
+    ordered nothing. The numbers are kept in
+    docs/analysis/2026-08-28-enrichment-baseline.md; the field itself left the
+    contract in v0.23.0. Applied now to signal_score, which has to do better.
     """
     total = sum(hist.values())
     if not total:

@@ -25,12 +25,11 @@ def a_match(db):
 
 @pytest.mark.django_db
 def test_enrich_sets_summary_and_category(a_match):
-    fake = FakeLLMClient(Summary("Licença concedida.", "grant", 0.9))
+    fake = FakeLLMClient(Summary("Licença concedida.", "grant"))
     enrich_match(a_match, fake)
     a_match.refresh_from_db()
     assert a_match.ai_summary == "Licença concedida."
     assert a_match.category == "grant"
-    assert a_match.confidence == 0.9
 
 
 @pytest.mark.django_db
@@ -47,7 +46,7 @@ class _RecordingLLM:
 
     def summarize(self, text, terms):
         self.seen_terms = terms
-        return Summary(summary="s", category="c", confidence=0.9)
+        return Summary(summary="s", category="c")
 
 
 @pytest.mark.django_db
@@ -73,7 +72,7 @@ def test_enricher_passes_every_group_term_to_the_llm():
 @pytest.mark.django_db
 def test_enrich_stores_the_signals_and_their_score(a_match):
     fake = FakeLLMClient(Summary(
-        "Contrato de R$ 1.000,00 com a Beta Corp até 30/09.", "tender", 0.9,
+        "Contrato de R$ 1.000,00 com a Beta Corp até 30/09.", "tender",
         names_party=True, has_amount=True, has_deadline=False,
     ))
     enrich_match(a_match, fake)

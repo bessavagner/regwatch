@@ -17,7 +17,6 @@ class Match(models.Model):
     )
     ai_summary = models.TextField(null=True, blank=True)
     category = models.CharField(max_length=50, blank=True, default="")
-    confidence = models.FloatField(null=True, blank=True)
     # What the enricher could check in the act text. Each is independently
     # verifiable by the client reading the digest, which is the whole point:
     # `confidence` was 0.98-0.99 for everything, including the `other` bucket,

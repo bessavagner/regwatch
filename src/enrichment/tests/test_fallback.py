@@ -5,8 +5,8 @@ import pytest
 from enrichment.fallback import FallbackLLMClient
 from enrichment.llm import FakeLLMClient, RaisingLLMClient, Summary
 
-PRIMARY = Summary("from primary", "grant", 0.9)
-SECONDARY = Summary("from fallback", "tender", 0.8)
+PRIMARY = Summary("from primary", "grant")
+SECONDARY = Summary("from fallback", "tender")
 
 
 def test_uses_the_primary_when_it_succeeds():

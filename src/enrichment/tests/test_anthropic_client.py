@@ -20,7 +20,7 @@ def test_summarize_parses_model_json_into_summary():
         captured["headers"] = request.headers
         captured["body"] = json.loads(request.content)
         reply = json.dumps(
-            {"summary": "Concede licença à Beta Corp.", "category": "grant", "confidence": 0.9}
+            {"summary": "Concede licença à Beta Corp.", "category": "grant"}
         )
         return _messages_response(reply)
 
@@ -30,7 +30,6 @@ def test_summarize_parses_model_json_into_summary():
     assert isinstance(result, Summary)
     assert result.summary == "Concede licença à Beta Corp."
     assert result.category == "grant"
-    assert result.confidence == 0.9
     assert captured["url"] == "https://api.anthropic.com/v1/messages"
     assert captured["headers"].get("x-api-key") == "sk-test"
     assert captured["headers"].get("anthropic-version")
@@ -43,7 +42,7 @@ def test_summarize_unwraps_markdown_fenced_json():
     def handler(request):
         reply = (
             "```json\n"
-            '{"summary": "CVM autoriza entidade.", "category": "appointment", "confidence": 0.92}\n'
+            '{"summary": "CVM autoriza entidade.", "category": "appointment"}\n'
             "```"
         )
         return _messages_response(reply)
@@ -52,18 +51,16 @@ def test_summarize_unwraps_markdown_fenced_json():
     result = client.summarize("Ato da CVM.", ["cvm"])
     assert result.summary == "CVM autoriza entidade."
     assert result.category == "appointment"
-    assert result.confidence == 0.92
 
 
 def test_summarize_coerces_unknown_category_to_other():
     def handler(request):
-        reply = json.dumps({"summary": "x", "category": "banana", "confidence": 2})
+        reply = json.dumps({"summary": "x", "category": "banana"})
         return _messages_response(reply)
 
     client = AnthropicLLMClient("k", transport=httpx.MockTransport(handler))
     result = client.summarize("text", [])
     assert result.category == "other"      # not in taxonomy -> other
-    assert result.confidence == 1.0        # clamped to [0, 1]
 
 
 def test_summarize_raises_on_unparseable_reply():
@@ -112,7 +109,7 @@ def test_error_status_reports_the_providers_explanation():
 def test_summarize_reads_the_three_signals():
     def handler(request):
         return _messages_response(json.dumps({
-            "summary": "Multa de R$ 500,00.", "category": "penalty", "confidence": 0.9,
+            "summary": "Multa de R$ 500,00.", "category": "penalty",
             "names_party": True, "has_amount": True, "has_deadline": False,
         }))
 
