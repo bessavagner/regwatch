@@ -50,7 +50,7 @@ class _RecordingLLM:
 
 
 @pytest.mark.django_db
-def test_enricher_passes_every_group_term_to_the_llm():
+def test_enricher_passes_only_the_terms_that_fired():
     ws = Workspace.objects.create(name="EnrWS")
     client = Client.objects.create(workspace=ws, name="Enr")
     watch = Watch.objects.create(client=client, groups=[
@@ -62,7 +62,32 @@ def test_enricher_passes_every_group_term_to_the_llm():
     act = Act.objects.create(
         edition=edition, identifier="a1", title="t", agency="g",
         raw_text="corpo", search_text="corpo", source_anchor="#a1")
-    match = Match.objects.create(watch=watch, act=act, rank=0.0, snippet="corpo")
+    match = Match.objects.create(
+        watch=watch, act=act, rank=0.0, snippet="corpo", matched_terms=["contrato"])
+
+    llm = _RecordingLLM()
+    enrich_match(match, llm)
+    assert llm.seen_terms == ["contrato"]
+
+
+@pytest.mark.django_db
+def test_enricher_falls_back_to_the_whole_watch_for_pre_v0_20_matches():
+    # Every match created before v0.20.0 carries an empty matched_terms and the
+    # terms are unrecoverable -- acts past the 7-day text window have no body to
+    # re-evaluate. Those still get the full watch, which is what they got before.
+    ws = Workspace.objects.create(name="OldWS")
+    client = Client.objects.create(workspace=ws, name="Old")
+    watch = Watch.objects.create(client=client, groups=[
+        {"terms": [{"text": "sebrae", "kind": "entity"}]},
+        {"terms": [{"text": "contrato", "kind": "concept"}]},
+    ])
+    edition = Edition.objects.create(
+        date=datetime.date(2026, 6, 26), section="1", source_url="https://o.test/s1")
+    act = Act.objects.create(
+        edition=edition, identifier="o1", title="t", agency="g",
+        raw_text="corpo", search_text="corpo", source_anchor="#o1")
+    match = Match.objects.create(
+        watch=watch, act=act, rank=0.0, snippet="corpo", matched_terms=[])
 
     llm = _RecordingLLM()
     enrich_match(match, llm)

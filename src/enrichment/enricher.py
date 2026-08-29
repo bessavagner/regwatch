@@ -7,7 +7,11 @@ logger = logging.getLogger(__name__)
 
 
 def enrich_match(match: Match, client: LLMClient) -> None:
-    terms = term_texts(match.watch.groups)
+    # The terms that actually fired, when we know them. Every match created
+    # before v0.20.0 carries an empty list -- those acts are past the text
+    # retention window and cannot be re-evaluated, so they fall back to the
+    # whole watch, which is what they were enriched with in the first place.
+    terms = match.matched_terms or term_texts(match.watch.groups)
     try:
         result = client.summarize(match.act.raw_text, terms)
     except Exception:
