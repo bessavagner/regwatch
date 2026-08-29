@@ -96,3 +96,41 @@ def test_an_unknown_kind_is_rejected(client):
 def test_json_output_reports_the_created_id(client):
     out = _call("--client", str(client.pk), "--group", "entity:x", "--apply", "--json")
     assert json.loads(out)["id"] == Watch.objects.get().pk
+
+
+@pytest.mark.django_db
+def test_groups_can_arrive_as_one_semicolon_separated_argument(client):
+    # `gcloud run jobs execute --args` rejects a repeated flag ("--group cannot
+    # be specified multiple times"), so the production path needs a form that
+    # names each flag once.
+    _call(
+        "--client", str(client.pk),
+        "--groups", "entity:Pentecoste|Coreaú;concept:convênio|termo de fomento",
+        "--excludes", "aviso de licitacao;pregao eletronico",
+        "--section", "DO1", "--apply",
+    )
+    watch = Watch.objects.get()
+    assert watch.groups == [
+        {"terms": [
+            {"text": "Pentecoste", "kind": "entity"},
+            {"text": "Coreaú", "kind": "entity"},
+        ]},
+        {"terms": [
+            {"text": "convênio", "kind": "concept"},
+            {"text": "termo de fomento", "kind": "concept"},
+        ]},
+    ]
+    assert watch.exclude == ["aviso de licitacao", "pregao eletronico"]
+
+
+@pytest.mark.django_db
+def test_the_two_group_forms_agree(client):
+    out_a = _call("--client", str(client.pk), "--groups", "entity:a|b;concept:c")
+    out_b = _call("--client", str(client.pk), "--group", "entity:a|b", "--group", "concept:c")
+    assert out_a == out_b
+
+
+@pytest.mark.django_db
+def test_at_least_one_group_is_required(client):
+    with pytest.raises(CommandError, match="at least one group"):
+        _call("--client", str(client.pk), "--apply")

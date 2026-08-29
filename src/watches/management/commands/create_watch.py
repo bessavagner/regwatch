@@ -44,11 +44,22 @@ class Command(BaseCommand):
     def add_arguments(self, parser):
         parser.add_argument("--client", type=int, required=True, help="client id")
         parser.add_argument(
-            "--group", action="append", default=[], required=True,
+            "--group", action="append", default=[],
             metavar="[KIND:]TERM|TERM",
             help="one ANDed group; repeat for more. KIND is entity (default) or concept.",
         )
+        # `gcloud run jobs execute --args` refuses a repeated flag, so the
+        # production path needs every flag named once. Same grammar, ';' between
+        # groups.
+        parser.add_argument(
+            "--groups", default="", metavar="GROUP;GROUP",
+            help="all groups in one argument, separated by ';' (for gcloud --args)",
+        )
         parser.add_argument("--exclude", action="append", default=[], help="excluded phrase")
+        parser.add_argument(
+            "--excludes", default="", metavar="PHRASE;PHRASE",
+            help="all excluded phrases in one argument, separated by ';'",
+        )
         parser.add_argument("--section", default="", help='DOU section, e.g. DO1 ("" = all)')
         parser.add_argument("--apply", action="store_true", help="actually create it")
         parser.add_argument("--json", action="store_true", help="machine-readable output")
@@ -59,8 +70,18 @@ class Command(BaseCommand):
         except Client.DoesNotExist as exc:
             raise CommandError(f"no client with id {options['client']}") from exc
 
-        groups = [_parse_group(spec) for spec in options["group"]]
-        exclude = [e.strip() for e in options["exclude"] if e.strip()]
+        specs = list(options["group"]) + [
+            g for g in options["groups"].split(";") if g.strip()
+        ]
+        if not specs:
+            raise CommandError("at least one group is required (--group or --groups)")
+        groups = [_parse_group(spec) for spec in specs]
+
+        exclude = [
+            e.strip()
+            for e in list(options["exclude"]) + options["excludes"].split(";")
+            if e.strip()
+        ]
         section = options["section"].strip()
 
         # Re-running a provisioning command must not silently double a client's
