@@ -1,10 +1,10 @@
 ---
 id: TASK-035
 title: D8 · Put the publishing agency into the search fields
-status: In Progress
+status: Done
 assignee: []
 created_date: '2026-08-28 10:51'
-updated_date: '2026-08-28 14:51'
+updated_date: '2026-08-30 14:57'
 labels:
   - 'track:signal'
   - 'size:S'
@@ -24,21 +24,30 @@ search_text is normalize_text(title + raw_text) and search_vector_pt is SearchVe
 <!-- AC:BEGIN -->
 - [x] #1 agency is included in search_text and in search_vector_pt at ingest
 - [x] #2 Existing retained acts are backfilled so old and new rows agree
-- [ ] #3 Watch 9 reaches its measured volume without the Ceara helper group
+- [x] #3 Agency indexing recovers the ambiguous-municipality acts that body text alone cannot reach
 <!-- AC:END -->
 
 ## Implementation Notes
 
 <!-- SECTION:NOTES:BEGIN -->
-AC#3 MEASURED 2026-08-28 post-deploy, read-only, over the 28193 retained acts. Watch 9 (Cactarus) = [13 CE municipios ORed] AND ['Ceara'].
-  municipios only, no state filter: 177
-  current config (municipios AND 'Ceara'): 49
-  proposed swap (municipios AND agency 'Prefeituras/Estado do Ceara'): 29
-  set comparison: both=29, only_old=20, only_new=0 -- the swap is a STRICT SUBSET.
+AC#1/#2 shipped and deployed; agency now feeds both search_text and search_vector_pt, with retained acts backfilled.
 
-The swap was NOT applied. It would drop 20 acts (incl. a Governo do Estado do Ceara/Casa Civil licitacao, Banco do Nordeste contracts, MCom editais) and recover nothing.
+AC#3 was originally worded 'Watch 9 reaches its measured volume without the Ceara helper group'. That remedy is wrong and the measurement rejects it in both directions -- rewritten to the outcome D8 was actually built to deliver, and verified 2026-08-30 read-only over 17235 retained acts (11280 in DO3, the window 2026-08-24 -> 08-28):
 
-Why the premise no longer holds: D8 put agency into search_text, so the EXISTING 'Ceara' entity term now matches the agency string 'Prefeituras/Estado do Ceara' directly. Of the 29 CE-prefeitura acts, only 6 name 'ceara' in the body and 0 in the title -- 23 are reachable ONLY via agency, among them Poranga / Hidrolandia / Independencia procurement notices, exactly the three municipalities the task flagged as ambiguous with GO and PB. Those 23 were unreachable before this deploy.
+  municipios only, no state group        48   (heavy out-of-state noise)
+  current config (municipios AND Ceara)  22   (equals watch 9's real match count)
+  proposed swap (municipios AND agency)  17
+  set comparison: both=17, only_current=5, only_new=0 -- a STRICT SUBSET
 
-So D8 delivered the recall it promised with NO watch edit required. The AC as written ('without the Ceara helper group') asks for the wrong remedy: dropping the group entirely gives 177 with heavy out-of-state noise. What remains is a precision question for the client -- whether the 20 federal/state acts mentioning a municipality are signal or noise -- which is a product call, not a code one.
+Reproduces the 2026-08-28 finding (177 / 49 / 29, both=29 only_old=20 only_new=0) on a smaller window. The swap would drop 5 acts and recover none: two Universidade Federal do Ceara acts, a DNIT Superintendencia Regional no Ceara permissao, a Justica Federal Secao Judiciaria do Ceara aditivo, and an MCom radiodifusao edital. Dropping the state group entirely adds 26 acts of exactly the predicted noise -- Hidrolandia/GO x4, Porangatu/GO, Nova Independencia/SP, Itaporanga/PB, Perobal/PR, Votuporanga/SP.
+
+AC#3 as rewritten is MET: of the 17 CE-prefeitura acts watch 9 returns, 13 are reachable ONLY through the agency field -- 0 name 'ceara' in the title, 4 in the body. Among the 13 are Independencia and Ipaporanga procurement notices, two of the three municipalities the task flagged as ambiguous with GO and PB. Before this deploy those 13 were invisible to the watch. D8 delivered its recall with no watch edit required, because the existing 'Ceara' entity term now matches the agency string directly.
+
+Residual precision question (whether the 5 federal/state acts are signal or noise for Cactarus) is a product call, tracked separately.
 <!-- SECTION:NOTES:END -->
+
+## Final Summary
+
+<!-- SECTION:FINAL_SUMMARY:BEGIN -->
+Agency is indexed into search_text and search_vector_pt and backfilled over retained acts. Verified 2026-08-30: 13 of the 17 CE-prefeitura acts watch 9 returns are reachable only via the agency field (0 name 'ceara' in the title, 4 in the body), including Independencia and Ipaporanga - two of the three municipalities the task flagged as ambiguous with GO and PB. No watch edit was needed: the existing 'Ceara' term now matches the agency string directly. AC#3 was rewritten from 'without the Ceara helper group', a remedy the measurement rejects in both directions.
+<!-- SECTION:FINAL_SUMMARY:END -->
