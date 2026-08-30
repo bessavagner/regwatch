@@ -342,7 +342,7 @@ test('dismissing a match removes it from the default feed and lowers the count',
   await waitFor(() => expect(screen.getByText('snip-1')).toBeInTheDocument());
   expect(screen.getByText('2 ocorrências')).toBeInTheDocument();
 
-  await user.click(screen.getAllByRole('button', { name: /descartar/i })[0]);
+  await user.click(screen.getAllByRole('button', { name: /arquivar/i })[0]);
 
   await waitFor(() => expect(screen.queryByText('snip-1')).toBeNull());
   expect(screen.getByText('snip-2')).toBeInTheDocument();
@@ -468,7 +468,7 @@ test('dismissing the selection asks for confirmation before it fires', async () 
   await waitFor(() => expect(screen.getByText('snip-1')).toBeInTheDocument());
   await user.keyboard('jxjx');
 
-  await user.click(screen.getByRole('button', { name: /descartar selecionadas/i }));
+  await user.click(screen.getByRole('button', { name: /arquivar selecionadas/i }));
   // First click only arms it — nothing has been dismissed yet.
   expect(spy).not.toHaveBeenCalled();
 
@@ -485,7 +485,7 @@ test('dismissing a whole agency names it and confirms first', async () => {
   await waitFor(() => expect(screen.getByText('snip-1')).toBeInTheDocument());
   await user.keyboard('j');
 
-  const button = screen.getByRole('button', { name: /descartar todas desta origem/i });
+  const button = screen.getByRole('button', { name: /arquivar todas desta origem/i });
   await user.click(button);
   expect(spy).not.toHaveBeenCalled();
 
@@ -503,7 +503,7 @@ test('a bulk dismiss removes the rows and lowers the count', async () => {
   expect(screen.getByText('2 ocorrências')).toBeInTheDocument();
 
   await user.keyboard('jx');
-  await user.click(screen.getByRole('button', { name: /descartar selecionadas/i }));
+  await user.click(screen.getByRole('button', { name: /arquivar selecionadas/i }));
   await user.click(screen.getByRole('button', { name: /confirmar/i }));
 
   await waitFor(() => expect(screen.queryByText('snip-1')).not.toBeInTheDocument());

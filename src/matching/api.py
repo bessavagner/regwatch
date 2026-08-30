@@ -1,4 +1,5 @@
 from django.http import Http404
+from django.shortcuts import get_object_or_404
 from rest_framework import serializers, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -92,7 +93,23 @@ class MatchViewSet(WorkspaceScopedQuerysetMixin, viewsets.ReadOnlyModelViewSet):
 
     @action(detail=True, methods=["post"])
     def dismiss(self, request, pk=None):
+        """Archive a match: hide it from the feed without destroying it."""
         return self._set_state("dismissed")
+
+    @action(detail=True, methods=["post"])
+    def reopen(self, request, pk=None):
+        """Take a match back out of the archive.
+
+        get_object() normally runs through get_queryset(), which hides
+        dismissed rows when no state filter is given — so this action would
+        404 on everything it exists to act on. Look the row up in the
+        workspace-scoped set instead, which is still the only scoping that
+        matters for safety.
+        """
+        match = get_object_or_404(self.workspace_queryset(), pk=pk)
+        match.state = "new"
+        match.save(update_fields=["state"])
+        return Response(self.get_serializer(match).data)
 
     @action(detail=False, methods=["post"])
     def bulk_dismiss(self, request):
@@ -135,3 +152,31 @@ class MatchViewSet(WorkspaceScopedQuerysetMixin, viewsets.ReadOnlyModelViewSet):
         # returns is the number of rows that actually changed.
         dismissed = qs.update(state="dismissed")
         return Response({"dismissed": dismissed})
+
+    @action(detail=False, methods=["post"])
+    def bulk_delete(self, request):
+        """Permanently delete archived matches. There is no undo.
+
+        Dismissing is archiving — it hides a match, it never destroys one — so
+        this is the one operation in the app that actually loses something. Two
+        properties keep it survivable:
+
+        - it reaches only rows already in the archive, so there is always one
+          deliberate step between reading a feed and losing a row;
+        - it takes an explicit id list, never a filter and never "everything",
+          so the blast radius is whatever the operator could see and tick.
+        """
+        ids = request.data.get("ids")
+        if not isinstance(ids, list) or not ids or not all(isinstance(i, int) for i in ids):
+            raise serializers.ValidationError("ids precisa ser uma lista de inteiros não vazia")
+
+        # workspace_queryset(), not get_queryset(): the feed hides dismissed
+        # rows by default, which is precisely the set this may touch.
+        qs = self.workspace_queryset().filter(pk__in=ids, state="dismissed")
+        if qs.count() != len(set(ids)):
+            raise Http404(
+                "uma ou mais ocorrências não estão no arquivo ou não foram encontradas"
+            )
+
+        deleted, _ = qs.delete()
+        return Response({"deleted": len(set(ids))})

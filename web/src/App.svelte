@@ -10,6 +10,7 @@
   import Watches from './routes/Watches.svelte';
   import Clients from './routes/Clients.svelte';
   import Digests from './routes/Digests.svelte';
+  import Archive from './routes/Archive.svelte';
 
   const PUBLIC = new Set(['/login']);
   const NAV_ROUTES = [
@@ -17,6 +18,7 @@
     { path: '/watches', label: 'buscas' },
     { path: '/clients', label: 'clientes' },
     { path: '/digests', label: 'boletins' },
+    { path: '/arquivo', label: 'arquivo' },
   ];
   // Routes first, then the triage keys: the palette is where a shortcut is
   // found, so it carries both registers in one list.
@@ -65,7 +67,7 @@
     <CommandPalette bind:this={palette} commands={COMMANDS} />
   {/if}
   <Router
-    routes={{ '/login': login, '/feed': feed, '/watches': watchesRoute, '/clients': clientsRoute, '/digests': digestsRoute }}
+    routes={{ '/login': login, '/feed': feed, '/watches': watchesRoute, '/clients': clientsRoute, '/digests': digestsRoute, '/arquivo': archiveRoute }}
     fallback={fallbackSnippet}
     authed={auth.status === 'authed'}
     isPublic={(p) => PUBLIC.has(p)}
@@ -91,6 +93,10 @@
 
 {#snippet digestsRoute()}
   <Digests />
+{/snippet}
+
+{#snippet archiveRoute()}
+  <Archive />
 {/snippet}
 
 {#snippet fallbackSnippet()}

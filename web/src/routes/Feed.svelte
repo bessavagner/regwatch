@@ -212,7 +212,7 @@
     pendingBulk = {
       body: { ids },
       visibleIds: ids,
-      label: `descartar ${ids.length} ocorrência${ids.length === 1 ? '' : 's'}`,
+      label: `arquivar ${ids.length} ocorrência${ids.length === 1 ? '' : 's'}`,
     };
   }
 
@@ -222,7 +222,7 @@
     pendingBulk = {
       body: { agency },
       visibleIds: matches.filter((m) => m.act_detail.agency === agency).map((m) => m.id),
-      label: `descartar todas de ${agency}`,
+      label: `arquivar todas de ${agency}`,
     };
   }
 
@@ -233,7 +233,7 @@
       const { dismissed } = await bulkDismiss(pending.body, filters);
       applyBulkRemoval(pending.visibleIds, dismissed);
     } catch (err) {
-      actionError = err instanceof ApiError ? err.detail : 'não foi possível descartar';
+      actionError = err instanceof ApiError ? err.detail : 'não foi possível arquivar';
     } finally {
       pendingBulk = null;
     }
@@ -350,7 +350,7 @@
   {#if actionError}<p role="alert" class="mb-2 text-sm text-danger">{actionError}</p>{/if}
 
   {#if pendingBulk}
-    <div class="bulk-bar" role="group" aria-label="confirmar descarte em lote">
+    <div class="bulk-bar" role="group" aria-label="confirmar arquivamento em lote">
       <span class="bulk-bar__label">{pendingBulk.label}?</span>
       <Button variant="primary" onclick={confirmBulk}>confirmar</Button>
       <Button variant="ghost" onclick={() => (pendingBulk = null)}>cancelar</Button>
@@ -361,11 +361,11 @@
         <span class="bulk-bar__label">
           {selected.length} selecionada{selected.length === 1 ? '' : 's'}
         </span>
-        <Button variant="ghost" onclick={armSelectionDismiss}>descartar selecionadas</Button>
+        <Button variant="ghost" onclick={armSelectionDismiss}>arquivar selecionadas</Button>
         <Button variant="ghost" onclick={() => (selected = [])}>limpar seleção</Button>
       {/if}
       {#if focusedAgency}
-        <Button variant="ghost" onclick={armAgencyDismiss}>descartar todas desta origem</Button>
+        <Button variant="ghost" onclick={armAgencyDismiss}>arquivar todas desta origem</Button>
       {/if}
     </div>
   {/if}

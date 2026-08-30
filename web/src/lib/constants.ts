@@ -3,7 +3,7 @@
 export const STATES = [
   { value: 'new', label: 'nova' },
   { value: 'relevant', label: 'relevante' },
-  { value: 'dismissed', label: 'descartada' },
+  { value: 'dismissed', label: 'arquivada' },
 ];
 
 const STATE_LABELS: Record<string, string> = Object.fromEntries(

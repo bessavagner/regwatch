@@ -30,7 +30,12 @@ export const listWatches = (client?: string) =>
 export const listDigests = (client?: string) =>
   api.get<Page<Digest>>(`/api/digests${qs({ client })}`);
 export const markRelevant = (id: number) => api.post<Match>(`/api/matches/${id}/relevant`);
+// Archiving, not destroying: the row stays reachable at ?state=dismissed.
 export const dismissMatch = (id: number) => api.post<Match>(`/api/matches/${id}/dismiss`);
+export const reopenMatch = (id: number) => api.post<Match>(`/api/matches/${id}/reopen`);
+// Only reaches rows already archived, and only by explicit id. No undo.
+export const deleteMatches = (ids: number[]) =>
+  api.post<{ deleted: number }>('/api/matches/bulk_delete', { ids });
 
 // One of `ids` or `agency`, never both: the server refuses an ambiguous request
 // and has no "dismiss everything currently filtered" form on purpose. `params`

@@ -34,6 +34,6 @@ test('a rejected write surfaces an error, not a silent no-op', async () => {
   let errored = '';
   const user = userEvent.setup();
   render(TriageActions, { props: { match, onchange: () => {}, onerror: (msg: string) => (errored = msg) } });
-  await user.click(screen.getByRole('button', { name: /descartar/i }));
+  await user.click(screen.getByRole('button', { name: /arquivar/i }));
   await vi.waitFor(() => expect(errored).toBeTruthy());
 });

@@ -488,3 +488,126 @@ def test_bulk_dismiss_rejects_a_non_list_of_ids(firm_a):
     _ws, user = firm_a
     resp = _api(user).post("/api/matches/bulk_dismiss", {"ids": "1,2,3"}, format="json")
     assert resp.status_code == 400
+
+
+# --- Permanent delete from the archive --------------------------------------
+#
+# Dismissing is archiving: it hides a match, it never destroys one. Deletion is
+# a separate, explicit act, and it can only reach what is already archived.
+
+@pytest.mark.django_db
+def test_delete_removes_archived_matches_and_reports_the_count(firm_a):
+    ws, user = firm_a
+    a = _match(ws, date=datetime.date(2026, 7, 1), state="dismissed")
+    b = _match(ws, date=datetime.date(2026, 7, 1), state="dismissed")
+
+    resp = _api(user).post("/api/matches/bulk_delete", {"ids": [a.id, b.id]}, format="json")
+
+    assert resp.status_code == 200
+    assert resp.data["deleted"] == 2
+    assert not Match.objects.filter(pk__in=[a.id, b.id]).exists()
+
+
+@pytest.mark.django_db
+def test_delete_refuses_a_match_that_was_never_archived(firm_a):
+    ws, user = firm_a
+    archived = _match(ws, date=datetime.date(2026, 7, 1), state="dismissed")
+    live = _match(ws, date=datetime.date(2026, 7, 1), state="new")
+
+    resp = _api(user).post(
+        "/api/matches/bulk_delete", {"ids": [archived.id, live.id]}, format="json")
+
+    # All-or-nothing again, and the interesting half: deletion cannot reach a
+    # row the operator has not first archived, so there is always one
+    # deliberate step between a feed and an irreversible loss.
+    assert resp.status_code == 404
+    assert Match.objects.filter(pk=archived.id).exists()
+    assert Match.objects.filter(pk=live.id).exists()
+
+
+@pytest.mark.django_db
+def test_delete_refuses_a_relevant_match(firm_a):
+    ws, user = firm_a
+    keeper = _match(ws, date=datetime.date(2026, 7, 1), state="relevant")
+
+    resp = _api(user).post("/api/matches/bulk_delete", {"ids": [keeper.id]}, format="json")
+
+    assert resp.status_code == 404
+    assert Match.objects.filter(pk=keeper.id).exists()
+
+
+@pytest.mark.django_db
+def test_delete_cannot_cross_a_workspace_boundary(firm_a, firm_b):
+    ws_a, user_a = firm_a
+    ws_b, _ = firm_b
+    mine = _match(ws_a, date=datetime.date(2026, 7, 1), state="dismissed")
+    theirs = _match(ws_b, date=datetime.date(2026, 7, 1), state="dismissed")
+
+    resp = _api(user_a).post(
+        "/api/matches/bulk_delete", {"ids": [mine.id, theirs.id]}, format="json")
+
+    assert resp.status_code == 404
+    assert Match.objects.filter(pk=mine.id).exists()
+    assert Match.objects.filter(pk=theirs.id).exists()
+
+
+@pytest.mark.django_db
+def test_delete_ignores_the_feeds_own_filters(firm_a):
+    # The archive is state=dismissed, which is exactly what the feed's default
+    # queryset excludes. Deletion must not inherit that exclusion, or it would
+    # be unable to reach the only rows it is allowed to touch.
+    ws, user = firm_a
+    archived = _match(ws, date=datetime.date(2026, 7, 1), state="dismissed")
+
+    resp = _api(user).post("/api/matches/bulk_delete", {"ids": [archived.id]}, format="json")
+
+    assert resp.status_code == 200
+    assert not Match.objects.filter(pk=archived.id).exists()
+
+
+@pytest.mark.django_db
+def test_delete_needs_an_explicit_id_list(firm_a):
+    _ws, user = firm_a
+    assert _api(user).post("/api/matches/bulk_delete", {}, format="json").status_code == 400
+    assert _api(user).post(
+        "/api/matches/bulk_delete", {"ids": "1,2"}, format="json").status_code == 400
+    # No "delete the whole archive" form: the archive is the safety net.
+    assert _api(user).post(
+        "/api/matches/bulk_delete", {"ids": []}, format="json").status_code == 400
+
+
+@pytest.mark.django_db
+def test_reopen_puts_an_archived_match_back_in_the_feed(firm_a):
+    ws, user = firm_a
+    archived = _match(ws, date=datetime.date(2026, 7, 1), state="dismissed")
+
+    resp = _api(user).post(f"/api/matches/{archived.id}/reopen")
+
+    assert resp.status_code == 200
+    assert resp.data["state"] == "new"
+    archived.refresh_from_db()
+    assert archived.state == "new"
+
+
+@pytest.mark.django_db
+def test_reopen_reaches_a_row_the_feed_hides_by_default(firm_a):
+    # get_object() runs through get_queryset(), which excludes dismissed rows
+    # when no state filter is given -- so the archive's own action would 404 on
+    # everything in the archive if it inherited that.
+    ws, user = firm_a
+    archived = _match(ws, date=datetime.date(2026, 7, 1), state="dismissed")
+    resp = _api(user).post(f"/api/matches/{archived.id}/reopen")
+    assert resp.status_code == 200
+
+
+@pytest.mark.django_db
+def test_reopen_cannot_cross_a_workspace_boundary(firm_a, firm_b):
+    _ws_a, user_a = firm_a
+    ws_b, _ = firm_b
+    theirs = _match(ws_b, date=datetime.date(2026, 7, 1), state="dismissed")
+
+    resp = _api(user_a).post(f"/api/matches/{theirs.id}/reopen")
+
+    assert resp.status_code == 404
+    theirs.refresh_from_db()
+    assert theirs.state == "dismissed"

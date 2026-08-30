@@ -12,6 +12,6 @@ export const TRIAGE_SHORTCUTS: Command[] = [
   { kind: 'shortcut', label: 'próxima ocorrência', keys: 'J' },
   { kind: 'shortcut', label: 'ocorrência anterior', keys: 'K' },
   { kind: 'shortcut', label: 'marcar como relevante', keys: 'R' },
-  { kind: 'shortcut', label: 'descartar', keys: 'D' },
+  { kind: 'shortcut', label: 'arquivar', keys: 'D' },
   { kind: 'shortcut', label: 'selecionar para ação em lote', keys: 'X' },
 ];

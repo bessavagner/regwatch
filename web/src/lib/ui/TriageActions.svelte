@@ -28,5 +28,5 @@
 
 <div class="flex gap-2">
   <Button variant="primary" disabled={busy} onclick={() => act(markRelevant)}>relevante</Button>
-  <Button variant="ghost" disabled={busy} onclick={() => act(dismissMatch)}>descartar</Button>
+  <Button variant="ghost" disabled={busy} onclick={() => act(dismissMatch)}>arquivar</Button>
 </div>

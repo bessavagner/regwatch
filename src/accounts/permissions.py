@@ -17,10 +17,20 @@ class WorkspaceScopedQuerysetMixin:
 
     workspace_lookup = "workspace"
 
-    def get_queryset(self):
+    def workspace_queryset(self):
+        """Workspace scoping alone, with no view-level filtering applied.
+
+        A view whose get_queryset() narrows further (the feed hides dismissed
+        matches, for instance) still needs a way to reach its own workspace's
+        rows unfiltered — otherwise an action on the hidden rows cannot see the
+        only rows it is allowed to touch.
+        """
         qs = super().get_queryset()
         ids = workspace_ids_for(self.request.user)
         return qs.filter(**{f"{self.workspace_lookup}__in": ids})
+
+    def get_queryset(self):
+        return self.workspace_queryset()
 
     def _user_workspace(self):
         membership = Membership.objects.filter(user=self.request.user).first()

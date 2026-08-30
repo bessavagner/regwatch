@@ -27,7 +27,7 @@ test('ctrl+k opens the palette and lists the routes', async () => {
 test('the triage shortcuts are discoverable, with their keys', async () => {
   await open();
   await waitFor(() => expect(screen.getByText(/marcar como relevante/i)).toBeInTheDocument());
-  expect(screen.getByText(/descartar/i)).toBeInTheDocument();
+  expect(screen.getByText(/arquivar/i)).toBeInTheDocument();
   // The key itself, not just the description — otherwise it is not discoverable.
   expect(screen.getByText('R')).toBeInTheDocument();
   expect(screen.getByText('J')).toBeInTheDocument();
