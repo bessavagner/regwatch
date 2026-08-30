@@ -38,6 +38,11 @@ mkdir -p "$OUT_DIR"
 STAMP="$(date +%Y-%m-%dT%H-%M-%S)"
 FILE="$OUT_DIR/regwatch-$STAMP.sql.gz"
 
+# A failing pg_dump still leaves a (tiny, useless) gzip behind, and `set -e`
+# exits before any check below can catch it. Clean up on every abnormal exit,
+# so .backups/ never accumulates files that look like backups and are not.
+trap '[[ -n "${DONE:-}" ]] || rm -f "$FILE"' EXIT
+
 # The URL in .env carries a password with characters libpq will not accept
 # unencoded (a space, among others). Split it into parts here and hand the
 # password over as PGPASSWORD, so the credential never has to survive a round
@@ -94,6 +99,8 @@ ROWS=$(gunzip -c "$FILE" | awk '/^COPY public\.matching_match /{f=1;next} f&&/^\
 echo "ok: $(du -h "$FILE" | cut -f1), $ROWS rows in matching_match"
 
 # Keep the newest $KEEP, drop the rest.
+DONE=1
+
 ls -1t "$OUT_DIR"/regwatch-*.sql.gz 2>/dev/null | tail -n "+$((KEEP + 1))" | while read -r old; do
   echo "pruning $old"
   rm -f "$old"
