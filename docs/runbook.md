@@ -642,6 +642,72 @@ going quiet. Note the growth rate above (~14.7 MB/day) counts act text only —
 measured against the whole database, including the trigram and GIN indexes over
 that text, it is closer to **32 MB per publication day**.
 
+## Back up the database to this machine
+
+The Supabase project is on the Free plan: **no Point-in-Time Recovery, no
+automated daily backups**. Until that changes, a dump on this machine is the
+only copy of anything that cannot be regenerated. Acts can be re-scraped and
+summaries re-enriched for pennies; a human triage label on
+`matching_match.state` exists nowhere else.
+
+```bash
+scripts/backup-db.sh          # -> .backups/regwatch-<timestamp>.sql.gz, keeps 10
+KEEP=30 scripts/backup-db.sh  # keep 30 instead
+```
+
+What it prints on success:
+
+```
+dumping to .backups/regwatch-2026-08-30T17-21-21.sql.gz ...
+verifying ...
+ok: 26M, 101 rows in matching_match
+```
+
+It refuses to keep a dump that is empty or that is missing any of
+`matching_match`, `watches_watch`, `watches_client`, `digests_digest` — a dump
+that restores nothing is worse than no dump, because it gets trusted.
+
+**When to run it.** Before any destructive migration or bulk operation, and on
+any day you spend time triaging. Understand what this is: a snapshot as of the
+moment it runs, so the most you can lose is everything since the last one. It
+is not PITR and does not pretend to be.
+
+**Common failure:** `unexpected spaces found in "..."`. The password inside
+`SUPABASE_DB_URL` is not percent-encoded, so libpq rejects the URL. The script
+already works around this by splitting the URL and passing the password as
+`PGPASSWORD`; if you see this from a *manual* `pg_dump`, that is why — and note
+that the error prints part of the password, so avoid running it that way.
+
+## Prove a backup actually restores
+
+A dump nobody has restored is a guess.
+
+```bash
+scripts/restore-drill.sh                          # newest backup
+scripts/restore-drill.sh .backups/regwatch-....sql.gz
+```
+
+It starts a throwaway `postgres:17` on port 55432, restores into it, compares
+the row count in the dump against the row count that came back for every core
+table, and removes the container on exit either way.
+
+```
+TABLE                        DUMP   RESTORED   RESULT
+matching_match                101        101   ok
+watches_watch                   7          7   ok
+...
+restore drill PASSED — every table came back with the row count the dump carried
+```
+
+**Expected noise:** errors mentioning `supabase_vault`, `auth`, or `storage`.
+Those are Supabase's managed schemas and do not exist in a plain Postgres
+image; they have nothing to do with the application's tables. They are written
+to `/tmp/restore-drill.err` rather than the console for exactly that reason.
+
+**Common failure:** port 55432 already in use, usually a drill container left
+behind by an interrupted run. `docker rm -f $(docker ps -q --filter
+name=regwatch-restore-drill)`.
+
 ## Tell a quiet day from a broken pipeline
 
 Since v0.28.0 a client hears from RegWatch on **every day the DOU publishes**,
