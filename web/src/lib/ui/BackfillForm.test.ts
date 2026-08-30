@@ -28,35 +28,35 @@ test('submitting shows a pending state, then a result summary with a link to the
   const user = userEvent.setup();
   render(BackfillForm, { props: { watch, oncancel: () => {} } });
 
-  await user.type(screen.getByLabelText(/from/i), '2026-07-01');
-  await user.type(screen.getByLabelText(/to/i), '2026-07-02');
-  await user.click(screen.getByRole('button', { name: /^run$/i }));
+  await user.type(screen.getByLabelText(/^de$/i), '2026-07-01');
+  await user.type(screen.getByLabelText(/^até$/i), '2026-07-02');
+  await user.click(screen.getByRole('button', { name: /^rodar$/i }));
 
   expect(resources.backfillWatch).toHaveBeenCalledWith(1, { date_from: '2026-07-01', date_to: '2026-07-02' });
-  expect(screen.getByRole('button', { name: /^run$/i })).toHaveAttribute('aria-busy', 'true');
+  expect(screen.getByRole('button', { name: /^rodar$/i })).toHaveAttribute('aria-busy', 'true');
 
   resolveBackfill!({ editions: 2, acts: 5, matches: 3, enriched: 1, skipped_dates: ['2026-07-01'] });
 
-  expect(await screen.findByText(/3 matches/i)).toBeInTheDocument();
-  expect(screen.getByText(/2 editions/i)).toBeInTheDocument();
+  expect(await screen.findByText(/3 ocorrências/i)).toBeInTheDocument();
+  expect(screen.getByText(/2 edições/i)).toBeInTheDocument();
   expect(screen.getByText(/1 de julho de 2026/)).toBeInTheDocument();
   expect(navigateSpy).not.toHaveBeenCalled();
 
-  await user.click(screen.getByRole('button', { name: /view in feed/i }));
+  await user.click(screen.getByRole('button', { name: /ver na triagem/i }));
   expect(navigateSpy).toHaveBeenCalledWith('/feed?client=3&date_from=2026-07-01&date_to=2026-07-02');
 });
 
 test('a 400 range error is shown as a non-field error', async () => {
   const { ApiError } = await import('../api/client');
   vi.spyOn(resources, 'backfillWatch').mockRejectedValue(
-    new ApiError(400, 'request failed', { non_field_errors: ['range must not exceed 7 days'] }),
+    new ApiError(400, 'request failed', { non_field_errors: ['o intervalo não pode passar de 7 dias'] }),
   );
   const user = userEvent.setup();
   render(BackfillForm, { props: { watch, oncancel: () => {} } });
-  await user.type(screen.getByLabelText(/from/i), '2026-07-01');
-  await user.type(screen.getByLabelText(/to/i), '2026-07-10');
-  await user.click(screen.getByRole('button', { name: /^run$/i }));
-  expect(await screen.findByText(/must not exceed 7 days/i)).toBeInTheDocument();
+  await user.type(screen.getByLabelText(/^de$/i), '2026-07-01');
+  await user.type(screen.getByLabelText(/^até$/i), '2026-07-10');
+  await user.click(screen.getByRole('button', { name: /^rodar$/i }));
+  expect(await screen.findByText(/não pode passar de 7 dias/i)).toBeInTheDocument();
 });
 
 test('submitting with both dates empty does not call the API', async () => {
@@ -66,9 +66,9 @@ test('submitting with both dates empty does not call the API', async () => {
   const user = userEvent.setup();
   render(BackfillForm, { props: { watch, oncancel: () => {} } });
 
-  await user.click(screen.getByRole('button', { name: /^run$/i }));
+  await user.click(screen.getByRole('button', { name: /^rodar$/i }));
 
-  expect(await screen.findByText(/both dates are required/i)).toBeInTheDocument();
+  expect(await screen.findByText(/as duas datas são obrigatórias/i)).toBeInTheDocument();
   expect(resources.backfillWatch).not.toHaveBeenCalled();
 });
 
@@ -76,6 +76,6 @@ test('clicking Cancel invokes oncancel', async () => {
   const oncancel = vi.fn();
   const user = userEvent.setup();
   render(BackfillForm, { props: { watch, oncancel } });
-  await user.click(screen.getByRole('button', { name: /cancel/i }));
+  await user.click(screen.getByRole('button', { name: /cancelar/i }));
   expect(oncancel).toHaveBeenCalled();
 });

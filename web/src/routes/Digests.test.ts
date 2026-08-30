@@ -13,12 +13,12 @@ test('lists digests with sent status', async () => {
   vi.spyOn(resources, 'listDigests').mockResolvedValue({ count: 1, next: null, previous: null, results: [digest] });
   render(Digests);
   await waitFor(() => expect(screen.getByText('2 de julho de 2026')).toBeInTheDocument());
-  expect(screen.getByText(/sent/i)).toBeInTheDocument();
+  expect(screen.getByText(/enviado/i)).toBeInTheDocument();
 });
 
 test('shows the empty state', async () => {
   vi.spyOn(resources, 'listClients').mockResolvedValue({ count: 0, next: null, previous: null, results: [] });
   vi.spyOn(resources, 'listDigests').mockResolvedValue({ count: 0, next: null, previous: null, results: [] });
   render(Digests);
-  await waitFor(() => expect(screen.getByText(/no digests/i)).toBeInTheDocument());
+  await waitFor(() => expect(screen.getByText(/nenhum boletim/i)).toBeInTheDocument());
 });

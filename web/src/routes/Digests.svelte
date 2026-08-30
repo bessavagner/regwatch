@@ -31,10 +31,10 @@
 
 <section class="mx-auto max-w-2xl p-4">
   <div class="mb-3 flex items-center justify-between">
-    <h1 class="text-xl">Digest history</h1>
-    <label class="text-sm text-ink-2">Client
+    <h1 class="text-xl">histórico de boletins</h1>
+    <label class="text-sm text-ink-2">cliente
       <select class="ml-1 field inline-flex w-auto min-h-9" bind:value={client}>
-        <option value="">all</option>
+        <option value="">todos</option>
         {#each clients as c}<option value={c.id}>{c.name}</option>{/each}
       </select>
     </label>
@@ -47,14 +47,14 @@
           <li class="row reveal" style="--i: {i}">
             <div class="flex items-center justify-between gap-2">
               <p class="text-sm text-ink"><span>{brDate(d.date)}</span> · <span class="as-typed">{clientName(d.client)}</span></p>
-              <Badge label={d.sent ? 'sent' : 'not sent'} tone={d.sent ? 'green' : 'gray'} />
+              <Badge label={d.sent ? 'enviado' : 'não enviado'} tone={d.sent ? 'green' : 'gray'} />
             </div>
             <pre class="as-typed mt-2 whitespace-pre-wrap font-mono text-sm text-muted">{d.body}</pre>
           </li>
         {/each}
       </ul>
     {/snippet}
-    {#snippet empty()}<p class="p-4 text-sm text-muted">No digests yet.</p>{/snippet}
-    {#snippet error()}<p role="alert" class="p-4 text-sm text-danger">Could not load digests.</p>{/snippet}
+    {#snippet empty()}<p class="p-4 text-sm text-muted">nenhum boletim ainda.</p>{/snippet}
+    {#snippet error()}<p role="alert" class="p-4 text-sm text-danger">não foi possível carregar os boletins.</p>{/snippet}
   </AsyncState>
 </section>

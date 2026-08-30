@@ -59,28 +59,28 @@ class WatchSerializer(serializers.ModelSerializer):
 
     def validate_groups(self, value):
         if not isinstance(value, list):
-            raise serializers.ValidationError("groups must be a list")
+            raise serializers.ValidationError("grupos precisa ser uma lista")
         if not value:
-            raise serializers.ValidationError("groups must not be empty")
+            raise serializers.ValidationError("grupos não pode ficar vazio")
         normalized = []
         for group in value:
             if not isinstance(group, dict):
-                raise serializers.ValidationError("each group must be an object")
+                raise serializers.ValidationError("cada grupo precisa ser um objeto")
             terms = group.get("terms")
             if not isinstance(terms, list) or not terms:
-                raise serializers.ValidationError("each group must have at least one term")
+                raise serializers.ValidationError("cada grupo precisa ter ao menos um termo")
             normalized_terms = []
             for term in terms:
                 if not isinstance(term, dict):
-                    raise serializers.ValidationError("each term must be an object")
+                    raise serializers.ValidationError("cada termo precisa ser um objeto")
                 text = term.get("text")
                 if not isinstance(text, str) or not text.strip():
-                    raise serializers.ValidationError("term text must not be empty")
+                    raise serializers.ValidationError("o texto do termo não pode ficar vazio")
                 text = text.strip()
                 kind = term.get("kind") or KIND_ENTITY
                 if kind not in VALID_KINDS:
                     raise serializers.ValidationError(
-                        f"kind must be one of {', '.join(VALID_KINDS)}"
+                        f"tipo precisa ser um de: {', '.join(VALID_KINDS)}"
                     )
                 normalized_terms.append({"text": text, "kind": kind})
             normalized.append({"terms": normalized_terms})
@@ -89,7 +89,7 @@ class WatchSerializer(serializers.ModelSerializer):
     def validate_client(self, value):
         user = self.context["request"].user
         if value.workspace_id not in workspace_ids_for(user):
-            raise serializers.ValidationError("client not in your workspace")
+            raise serializers.ValidationError("cliente fora do seu espaço de trabalho")
         return value
 
 
@@ -99,12 +99,12 @@ class BackfillRequestSerializer(serializers.Serializer):
 
     def validate(self, data):
         if data["date_from"] > data["date_to"]:
-            raise serializers.ValidationError("date_from must not be after date_to")
+            raise serializers.ValidationError("a data inicial não pode ser posterior à data final")
         if (data["date_to"] - data["date_from"]).days > 6:
-            raise serializers.ValidationError("range must not exceed 7 days")
+            raise serializers.ValidationError("o intervalo não pode passar de 7 dias")
         today = datetime.datetime.now(SAO_PAULO).date()
         if data["date_to"] > today:
-            raise serializers.ValidationError("date_to must not be in the future")
+            raise serializers.ValidationError("a data final não pode estar no futuro")
         return data
 
 

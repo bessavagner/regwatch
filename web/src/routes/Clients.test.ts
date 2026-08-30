@@ -17,7 +17,7 @@ test('lists existing clients', async () => {
 test('shows an empty state with zero clients', async () => {
   vi.spyOn(resources, 'listClients').mockResolvedValue({ count: 0, next: null, previous: null, results: [] });
   render(Clients);
-  await waitFor(() => expect(screen.getByText(/no clients yet/i)).toBeInTheDocument());
+  await waitFor(() => expect(screen.getByText(/nenhum cliente ainda/i)).toBeInTheDocument());
 });
 
 test('creating a client shows the form and appends the result to the list', async () => {
@@ -27,9 +27,9 @@ test('creating a client shows the form and appends the result to the list', asyn
   const user = userEvent.setup();
   render(Clients);
   await waitFor(() => expect(screen.getByText('Beta')).toBeInTheDocument());
-  await user.click(screen.getByRole('button', { name: /new client/i }));
-  await user.type(screen.getByLabelText(/name/i), 'Gamma');
-  await user.click(screen.getByRole('button', { name: /save/i }));
+  await user.click(screen.getByRole('button', { name: /novo cliente/i }));
+  await user.type(screen.getByLabelText(/nome/i), 'Gamma');
+  await user.click(screen.getByRole('button', { name: /salvar/i }));
   await waitFor(() => expect(screen.getByText('Gamma')).toBeInTheDocument());
 });
 

@@ -14,9 +14,9 @@ test('creating a client posts name, email, and is_house', async () => {
   const user = userEvent.setup();
   render(ClientForm, { props: { onsaved: (c: Client) => (saved = c) } });
 
-  await user.type(screen.getByLabelText(/name/i), 'Acme Corp');
-  await user.type(screen.getByLabelText(/email/i), 'acme@example.com');
-  await user.click(screen.getByRole('button', { name: /save/i }));
+  await user.type(screen.getByLabelText(/nome/i), 'Acme Corp');
+  await user.type(screen.getByLabelText(/e-mail/i), 'acme@example.com');
+  await user.click(screen.getByRole('button', { name: /salvar/i }));
 
   expect(resources.createClient).toHaveBeenCalledWith({
     name: 'Acme Corp',
@@ -33,10 +33,10 @@ test('editing a client PATCHes when a client prop is passed', async () => {
   const user = userEvent.setup();
   render(ClientForm, { props: { client: existing, onsaved: () => {} } });
 
-  await user.clear(screen.getByLabelText(/name/i));
-  await user.type(screen.getByLabelText(/name/i), 'Acme Corporation');
-  await user.click(screen.getByLabelText(/house account/i));
-  await user.click(screen.getByRole('button', { name: /save/i }));
+  await user.clear(screen.getByLabelText(/nome/i));
+  await user.type(screen.getByLabelText(/nome/i), 'Acme Corporation');
+  await user.click(screen.getByLabelText(/conta interna/i));
+  await user.click(screen.getByRole('button', { name: /salvar/i }));
 
   expect(resources.updateClient).toHaveBeenCalledWith(5, {
     name: 'Acme Corporation',
@@ -52,6 +52,6 @@ test('a 400 field error is shown', async () => {
   );
   const user = userEvent.setup();
   render(ClientForm, { props: { onsaved: () => {} } });
-  await user.click(screen.getByRole('button', { name: /save/i }));
+  await user.click(screen.getByRole('button', { name: /salvar/i }));
   expect(await screen.findByText(/may not be blank/i)).toBeInTheDocument();
 });

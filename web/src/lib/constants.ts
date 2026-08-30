@@ -1,8 +1,18 @@
+// Values are the stored English enum (decision-002): the API filters on them
+// literally and Match.state is written from them. Only the labels are pt-BR.
 export const STATES = [
-  { value: 'new', label: 'new' },
-  { value: 'relevant', label: 'relevant' },
-  { value: 'dismissed', label: 'dismissed' },
+  { value: 'new', label: 'nova' },
+  { value: 'relevant', label: 'relevante' },
+  { value: 'dismissed', label: 'descartada' },
 ];
+
+const STATE_LABELS: Record<string, string> = Object.fromEntries(
+  STATES.map((s) => [s.value, s.label]),
+);
+
+// A state that arrives from the server without a label here is shown as it came
+// rather than blanked -- an unknown value is worth seeing, not hiding.
+export const stateLabel = (value: string): string => STATE_LABELS[value] ?? value;
 
 // Values match the real INLABS pipeline edition codes (src/gazette/inlabs/fetch.py
 // SECTIONS) that get written to Edition.section — the matcher compares them literally.

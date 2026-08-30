@@ -8,12 +8,12 @@ const PASS = process.env.E2E_PASS ?? 'e2epw12345';
 test('rejects bad credentials, accepts a valid login, then logs out', async ({ page }) => {
   await page.goto('/login');
 
-  await page.getByLabel(/username/i).fill(USER);
-  await page.getByLabel(/password/i).fill('wrong-password');
-  await page.getByRole('button', { name: /sign in/i }).click();
+  await page.getByLabel(/usuário/i).fill(USER);
+  await page.getByLabel(/senha/i).fill('wrong-password');
+  await page.getByRole('button', { name: /entrar/i }).click();
   await expect(page.getByRole('alert')).toBeVisible();
 
-  await page.getByLabel(/password/i).fill(PASS);
-  await page.getByRole('button', { name: /sign in/i }).click();
+  await page.getByLabel(/senha/i).fill(PASS);
+  await page.getByRole('button', { name: /entrar/i }).click();
   await expect(page).toHaveURL(/\/feed/);
 });

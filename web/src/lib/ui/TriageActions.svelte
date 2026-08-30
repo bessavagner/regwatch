@@ -18,7 +18,7 @@
       const updated = await fn(match.id);
       onchange(updated);
     } catch (err) {
-      const msg = err instanceof ApiError ? err.detail : 'action failed';
+      const msg = err instanceof ApiError ? err.detail : 'não foi possível concluir a ação';
       onerror(msg);
     } finally {
       busy = false;
@@ -27,6 +27,6 @@
 </script>
 
 <div class="flex gap-2">
-  <Button variant="primary" disabled={busy} onclick={() => act(markRelevant)}>Relevant</Button>
-  <Button variant="ghost" disabled={busy} onclick={() => act(dismissMatch)}>Dismiss</Button>
+  <Button variant="primary" disabled={busy} onclick={() => act(markRelevant)}>relevante</Button>
+  <Button variant="ghost" disabled={busy} onclick={() => act(dismissMatch)}>descartar</Button>
 </div>

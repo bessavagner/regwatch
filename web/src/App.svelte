@@ -12,10 +12,10 @@
 
   const PUBLIC = new Set(['/login']);
   const NAV_ROUTES = [
-    { path: '/feed', label: 'Triage' },
-    { path: '/watches', label: 'Watches' },
-    { path: '/clients', label: 'Clients' },
-    { path: '/digests', label: 'Digests' },
+    { path: '/feed', label: 'triagem' },
+    { path: '/watches', label: 'buscas' },
+    { path: '/clients', label: 'clientes' },
+    { path: '/digests', label: 'boletins' },
   ];
 
   let palette: CommandPalette | undefined = $state();
@@ -33,7 +33,7 @@
 </script>
 
 {#if auth.status === 'idle' || auth.status === 'loading'}
-  <p class="p-6 text-sm text-muted">Loading…</p>
+  <p class="p-6 text-sm text-muted">carregando…</p>
 {:else}
   {#if auth.status === 'authed'}
     <nav class="nav">
@@ -49,10 +49,10 @@
         {/each}
       </div>
       <button type="button" class="cmdk-trigger ml-auto shrink-0" onclick={() => palette?.show()}>
-        <span class="cmdk-trigger__label">Jump to…</span><span>⌘K</span>
+        <span class="cmdk-trigger__label">ir para…</span><span>⌘K</span>
       </button>
       <div class="shrink-0">
-        <Button variant="ghost" onclick={() => auth.logout().then(() => navigate('/login'))}>Log out</Button>
+        <Button variant="ghost" onclick={() => auth.logout().then(() => navigate('/login'))}>sair</Button>
       </div>
     </nav>
     <CommandPalette bind:this={palette} routes={NAV_ROUTES} />

@@ -11,7 +11,7 @@
   const ticks = Array.from({ length: 12 }, (_, i) => i * 30);
 </script>
 
-<div class="apparatus" role="img" aria-label="{value} matches tracked">
+<div class="apparatus" role="img" aria-label="{value} ocorrências acompanhadas">
   <svg viewBox="0 0 120 120">
     <circle class="apparatus__ring" cx="60" cy="60" r={R} fill="none" stroke-width="2" />
     {#each ticks as deg}
@@ -39,6 +39,6 @@
   </svg>
   <div class="apparatus__readout">
     <span class="apparatus__value tabular-nums">{value}</span>
-    <span class="apparatus__unit">signal</span>
+    <span class="apparatus__unit">sinal</span>
   </div>
 </div>

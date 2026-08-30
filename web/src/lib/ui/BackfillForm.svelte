@@ -28,7 +28,7 @@
     e.preventDefault();
     fieldErrors = {};
     if (!dateFrom || !dateTo) {
-      fieldErrors = { _: ['Both dates are required.'] };
+      fieldErrors = { _: ['as duas datas são obrigatórias.'] };
       return;
     }
     const body: BackfillBody = { date_from: dateFrom, date_to: dateTo };
@@ -38,7 +38,7 @@
       result = await backfillWatch(watch.id, body);
     } catch (err) {
       if (err instanceof ApiError && Object.keys(err.fields).length) fieldErrors = err.fields;
-      else fieldErrors = { _: [err instanceof ApiError ? err.detail : 'backfill failed'] };
+      else fieldErrors = { _: [err instanceof ApiError ? err.detail : 'não foi possível rodar nas edições anteriores'] };
     } finally {
       running = false;
     }
@@ -50,10 +50,10 @@
 </script>
 
 <form onsubmit={run} novalidate class="space-y-2">
-  <label class="block text-sm">From
+  <label class="block text-sm">de
     <input type="date" class="mt-1 field" bind:value={dateFrom} max={today} required />
   </label>
-  <label class="block text-sm">To
+  <label class="block text-sm">até
     <input type="date" class="mt-1 field" bind:value={dateTo} min={dateFrom || undefined} max={maxDateTo()} required />
   </label>
   {#if fieldErrors.date_from}<p role="alert" class="text-sm text-danger">{fieldErrors.date_from.join(' ')}</p>{/if}
@@ -62,16 +62,16 @@
   {#if fieldErrors._}<p role="alert" class="text-sm text-danger">{fieldErrors._.join(' ')}</p>{/if}
   {#if result}
     <p class="text-sm text-ink-2">
-      {result.editions} editions, {result.acts} acts, {result.matches} matches, {result.enriched} enriched.
-      {#if result.skipped_dates.length}Skipped: {result.skipped_dates.map(brDate).join(', ')}.{/if}
+      {result.editions} edições, {result.acts} atos, {result.matches} ocorrências, {result.enriched} enriquecidas.
+      {#if result.skipped_dates.length}ignoradas: {result.skipped_dates.map(brDate).join(', ')}.{/if}
     </p>
   {/if}
   <div class="flex gap-2">
     {#if result}
-      <Button onclick={viewInFeed}>View in feed</Button>
+      <Button onclick={viewInFeed}>ver na triagem</Button>
     {:else}
-      <Button type="submit" loading={running}>Run</Button>
+      <Button type="submit" loading={running}>rodar</Button>
     {/if}
-    <Button variant="ghost" onclick={oncancel}>Cancel</Button>
+    <Button variant="ghost" onclick={oncancel}>cancelar</Button>
   </div>
 </form>

@@ -66,49 +66,49 @@
       onsaved(result);
     } catch (err) {
       if (err instanceof ApiError && Object.keys(err.fields).length) fieldErrors = err.fields;
-      else fieldErrors = { _: [err instanceof ApiError ? err.detail : 'save failed'] };
+      else fieldErrors = { _: [err instanceof ApiError ? err.detail : 'não foi possível salvar'] };
     }
   }
 </script>
 
 <form onsubmit={save} class="space-y-2">
-  <label class="block text-sm">Client
+  <label class="block text-sm">cliente
     <select class="mt-1 field" bind:value={client}>
       {#each clients as c}<option value={c.id}>{c.name}</option>{/each}
     </select>
   </label>
 
-  <p class="text-sm">All groups must match. Each line inside a group is an alternative spelling of the same thing.</p>
+  <p class="text-sm">todos os grupos precisam bater. cada linha dentro de um grupo é uma outra forma de escrever a mesma coisa.</p>
   {#each rows as row, i}
     <div class="flex items-end gap-2">
-      <label class="block flex-1 text-sm">Aliases for group {i + 1} (one per line)
+      <label class="block flex-1 text-sm">variações do grupo {i + 1} (uma por linha)
         <textarea class="mt-1 field" rows="3" bind:value={row.aliases}></textarea>
       </label>
-      <label class="block text-sm">Match kind for group {i + 1}
+      <label class="block text-sm">tipo de busca do grupo {i + 1}
         <select class="mt-1 field" bind:value={row.kind} onchange={() => { row.kindTouched = true; }}>
-          <option value="entity">name (exact)</option>
-          <option value="concept">word (stemmed)</option>
+          <option value="entity">nome (exato)</option>
+          <option value="concept">palavra (com flexão)</option>
         </select>
       </label>
       {#if rows.length > 1}
-        <Button type="button" onclick={() => removeGroup(i)}>Remove group {i + 1}</Button>
+        <Button type="button" onclick={() => removeGroup(i)}>remover grupo {i + 1}</Button>
       {/if}
     </div>
   {/each}
-  <Button type="button" onclick={addGroup}>Add group</Button>
+  <Button type="button" onclick={addGroup}>adicionar grupo</Button>
   {#if fieldErrors.groups}<p role="alert" class="text-sm text-danger">{fieldErrors.groups.join(' ')}</p>{/if}
 
-  <label class="block text-sm">Exclude (comma-separated)
+  <label class="block text-sm">excluir (separado por vírgulas)
     <input class="mt-1 field" bind:value={excludeText} />
   </label>
-  <label class="block text-sm">Section
+  <label class="block text-sm">seção
     <select class="mt-1 field" bind:value={section}>
-      <option value="">all sections</option>
+      <option value="">todas as seções</option>
       {#each SECTIONS as s}<option value={s.value}>{s.label}</option>{/each}
     </select>
   </label>
-  <label class="flex items-center gap-2 text-sm"><input type="checkbox" class="accent-accent" bind:checked={active} /> Active</label>
+  <label class="flex items-center gap-2 text-sm"><input type="checkbox" class="accent-accent" bind:checked={active} /> ativa</label>
   {#if fieldErrors.client}<p role="alert" class="text-sm text-danger">{fieldErrors.client.join(' ')}</p>{/if}
   {#if fieldErrors._}<p role="alert" class="text-sm text-danger">{fieldErrors._.join(' ')}</p>{/if}
-  <Button type="submit">Save</Button>
+  <Button type="submit">salvar</Button>
 </form>

@@ -16,9 +16,9 @@ test('submitting valid credentials calls auth.login', async () => {
   const user = userEvent.setup();
   render(Login);
 
-  await user.type(screen.getByLabelText(/username/i), 'a@f.com');
-  await user.type(screen.getByLabelText(/password/i), 'pw');
-  await user.click(screen.getByRole('button', { name: /sign in/i }));
+  await user.type(screen.getByLabelText(/usuário/i), 'a@f.com');
+  await user.type(screen.getByLabelText(/senha/i), 'pw');
+  await user.click(screen.getByRole('button', { name: /entrar/i }));
 
   expect(spy).toHaveBeenCalledWith('a@f.com', 'pw');
 });
@@ -30,8 +30,8 @@ test('an auth error is shown', async () => {
   });
   const user = userEvent.setup();
   render(Login);
-  await user.type(screen.getByLabelText(/username/i), 'a@f.com');
-  await user.type(screen.getByLabelText(/password/i), 'x');
-  await user.click(screen.getByRole('button', { name: /sign in/i }));
+  await user.type(screen.getByLabelText(/usuário/i), 'a@f.com');
+  await user.type(screen.getByLabelText(/senha/i), 'x');
+  await user.click(screen.getByRole('button', { name: /entrar/i }));
   expect(await screen.findByText(/invalid credentials/i)).toBeInTheDocument();
 });

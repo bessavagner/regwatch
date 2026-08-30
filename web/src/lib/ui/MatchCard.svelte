@@ -1,6 +1,7 @@
 <script lang="ts">
   import type { Match } from '../api/types';
   import { brDate } from '../format';
+  import { stateLabel } from '../constants';
   import Badge from './Badge.svelte';
   import { highlight } from '../highlight';
 
@@ -18,7 +19,7 @@
       {#if match.act_detail.agency} · {match.act_detail.agency}{/if}
     </p>
   </div>
-  <Badge label={match.state} tone={tone} />
+  <Badge label={stateLabel(match.state)} tone={tone} />
 </div>
 
 {#if match.ai_summary}
@@ -50,7 +51,7 @@
       class="underline"
       href={match.act_detail.source_url}
       target="_blank"
-      rel="noopener noreferrer">source</a
+      rel="noopener noreferrer">fonte</a
     >
   {/if}
 </div>

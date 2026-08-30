@@ -37,8 +37,8 @@ test('toggling active PATCHes the watch', async () => {
   const spy = vi.spyOn(resources, 'updateWatch').mockResolvedValue({ ...watch, active: false });
   const user = userEvent.setup();
   render(Watches);
-  await waitFor(() => expect(screen.getByRole('button', { name: /deactivate/i })).toBeInTheDocument());
-  await user.click(screen.getByRole('button', { name: /deactivate/i }));
+  await waitFor(() => expect(screen.getByRole('button', { name: /desativar/i })).toBeInTheDocument());
+  await user.click(screen.getByRole('button', { name: /desativar/i }));
   expect(spy).toHaveBeenCalledWith(1, { active: false });
 });
 
@@ -48,10 +48,10 @@ test('a failed toggle surfaces an error instead of failing silently', async () =
   vi.spyOn(resources, 'updateWatch').mockRejectedValue(new Error('boom'));
   const user = userEvent.setup();
   render(Watches);
-  await waitFor(() => expect(screen.getByRole('button', { name: /deactivate/i })).toBeInTheDocument());
-  await user.click(screen.getByRole('button', { name: /deactivate/i }));
+  await waitFor(() => expect(screen.getByRole('button', { name: /desativar/i })).toBeInTheDocument());
+  await user.click(screen.getByRole('button', { name: /desativar/i }));
   await waitFor(() => expect(screen.getByRole('alert')).toBeInTheDocument());
-  expect(screen.getByRole('button', { name: /deactivate/i })).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: /desativar/i })).toBeInTheDocument();
 });
 
 test('clicking "Run on past editions" reveals the backfill form', async () => {
@@ -59,9 +59,9 @@ test('clicking "Run on past editions" reveals the backfill form', async () => {
   vi.spyOn(resources, 'listWatches').mockResolvedValue({ count: 1, next: null, previous: null, results: [watch] });
   const user = userEvent.setup();
   render(Watches);
-  await waitFor(() => expect(screen.getByRole('button', { name: /run on past editions/i })).toBeInTheDocument());
-  await user.click(screen.getByRole('button', { name: /run on past editions/i }));
-  expect(screen.getByLabelText(/from/i)).toBeInTheDocument();
+  await waitFor(() => expect(screen.getByRole('button', { name: /rodar em edições anteriores/i })).toBeInTheDocument());
+  await user.click(screen.getByRole('button', { name: /rodar em edições anteriores/i }));
+  expect(screen.getByLabelText(/^de$/i)).toBeInTheDocument();
 });
 
 test('a watch row names its client and reports its match activity', async () => {
@@ -70,8 +70,8 @@ test('a watch row names its client and reports its match activity', async () => 
   render(Watches);
 
   await waitFor(() => expect(screen.getByText('Acme')).toBeInTheDocument());
-  expect(screen.getByText(/12 matches/)).toBeInTheDocument();
-  expect(screen.getByText(/last 2026-08-11/)).toBeInTheDocument();
+  expect(screen.getByText(/12 ocorrências/)).toBeInTheDocument();
+  expect(screen.getByText(/última 2026-08-11/)).toBeInTheDocument();
   // The row used to print a bare "seção 1"; it now uses the form's own label.
   expect(screen.getByText(/seção 1/)).toBeInTheDocument();
 });
@@ -84,13 +84,13 @@ test('a watch that has never matched says so instead of looking healthy', async 
   });
   render(Watches);
 
-  await waitFor(() => expect(screen.getByText(/no matches yet/i)).toBeInTheDocument());
+  await waitFor(() => expect(screen.getByText(/nenhuma ocorrência ainda/i)).toBeInTheDocument());
 });
 
 test('with zero clients, "New watch" is disabled with a link to Clients', async () => {
   vi.spyOn(resources, 'listClients').mockResolvedValue({ count: 0, next: null, previous: null, results: [] });
   vi.spyOn(resources, 'listWatches').mockResolvedValue({ count: 0, next: null, previous: null, results: [] });
   render(Watches);
-  await waitFor(() => expect(screen.getByRole('button', { name: /new watch/i })).toBeDisabled());
-  expect(screen.getByRole('link', { name: /clients/i })).toHaveAttribute('href', '/clients');
+  await waitFor(() => expect(screen.getByRole('button', { name: /nova busca/i })).toBeDisabled());
+  expect(screen.getByRole('link', { name: /clientes/i })).toHaveAttribute('href', '/clients');
 });

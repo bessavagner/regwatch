@@ -23,21 +23,21 @@
       onsaved(result);
     } catch (err) {
       if (err instanceof ApiError && Object.keys(err.fields).length) fieldErrors = err.fields;
-      else fieldErrors = { _: [err instanceof ApiError ? err.detail : 'save failed'] };
+      else fieldErrors = { _: [err instanceof ApiError ? err.detail : 'não foi possível salvar'] };
     }
   }
 </script>
 
 <form onsubmit={save} class="space-y-2">
-  <label class="block text-sm">Name
+  <label class="block text-sm">nome
     <input class="mt-1 field" bind:value={name} />
   </label>
   {#if fieldErrors.name}<p role="alert" class="text-sm text-danger">{fieldErrors.name.join(' ')}</p>{/if}
-  <label class="block text-sm">Email (digest recipient — blank = no digest)
+  <label class="block text-sm">e-mail (destinatário do boletim — em branco = sem boletim)
     <input class="mt-1 field" bind:value={email} />
   </label>
   {#if fieldErrors.email}<p role="alert" class="text-sm text-danger">{fieldErrors.email.join(' ')}</p>{/if}
-  <label class="flex items-center gap-2 text-sm"><input type="checkbox" class="accent-accent" bind:checked={isHouse} /> House account</label>
+  <label class="flex items-center gap-2 text-sm"><input type="checkbox" class="accent-accent" bind:checked={isHouse} /> conta interna</label>
   {#if fieldErrors._}<p role="alert" class="text-sm text-danger">{fieldErrors._.join(' ')}</p>{/if}
-  <Button type="submit">Save</Button>
+  <Button type="submit">salvar</Button>
 </form>

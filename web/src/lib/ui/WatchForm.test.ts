@@ -15,14 +15,14 @@ describe('WatchForm groups', () => {
     const createWatch = vi.spyOn(resources, 'createWatch').mockResolvedValue({} as never);
     render(WatchForm, { clients, onsaved: () => {} });
 
-    await fireEvent.input(screen.getByLabelText(/aliases for group 1/i),
+    await fireEvent.input(screen.getByLabelText(/variações do grupo 1/i),
       { target: { value: 'sebrae\nsebrae/mg' } });
-    await fireEvent.click(screen.getByRole('button', { name: /add group/i }));
-    await fireEvent.input(screen.getByLabelText(/aliases for group 2/i),
+    await fireEvent.click(screen.getByRole('button', { name: /adicionar grupo/i }));
+    await fireEvent.input(screen.getByLabelText(/variações do grupo 2/i),
       { target: { value: 'contrato' } });
-    await fireEvent.change(screen.getByLabelText(/match kind for group 2/i),
+    await fireEvent.change(screen.getByLabelText(/tipo de busca do grupo 2/i),
       { target: { value: 'concept' } });
-    await fireEvent.click(screen.getByRole('button', { name: /save/i }));
+    await fireEvent.click(screen.getByRole('button', { name: /salvar/i }));
 
     expect(createWatch).toHaveBeenCalledWith(expect.objectContaining({
       groups: [
@@ -41,7 +41,7 @@ describe('WatchForm groups', () => {
         groups: [{ terms: [{ text: 'sebrae', kind: 'entity' }] }],
       } as never,
     });
-    expect(screen.getByLabelText(/aliases for group 1/i)).toHaveValue('sebrae');
+    expect(screen.getByLabelText(/variações do grupo 1/i)).toHaveValue('sebrae');
   });
 
   const mixedWatch: Watch = {
@@ -53,8 +53,8 @@ describe('WatchForm groups', () => {
     const updateWatch = vi.spyOn(resources, 'updateWatch').mockResolvedValue({} as never);
     render(WatchForm, { clients, onsaved: () => {}, watch: mixedWatch });
 
-    await fireEvent.change(screen.getByLabelText(/section/i), { target: { value: 'DO1' } });
-    await fireEvent.click(screen.getByRole('button', { name: /save/i }));
+    await fireEvent.change(screen.getByLabelText(/seção/i), { target: { value: 'DO1' } });
+    await fireEvent.click(screen.getByRole('button', { name: /salvar/i }));
 
     expect(updateWatch).toHaveBeenCalledWith(8, expect.objectContaining({
       groups: [{ terms: [{ text: 'sebrae', kind: 'entity' }, { text: 'contrato', kind: 'concept' }] }],
@@ -65,8 +65,8 @@ describe('WatchForm groups', () => {
     const updateWatch = vi.spyOn(resources, 'updateWatch').mockResolvedValue({} as never);
     render(WatchForm, { clients, onsaved: () => {}, watch: mixedWatch });
 
-    await fireEvent.change(screen.getByLabelText(/match kind for group 1/i), { target: { value: 'concept' } });
-    await fireEvent.click(screen.getByRole('button', { name: /save/i }));
+    await fireEvent.change(screen.getByLabelText(/tipo de busca do grupo 1/i), { target: { value: 'concept' } });
+    await fireEvent.click(screen.getByRole('button', { name: /salvar/i }));
 
     expect(updateWatch).toHaveBeenCalledWith(8, expect.objectContaining({
       groups: [{ terms: [{ text: 'sebrae', kind: 'concept' }, { text: 'contrato', kind: 'concept' }] }],
@@ -77,9 +77,9 @@ describe('WatchForm groups', () => {
     const updateWatch = vi.spyOn(resources, 'updateWatch').mockResolvedValue({} as never);
     render(WatchForm, { clients, onsaved: () => {}, watch: mixedWatch });
 
-    await fireEvent.input(screen.getByLabelText(/aliases for group 1/i),
+    await fireEvent.input(screen.getByLabelText(/variações do grupo 1/i),
       { target: { value: 'sebrae\ncontrato\nsebrae/mg' } });
-    await fireEvent.click(screen.getByRole('button', { name: /save/i }));
+    await fireEvent.click(screen.getByRole('button', { name: /salvar/i }));
 
     expect(updateWatch).toHaveBeenCalledWith(8, expect.objectContaining({
       groups: [{
@@ -96,9 +96,9 @@ describe('WatchForm groups', () => {
     const createWatch = vi.spyOn(resources, 'createWatch').mockResolvedValue({} as never);
     render(WatchForm, { clients, onsaved: () => {} });
 
-    await fireEvent.input(screen.getByLabelText(/aliases for group 1/i),
+    await fireEvent.input(screen.getByLabelText(/variações do grupo 1/i),
       { target: { value: 'sebrae\ncontrato' } });
-    await fireEvent.click(screen.getByRole('button', { name: /save/i }));
+    await fireEvent.click(screen.getByRole('button', { name: /salvar/i }));
 
     expect(createWatch).toHaveBeenCalledWith(expect.objectContaining({
       groups: [{ terms: [{ text: 'sebrae', kind: 'entity' }, { text: 'contrato', kind: 'entity' }] }],
@@ -113,9 +113,9 @@ describe('WatchForm aliases keep commas', () => {
     const createWatch = vi.spyOn(resources, 'createWatch').mockResolvedValue({} as never);
     render(WatchForm, { clients, onsaved: () => {} });
 
-    await fireEvent.input(screen.getByLabelText(/aliases for group 1/i),
+    await fireEvent.input(screen.getByLabelText(/variações do grupo 1/i),
       { target: { value: LONG_NAME } });
-    await fireEvent.click(screen.getByRole('button', { name: /save/i }));
+    await fireEvent.click(screen.getByRole('button', { name: /salvar/i }));
 
     expect(createWatch).toHaveBeenCalledWith(expect.objectContaining({
       groups: [{ terms: [{ text: LONG_NAME, kind: 'entity' }] }],
@@ -126,9 +126,9 @@ describe('WatchForm aliases keep commas', () => {
     const createWatch = vi.spyOn(resources, 'createWatch').mockResolvedValue({} as never);
     render(WatchForm, { clients, onsaved: () => {} });
 
-    await fireEvent.input(screen.getByLabelText(/aliases for group 1/i),
+    await fireEvent.input(screen.getByLabelText(/variações do grupo 1/i),
       { target: { value: 'IFCE\nInstituto Federal do Ceará\n\n' } });
-    await fireEvent.click(screen.getByRole('button', { name: /save/i }));
+    await fireEvent.click(screen.getByRole('button', { name: /salvar/i }));
 
     const body = vi.mocked(createWatch).mock.calls[0][0];
     expect(body.groups[0].terms.map((t) => t.text)).toEqual([
@@ -147,7 +147,7 @@ describe('WatchForm aliases keep commas', () => {
     } as never;
     render(WatchForm, { clients, onsaved: () => {}, watch });
 
-    const field = screen.getByLabelText(/aliases for group 1/i) as HTMLTextAreaElement;
+    const field = screen.getByLabelText(/variações do grupo 1/i) as HTMLTextAreaElement;
     expect(field.value).toBe(`${LONG_NAME}\nIFCE`);
   });
 
@@ -155,9 +155,9 @@ describe('WatchForm aliases keep commas', () => {
     const createWatch = vi.spyOn(resources, 'createWatch').mockResolvedValue({} as never);
     render(WatchForm, { clients, onsaved: () => {} });
 
-    await fireEvent.input(screen.getByLabelText(/aliases for group 1/i), { target: { value: 'IFCE' } });
-    await fireEvent.input(screen.getByLabelText(/exclude/i), { target: { value: 'aviso, errata' } });
-    await fireEvent.click(screen.getByRole('button', { name: /save/i }));
+    await fireEvent.input(screen.getByLabelText(/variações do grupo 1/i), { target: { value: 'IFCE' } });
+    await fireEvent.input(screen.getByLabelText(/excluir/i), { target: { value: 'aviso, errata' } });
+    await fireEvent.click(screen.getByRole('button', { name: /salvar/i }));
 
     expect(createWatch).toHaveBeenCalledWith(
       expect.objectContaining({ exclude: ['aviso', 'errata'] }),
@@ -188,20 +188,20 @@ describe('WatchForm', () => {
     vi.spyOn(resources, 'createWatch').mockResolvedValue(created);
     render(WatchForm, { clients, onsaved: () => {} });
 
-    expect(screen.getByLabelText(/section/i)).toHaveValue('');
-    await fireEvent.input(screen.getByLabelText(/aliases for group 1/i), { target: { value: 'a' } });
-    await fireEvent.click(screen.getByRole('button', { name: /save/i }));
+    expect(screen.getByLabelText(/seção/i)).toHaveValue('');
+    await fireEvent.input(screen.getByLabelText(/variações do grupo 1/i), { target: { value: 'a' } });
+    await fireEvent.click(screen.getByRole('button', { name: /salvar/i }));
 
     expect(resources.createWatch).toHaveBeenCalledWith(expect.objectContaining({ section: '' }));
   });
 
   it('a 400 field error is shown', async () => {
     vi.spyOn(resources, 'createWatch').mockRejectedValue(
-      new ApiError(400, 'request failed', { groups: ['must not be empty'] }),
+      new ApiError(400, 'request failed', { groups: ['não pode ficar vazio'] }),
     );
     render(WatchForm, { clients, onsaved: () => {} });
-    await fireEvent.change(screen.getByLabelText(/client/i), { target: { value: '1' } });
-    await fireEvent.click(screen.getByRole('button', { name: /save/i }));
-    expect(await screen.findByText(/must not be empty/i)).toBeInTheDocument();
+    await fireEvent.change(screen.getByLabelText(/cliente/i), { target: { value: '1' } });
+    await fireEvent.click(screen.getByRole('button', { name: /salvar/i }));
+    expect(await screen.findByText(/não pode ficar vazio/i)).toBeInTheDocument();
   });
 });

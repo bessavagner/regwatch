@@ -129,7 +129,7 @@
       digestStatus = 'sent';
     } catch (err) {
       digestStatus = 'error';
-      actionError = err instanceof ApiError ? err.detail : 'Could not send digest';
+      actionError = err instanceof ApiError ? err.detail : 'não foi possível enviar o boletim';
     }
   }
 
@@ -154,11 +154,11 @@
 
 <section class="mx-auto max-w-2xl p-4">
   <div class="hero">
-    <p class="eyebrow mb-2 text-xs opacity-60">00 · signal</p>
+    <p class="eyebrow mb-2 text-xs opacity-60">00 · sinal</p>
     <div class="hero__body">
       <div>
-        <h1 class="hero__title">triage today's <em>signal</em>.</h1>
-        <p class="hero__lede">every Diário Oficial da União edition, checked against your watches twice each weekday — 08:05 and 13:00.</p>
+        <h1 class="hero__title">faça a triagem do <em>sinal</em> de hoje.</h1>
+        <p class="hero__lede">cada edição do Diário Oficial da União, conferida com as suas buscas duas vezes por dia útil — às 08:05 e às 13:00.</p>
       </div>
       <SignalDial value={count} />
     </div>
@@ -167,61 +167,61 @@
   <div class="stat-row">
     <div class="stat">
       <span class="stat__value tabular-nums">{count}</span>
-      <span class="stat__label">matches</span>
+      <span class="stat__label">ocorrências</span>
     </div>
     <div class="stat">
       <span class="stat__value tabular-nums">{watchesCount}</span>
-      <span class="stat__label">watches</span>
+      <span class="stat__label">buscas</span>
     </div>
     <div class="stat">
       <span class="stat__value tabular-nums">{clientsCount}</span>
-      <span class="stat__label">clients</span>
+      <span class="stat__label">clientes</span>
     </div>
   </div>
 
   <div class="mb-4 grid grid-cols-2 gap-3 rounded-card border border-rule bg-paper-2/50 p-3 sm:grid-cols-3">
-    <label class="text-sm text-ink-2">Client
+    <label class="text-sm text-ink-2">cliente
       <select class="mt-1 field" value={String(filters.client ?? '')} onchange={(e) => setFilter('client', e.currentTarget.value)}>
-        <option value="">all</option>
+        <option value="">todos</option>
         <!-- String(c.id): Svelte matches the select's value against the raw
              option expression, so a numeric id would never equal a filter
              value read out of the query string. -->
         {#each clients as c}<option value={String(c.id)}>{c.name}</option>{/each}
       </select>
     </label>
-    <label class="text-sm text-ink-2">State
+    <label class="text-sm text-ink-2">situação
       <select class="mt-1 field" value={filters.state ?? ''} onchange={(e) => setFilter('state', e.currentTarget.value)}>
-        <option value="">active</option>
+        <option value="">ativas</option>
         {#each STATES as s}<option value={s.value}>{s.label}</option>{/each}
       </select>
     </label>
-    <label class="text-sm text-ink-2">Section
+    <label class="text-sm text-ink-2">seção
       <select class="mt-1 field" value={filters.section ?? ''} onchange={(e) => setFilter('section', e.currentTarget.value)}>
-        <option value="">all</option>
+        <option value="">todas</option>
         {#each SECTIONS as s}<option value={s.value}>{s.label}</option>{/each}
       </select>
     </label>
-    <label class="text-sm text-ink-2">Category
+    <label class="text-sm text-ink-2">categoria
       <select class="mt-1 field" value={filters.category ?? ''} onchange={(e) => setFilter('category', e.currentTarget.value)}>
-        <option value="">all</option>
+        <option value="">todas</option>
         {#each vocabulary.categories as c}<option value={c.value}>{c.label}</option>{/each}
       </select>
     </label>
-    <label class="text-sm text-ink-2">From
+    <label class="text-sm text-ink-2">de
       <input type="date" class="mt-1 field" value={filters.date_from ?? ''} onchange={(e) => setFilter('date_from', e.currentTarget.value)} />
     </label>
-    <label class="text-sm text-ink-2">To
+    <label class="text-sm text-ink-2">até
       <input type="date" class="mt-1 field" value={filters.date_to ?? ''} onchange={(e) => setFilter('date_to', e.currentTarget.value)} />
     </label>
   </div>
 
   <div class="mb-3 flex items-center justify-between text-sm text-muted">
-    <span class="font-mono tabular-nums">{count} match{count === 1 ? '' : 'es'}</span>
-    <label>Order
+    <span class="font-mono tabular-nums">{count} ocorrência{count === 1 ? '' : 's'}</span>
+    <label>ordenar
       <select class="ml-1 field inline-flex w-auto min-h-9" value={filters.ordering ?? ''} onchange={(e) => setFilter('ordering', e.currentTarget.value)}>
-        <option value="">most recent</option>
-        <option value="signal">most signals</option>
-        <option value="rank">highest rank</option>
+        <option value="">mais recentes</option>
+        <option value="signal">mais sinais</option>
+        <option value="rank">maior relevância</option>
       </select>
     </label>
   </div>
@@ -231,7 +231,7 @@
   {#if canSendDigest}
     <div class="mb-3">
       <Button variant="ghost" disabled={digestStatus === 'sending'} onclick={sendDigestForDate}>
-        {digestStatus === 'sent' ? 'Digest sent' : 'Send digest for this date'}
+        {digestStatus === 'sent' ? 'boletim enviado' : 'enviar boletim desta data'}
       </Button>
     </div>
   {/if}
@@ -250,13 +250,13 @@
         {/each}
       </ul>
     {/snippet}
-    {#snippet empty()}<p class="p-4 text-sm text-muted">No matches for these filters.</p>{/snippet}
-    {#snippet error()}<p role="alert" class="p-4 text-sm text-danger">Could not load matches.</p>{/snippet}
+    {#snippet empty()}<p class="p-4 text-sm text-muted">nenhuma ocorrência para estes filtros.</p>{/snippet}
+    {#snippet error()}<p role="alert" class="p-4 text-sm text-danger">não foi possível carregar as ocorrências.</p>{/snippet}
   </AsyncState>
 
   <div class="mt-4 flex items-center justify-between">
-    <Button variant="ghost" disabled={!hasPrev} onclick={() => goToPage(page - 1)}>Prev</Button>
-    <span class="font-mono text-sm tabular-nums text-muted">Page {page} of {totalPages}</span>
-    <Button variant="ghost" disabled={!hasNext} onclick={() => goToPage(page + 1)}>Next</Button>
+    <Button variant="ghost" disabled={!hasPrev} onclick={() => goToPage(page - 1)}>anterior</Button>
+    <span class="font-mono text-sm tabular-nums text-muted">página {page} de {totalPages}</span>
+    <Button variant="ghost" disabled={!hasNext} onclick={() => goToPage(page + 1)}>próxima</Button>
   </div>
 </section>

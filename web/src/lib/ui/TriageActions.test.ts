@@ -24,7 +24,7 @@ test('clicking Relevant calls the API and emits the updated match', async () => 
   const changed: Match[] = [];
   const user = userEvent.setup();
   render(TriageActions, { props: { match, onchange: (m: Match) => changed.push(m), onerror: () => {} } });
-  await user.click(screen.getByRole('button', { name: /relevant/i }));
+  await user.click(screen.getByRole('button', { name: /relevante/i }));
   expect(resources.markRelevant).toHaveBeenCalledWith(7);
   await vi.waitFor(() => expect(changed[0].state).toBe('relevant'));
 });
@@ -34,6 +34,6 @@ test('a rejected write surfaces an error, not a silent no-op', async () => {
   let errored = '';
   const user = userEvent.setup();
   render(TriageActions, { props: { match, onchange: () => {}, onerror: (msg: string) => (errored = msg) } });
-  await user.click(screen.getByRole('button', { name: /dismiss/i }));
+  await user.click(screen.getByRole('button', { name: /descartar/i }));
   await vi.waitFor(() => expect(errored).toBeTruthy());
 });

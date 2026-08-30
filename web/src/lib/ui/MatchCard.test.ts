@@ -26,7 +26,7 @@ test('MatchCard shows snippet, summary, category and state', () => {
   render(MatchCard, { props: { match } });
   expect(screen.getByText('summary text')).toBeInTheDocument();
   expect(screen.getByText(/licitação/i)).toBeInTheDocument();
-  expect(screen.getByText(/new/i)).toBeInTheDocument();
+  expect(screen.getByText(/nova/i)).toBeInTheDocument();
 });
 
 test('MatchCard shows the act title, client, date and section', () => {
@@ -38,7 +38,7 @@ test('MatchCard shows the act title, client, date and section', () => {
 
 test('MatchCard links to the source edition', () => {
   render(MatchCard, { props: { match } });
-  const link = screen.getByRole('link', { name: /source/i }) as HTMLAnchorElement;
+  const link = screen.getByRole('link', { name: /fonte/i }) as HTMLAnchorElement;
   expect(link.href).toContain('inlabs.in.gov.br');
   expect(link.rel).toContain('noopener');
 });

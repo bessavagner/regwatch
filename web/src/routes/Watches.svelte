@@ -44,7 +44,7 @@
       watches = watches.map((x) => (x.id === updated.id ? updated : x));
       toggleError = '';
     } catch (err) {
-      toggleError = err instanceof ApiError ? err.detail : 'Could not update the watch';
+      toggleError = err instanceof ApiError ? err.detail : 'não foi possível atualizar a busca';
     }
   }
 
@@ -59,14 +59,14 @@
 
 <section class="mx-auto max-w-2xl p-4">
   <div class="mb-3 flex items-center justify-between">
-    <h1 class="text-xl">Watches</h1>
-    <Button disabled={clients.length === 0} onclick={() => { editing = undefined; showForm = true; }}>New watch</Button>
+    <h1 class="text-xl">buscas</h1>
+    <Button disabled={clients.length === 0} onclick={() => { editing = undefined; showForm = true; }}>nova busca</Button>
   </div>
 
   {#if status !== 'idle' && status !== 'loading' && clients.length === 0}
     <p class="mb-2 text-sm text-muted">
-      Add a client first —
-      <a href="/clients" class="text-accent underline" onclick={(e) => { e.preventDefault(); navigate('/clients'); }}>Clients</a>.
+      cadastre um cliente primeiro —
+      <a href="/clients" class="text-accent underline" onclick={(e) => { e.preventDefault(); navigate('/clients'); }}>clientes</a>.
     </p>
   {/if}
 
@@ -90,19 +90,19 @@
                 <p class="as-typed text-xs text-muted">{w.client_name}</p>
                 <p class="as-typed text-sm font-medium text-ink">{w.groups.map((g) => g.terms.map((t) => t.text).join(' / ')).join(' + ')}</p>
                 <p class="mt-0.5 font-mono text-xs text-muted">
-                  <span class="as-typed">{w.section ? sectionLabel(w.section) : 'all sections'}{w.exclude.length ? ` · excl: ${w.exclude.join(', ')}` : ''}</span> ·
+                  <span class="as-typed">{w.section ? sectionLabel(w.section) : 'todas as seções'}{w.exclude.length ? ` · exceto: ${w.exclude.join(', ')}` : ''}</span> ·
                   {#if w.match_count === 0}
-                    <span class="text-danger">no matches yet — check the terms</span>
+                    <span class="text-danger">nenhuma ocorrência ainda — revise os termos</span>
                   {:else}
-                    {w.match_count} matches · last {w.last_match_at?.slice(0, 10)}
+                    {w.match_count} ocorrências · última {w.last_match_at?.slice(0, 10)}
                   {/if}
                 </p>
               </div>
               <div class="flex items-center gap-2">
-                <Badge label={w.active ? 'active' : 'inactive'} tone={w.active ? 'green' : 'gray'} />
-                <Button variant="ghost" onclick={() => { editing = w; showForm = true; }}>Edit</Button>
-                <Button variant="ghost" onclick={() => toggle(w)}>{w.active ? 'Deactivate' : 'Activate'}</Button>
-                <Button variant="ghost" onclick={() => (backfillingWatch = backfillingWatch === w ? undefined : w)}>Run on past editions</Button>
+                <Badge label={w.active ? 'ativa' : 'inativa'} tone={w.active ? 'green' : 'gray'} />
+                <Button variant="ghost" onclick={() => { editing = w; showForm = true; }}>editar</Button>
+                <Button variant="ghost" onclick={() => toggle(w)}>{w.active ? 'desativar' : 'ativar'}</Button>
+                <Button variant="ghost" onclick={() => (backfillingWatch = backfillingWatch === w ? undefined : w)}>rodar em edições anteriores</Button>
               </div>
             </div>
             {#if backfillingWatch === w}
@@ -114,7 +114,7 @@
         {/each}
       </ul>
     {/snippet}
-    {#snippet empty()}<p class="p-4 text-sm text-muted">No watches yet — create one.</p>{/snippet}
-    {#snippet error()}<p role="alert" class="p-4 text-sm text-danger">Could not load watches.</p>{/snippet}
+    {#snippet empty()}<p class="p-4 text-sm text-muted">nenhuma busca ainda — crie uma.</p>{/snippet}
+    {#snippet error()}<p role="alert" class="p-4 text-sm text-danger">não foi possível carregar as buscas.</p>{/snippet}
   </AsyncState>
 </section>

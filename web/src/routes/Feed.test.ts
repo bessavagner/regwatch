@@ -38,7 +38,7 @@ test('shows the empty state when there are no matches', async () => {
   vi.spyOn(resources, 'listClients').mockResolvedValue({ count: 0, next: null, previous: null, results: [] });
   vi.spyOn(resources, 'listMatches').mockResolvedValue(page([]));
   render(Feed);
-  await waitFor(() => expect(screen.getByText(/no matches/i)).toBeInTheDocument());
+  await waitFor(() => expect(screen.getByText(/nenhuma ocorrência/i)).toBeInTheDocument());
 });
 
 test('seeds filters from the URL query string on mount', async () => {
@@ -59,7 +59,7 @@ test('changing the state filter refetches with the state param', async () => {
   const user = userEvent.setup();
   render(Feed);
   await waitFor(() => expect(screen.getByText('snip-1')).toBeInTheDocument());
-  await user.selectOptions(screen.getByLabelText(/state/i), 'relevant');
+  await user.selectOptions(screen.getByLabelText(/situação/i), 'relevant');
   await waitFor(() =>
     expect(spy).toHaveBeenLastCalledWith(expect.objectContaining({ state: 'relevant' })),
   );
@@ -71,7 +71,7 @@ test('Next button advances the page and refetches', async () => {
   const user = userEvent.setup();
   render(Feed);
   await waitFor(() => expect(screen.getByText('snip-1')).toBeInTheDocument());
-  await user.click(screen.getByRole('button', { name: /next/i }));
+  await user.click(screen.getByRole('button', { name: /próxima/i }));
   await waitFor(() => expect(spy).toHaveBeenLastCalledWith(expect.objectContaining({ page: 2 })));
 });
 
@@ -82,11 +82,11 @@ test('marking a match relevant updates its card in place', async () => {
   const user = userEvent.setup();
   render(Feed);
   await waitFor(() => expect(screen.getByText('snip-1')).toBeInTheDocument());
-  await user.click(screen.getByRole('button', { name: /relevant/i }));
+  await user.click(screen.getByRole('button', { name: /relevante/i }));
   // Scoped to the badge <span> — the State filter's <option value="relevant"> also
   // renders the literal text "relevant" now that its label is lowercased to match
   // the app's typographic system, so an unscoped getByText is ambiguous.
-  await waitFor(() => expect(screen.getByText('relevant', { selector: 'span' })).toBeInTheDocument());
+  await waitFor(() => expect(screen.getByText('relevante', { selector: 'span' })).toBeInTheDocument());
 });
 
 test('the Send digest action is hidden unless exactly one client and one exact date are selected', async () => {
@@ -96,7 +96,7 @@ test('the Send digest action is hidden unless exactly one client and one exact d
   vi.spyOn(resources, 'listMatches').mockResolvedValue(page([m(1)]));
   render(Feed);
   await waitFor(() => expect(screen.getByText('snip-1')).toBeInTheDocument());
-  expect(screen.queryByRole('button', { name: /send digest/i })).not.toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: /enviar boletim/i })).not.toBeInTheDocument();
 });
 
 test('shows the Send digest action when filtered to one client and one exact date, and sends it', async () => {
@@ -109,15 +109,15 @@ test('shows the Send digest action when filtered to one client and one exact dat
   render(Feed);
   await waitFor(() => expect(screen.getByText('snip-1')).toBeInTheDocument());
 
-  await user.selectOptions(screen.getByLabelText(/client/i), '3');
-  await user.type(screen.getByLabelText(/^from$/i), '2026-07-01');
-  await user.type(screen.getByLabelText(/^to$/i), '2026-07-01');
+  await user.selectOptions(screen.getByLabelText(/cliente/i), '3');
+  await user.type(screen.getByLabelText(/^de$/i), '2026-07-01');
+  await user.type(screen.getByLabelText(/^até$/i), '2026-07-01');
 
-  await waitFor(() => expect(screen.getByRole('button', { name: /send digest/i })).toBeInTheDocument());
-  await user.click(screen.getByRole('button', { name: /send digest/i }));
+  await waitFor(() => expect(screen.getByRole('button', { name: /enviar boletim/i })).toBeInTheDocument());
+  await user.click(screen.getByRole('button', { name: /enviar boletim/i }));
 
   expect(sendSpy).toHaveBeenCalledWith({ client: 3, date: '2026-07-01' });
-  await waitFor(() => expect(screen.getByRole('button', { name: /digest sent/i })).toBeInTheDocument());
+  await waitFor(() => expect(screen.getByRole('button', { name: /boletim enviado/i })).toBeInTheDocument());
 });
 
 test('changing a filter writes it to the query string', async () => {
@@ -127,7 +127,7 @@ test('changing a filter writes it to the query string', async () => {
   render(Feed);
   await waitFor(() => expect(screen.getByText('snip-1')).toBeInTheDocument());
 
-  await user.selectOptions(screen.getByLabelText(/state/i), 'relevant');
+  await user.selectOptions(screen.getByLabelText(/situação/i), 'relevant');
   await waitFor(() => expect(window.location.search).toBe('?state=relevant'));
 });
 
@@ -138,7 +138,7 @@ test('browser back restores the previous filter set and refetches', async () => 
   render(Feed);
   await waitFor(() => expect(screen.getByText('snip-1')).toBeInTheDocument());
 
-  await user.selectOptions(screen.getByLabelText(/state/i), 'relevant');
+  await user.selectOptions(screen.getByLabelText(/situação/i), 'relevant');
   await waitFor(() => expect(window.location.search).toBe('?state=relevant'));
 
   // jsdom moves the history cursor but does not emit popstate for history.back(),
@@ -163,13 +163,13 @@ test('every control shows the filter the URL asked for', async () => {
   await waitFor(() => expect(screen.getByText('snip-1')).toBeInTheDocument());
 
   await waitFor(() =>
-    expect((screen.getByLabelText(/category/i) as HTMLSelectElement).value).toBe('tender'),
+    expect((screen.getByLabelText(/categoria/i) as HTMLSelectElement).value).toBe('tender'),
   );
-  expect((screen.getByLabelText(/state/i) as HTMLSelectElement).value).toBe('relevant');
-  expect((screen.getByLabelText(/section/i) as HTMLSelectElement).value).toBe('DO2');
-  expect((screen.getByLabelText(/order/i) as HTMLSelectElement).value).toBe('rank');
-  expect((screen.getByLabelText(/^from$/i) as HTMLInputElement).value).toBe('2026-07-01');
-  expect((screen.getByLabelText(/^to$/i) as HTMLInputElement).value).toBe('2026-07-02');
+  expect((screen.getByLabelText(/situação/i) as HTMLSelectElement).value).toBe('relevant');
+  expect((screen.getByLabelText(/seção/i) as HTMLSelectElement).value).toBe('DO2');
+  expect((screen.getByLabelText(/ordenar/i) as HTMLSelectElement).value).toBe('rank');
+  expect((screen.getByLabelText(/^de$/i) as HTMLInputElement).value).toBe('2026-07-01');
+  expect((screen.getByLabelText(/^até$/i) as HTMLInputElement).value).toBe('2026-07-02');
 });
 
 test('the client control shows the seeded client once its options arrive', async () => {
@@ -182,7 +182,7 @@ test('the client control shows the seeded client once its options arrive', async
   render(Feed);
   await waitFor(() => expect(screen.getByText('snip-1')).toBeInTheDocument());
   await waitFor(() =>
-    expect((screen.getByLabelText(/client/i) as HTMLSelectElement).value).toBe('3'),
+    expect((screen.getByLabelText(/cliente/i) as HTMLSelectElement).value).toBe('3'),
   );
 });
 
@@ -191,9 +191,9 @@ test('with no filters every control reads all', async () => {
   vi.spyOn(resources, 'listMatches').mockResolvedValue(page([m(1)]));
   render(Feed);
   await waitFor(() => expect(screen.getByText('snip-1')).toBeInTheDocument());
-  expect((screen.getByLabelText(/state/i) as HTMLSelectElement).value).toBe('');
-  expect((screen.getByLabelText(/section/i) as HTMLSelectElement).value).toBe('');
-  expect((screen.getByLabelText(/^from$/i) as HTMLInputElement).value).toBe('');
+  expect((screen.getByLabelText(/situação/i) as HTMLSelectElement).value).toBe('');
+  expect((screen.getByLabelText(/seção/i) as HTMLSelectElement).value).toBe('');
+  expect((screen.getByLabelText(/^de$/i) as HTMLInputElement).value).toBe('');
 });
 
 test('says which page of how many', async () => {
@@ -203,7 +203,7 @@ test('says which page of how many', async () => {
     next: '/api/matches?page=2', previous: null, results: [m(1)],
   });
   render(Feed);
-  await waitFor(() => expect(screen.getByText('Page 1 of 18')).toBeInTheDocument());
+  await waitFor(() => expect(screen.getByText('página 1 de 18')).toBeInTheDocument());
 });
 
 test('the page indicator follows the Next button', async () => {
@@ -214,9 +214,9 @@ test('the page indicator follows the Next button', async () => {
   });
   const user = userEvent.setup();
   render(Feed);
-  await waitFor(() => expect(screen.getByText('Page 1 of 18')).toBeInTheDocument());
-  await user.click(screen.getByRole('button', { name: /next/i }));
-  await waitFor(() => expect(screen.getByText('Page 2 of 18')).toBeInTheDocument());
+  await waitFor(() => expect(screen.getByText('página 1 de 18')).toBeInTheDocument());
+  await user.click(screen.getByRole('button', { name: /próxima/i }));
+  await waitFor(() => expect(screen.getByText('página 2 de 18')).toBeInTheDocument());
   expect(window.location.search).toBe('?page=2');
 });
 
@@ -224,8 +224,8 @@ test('an empty feed is page 1 of 1, never page 1 of 0', async () => {
   vi.spyOn(resources, 'listClients').mockResolvedValue({ count: 0, next: null, previous: null, results: [] });
   vi.spyOn(resources, 'listMatches').mockResolvedValue(page([], 0));
   render(Feed);
-  await waitFor(() => expect(screen.getByText(/no matches/i)).toBeInTheDocument());
-  expect(screen.getByText('Page 1 of 1')).toBeInTheDocument();
+  await waitFor(() => expect(screen.getByText(/nenhuma ocorrência/i)).toBeInTheDocument());
+  expect(screen.getByText('página 1 de 1')).toBeInTheDocument();
 });
 
 test('triaging a match out of the active filter lowers the count and the dial', async () => {
@@ -236,13 +236,13 @@ test('triaging a match out of the active filter lowers the count and the dial', 
   window.history.pushState({}, '', '/feed?state=new');
   render(Feed);
   await waitFor(() => expect(screen.getByText('snip-1')).toBeInTheDocument());
-  expect(screen.getByText('2 matches')).toBeInTheDocument();
+  expect(screen.getByText('2 ocorrências')).toBeInTheDocument();
 
-  // One Relevant button per card, so take the first.
-  await user.click(screen.getAllByRole('button', { name: /^relevant$/i })[0]);
+  // One "relevante" button per card, so take the first.
+  await user.click(screen.getAllByRole('button', { name: /^relevante$/i })[0]);
 
-  await waitFor(() => expect(screen.getByText('1 match')).toBeInTheDocument());
-  expect(screen.getByLabelText('1 matches tracked')).toBeInTheDocument();
+  await waitFor(() => expect(screen.getByText('1 ocorrência')).toBeInTheDocument());
+  expect(screen.getByLabelText('1 ocorrências acompanhadas')).toBeInTheDocument();
 });
 
 test('triaging within the active filter leaves the count alone', async () => {
@@ -254,9 +254,9 @@ test('triaging within the active filter leaves the count alone', async () => {
   render(Feed);
   await waitFor(() => expect(screen.getByText('snip-1')).toBeInTheDocument());
 
-  await user.click(screen.getAllByRole('button', { name: /^relevant$/i })[0]);
-  await waitFor(() => expect(screen.getByText('relevant', { selector: 'span' })).toBeInTheDocument());
-  expect(screen.getByText('2 matches')).toBeInTheDocument();
+  await user.click(screen.getAllByRole('button', { name: /^relevante$/i })[0]);
+  await waitFor(() => expect(screen.getByText('relevante', { selector: 'span' })).toBeInTheDocument());
+  expect(screen.getByText('2 ocorrências')).toBeInTheDocument();
 });
 
 test('emptying a page that still has matches behind it reloads it', async () => {
@@ -273,7 +273,7 @@ test('emptying a page that still has matches behind it reloads it', async () => 
   await waitFor(() => expect(screen.getByText('snip-1')).toBeInTheDocument());
   const before = spy.mock.calls.length;
 
-  await user.click(screen.getAllByRole('button', { name: /^relevant$/i })[0]);
+  await user.click(screen.getAllByRole('button', { name: /^relevante$/i })[0]);
 
   // count drops to 25, which is still one full page, so page 1 reloads.
   await waitFor(() => expect(spy.mock.calls.length).toBeGreaterThan(before));
@@ -293,7 +293,7 @@ test('emptying the last page steps back to the page before it', async () => {
   render(Feed);
   await waitFor(() => expect(screen.getByText('snip-1')).toBeInTheDocument());
 
-  await user.click(screen.getAllByRole('button', { name: /^relevant$/i })[0]);
+  await user.click(screen.getAllByRole('button', { name: /^relevante$/i })[0]);
 
   // count drops to 25 -- one page -- so page 2 no longer exists.
   await waitFor(() => expect(spy).toHaveBeenLastCalledWith(expect.objectContaining({ page: 1 })));
@@ -313,8 +313,8 @@ test('emptying the only page just shows the empty state', async () => {
   render(Feed);
   await waitFor(() => expect(screen.getByText('snip-1')).toBeInTheDocument());
 
-  await user.click(screen.getAllByRole('button', { name: /^relevant$/i })[0]);
-  await waitFor(() => expect(screen.getByText(/no matches/i)).toBeInTheDocument());
+  await user.click(screen.getAllByRole('button', { name: /^relevante$/i })[0]);
+  await waitFor(() => expect(screen.getByText(/nenhuma ocorrência/i)).toBeInTheDocument());
 });
 
 test('the order control offers sorting by signal and puts it in the URL', async () => {
@@ -323,7 +323,7 @@ test('the order control offers sorting by signal and puts it in the URL', async 
   render(Feed);
   await waitFor(() => expect(screen.getByText('snip-1')).toBeInTheDocument());
 
-  await userEvent.selectOptions(screen.getByLabelText(/order/i), 'signal');
+  await userEvent.selectOptions(screen.getByLabelText(/ordenar/i), 'signal');
   await waitFor(() =>
     expect(list).toHaveBeenLastCalledWith(expect.objectContaining({ ordering: 'signal' })),
   );
@@ -340,11 +340,11 @@ test('dismissing a match removes it from the default feed and lowers the count',
   const user = userEvent.setup();
   render(Feed);
   await waitFor(() => expect(screen.getByText('snip-1')).toBeInTheDocument());
-  expect(screen.getByText('2 matches')).toBeInTheDocument();
+  expect(screen.getByText('2 ocorrências')).toBeInTheDocument();
 
-  await user.click(screen.getAllByRole('button', { name: /dismiss/i })[0]);
+  await user.click(screen.getAllByRole('button', { name: /descartar/i })[0]);
 
   await waitFor(() => expect(screen.queryByText('snip-1')).toBeNull());
   expect(screen.getByText('snip-2')).toBeInTheDocument();
-  expect(screen.getByText('1 match')).toBeInTheDocument();
+  expect(screen.getByText('1 ocorrência')).toBeInTheDocument();
 });

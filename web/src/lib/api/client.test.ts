@@ -37,7 +37,7 @@ test('a 400 throws ApiError with field errors', async () => {
   vi.stubGlobal(
     'fetch',
     vi.fn().mockResolvedValue(
-      new Response(JSON.stringify({ terms: ['must not be empty'] }), {
+      new Response(JSON.stringify({ terms: ['não pode ficar vazio'] }), {
         status: 400,
         headers: { 'Content-Type': 'application/json' },
       }),
@@ -45,7 +45,7 @@ test('a 400 throws ApiError with field errors', async () => {
   );
   await expect(api.post('/api/watches', {})).rejects.toMatchObject({
     status: 400,
-    fields: { terms: ['must not be empty'] },
+    fields: { terms: ['não pode ficar vazio'] },
   });
   await expect(api.post('/api/watches', {})).rejects.toBeInstanceOf(ApiError);
 });

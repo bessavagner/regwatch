@@ -36,8 +36,8 @@
 
 <section class="mx-auto max-w-2xl p-4">
   <div class="mb-3 flex items-center justify-between">
-    <h1 class="text-xl">Clients</h1>
-    <Button onclick={() => { editing = undefined; showForm = true; }}>New client</Button>
+    <h1 class="text-xl">clientes</h1>
+    <Button onclick={() => { editing = undefined; showForm = true; }}>novo cliente</Button>
   </div>
 
   {#if showForm}
@@ -56,18 +56,18 @@
             <div class="flex items-center justify-between gap-2">
               <div>
                 <p class="as-typed text-sm font-medium text-ink">{c.name}</p>
-                <p class="as-typed mt-0.5 text-xs text-muted">{c.email || 'no digest recipient'}</p>
+                <p class="as-typed mt-0.5 text-xs text-muted">{c.email || 'sem destinatário de boletim'}</p>
               </div>
               <div class="flex items-center gap-2">
-                {#if c.is_house}<Badge label="house" tone="blue" />{/if}
-                <Button variant="ghost" onclick={() => { editing = c; showForm = true; }}>Edit</Button>
+                {#if c.is_house}<Badge label="interno" tone="blue" />{/if}
+                <Button variant="ghost" onclick={() => { editing = c; showForm = true; }}>editar</Button>
               </div>
             </div>
           </li>
         {/each}
       </ul>
     {/snippet}
-    {#snippet empty()}<p class="p-4 text-sm text-muted">No clients yet — create one.</p>{/snippet}
-    {#snippet error()}<p role="alert" class="p-4 text-sm text-danger">Could not load clients.</p>{/snippet}
+    {#snippet empty()}<p class="p-4 text-sm text-muted">nenhum cliente ainda — crie um.</p>{/snippet}
+    {#snippet error()}<p role="alert" class="p-4 text-sm text-danger">não foi possível carregar os clientes.</p>{/snippet}
   </AsyncState>
 </section>

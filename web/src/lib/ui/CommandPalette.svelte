@@ -82,8 +82,8 @@
       onkeydown={onKeydown}
       type="text"
       class="cmdk-input"
-      placeholder="Jump to…"
-      aria-label="Jump to page"
+      placeholder="ir para…"
+      aria-label="ir para a página"
     />
   </div>
   {#if filtered.length}
@@ -105,6 +105,6 @@
       {/each}
     </ul>
   {:else}
-    <p class="cmdk-empty">No matches.</p>
+    <p class="cmdk-empty">nada encontrado.</p>
   {/if}
 </dialog>
