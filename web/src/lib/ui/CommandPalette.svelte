@@ -1,8 +1,9 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import { navigate } from '../router/router.svelte';
+  import type { Command } from '../commands';
 
-  let { routes }: { routes: { path: string; label: string }[] } = $props();
+  let { commands }: { commands: Command[] } = $props();
 
   let open = $state(false);
   let query = $state('');
@@ -10,8 +11,16 @@
   let dialogEl: HTMLDialogElement;
   let inputEl: HTMLInputElement;
 
+  const matching = $derived(
+    commands.filter((c) => c.label.toLowerCase().includes(query.trim().toLowerCase())),
+  );
+  // Only routes take the roving selection: a shortcut has nothing to open, and
+  // letting Enter land on one would make the palette lie about what it does.
   const filtered = $derived(
-    routes.filter((r) => r.label.toLowerCase().includes(query.trim().toLowerCase())),
+    matching.filter((c): c is Extract<Command, { kind: 'route' }> => c.kind === 'route'),
+  );
+  const shortcuts = $derived(
+    matching.filter((c): c is Extract<Command, { kind: 'shortcut' }> => c.kind === 'shortcut'),
   );
 
   export function show() {
@@ -104,7 +113,19 @@
         </li>
       {/each}
     </ul>
-  {:else}
+  {/if}
+  {#if shortcuts.length}
+    <p class="cmdk-group">atalhos da triagem</p>
+    <ul class="cmdk-list">
+      {#each shortcuts as sc (sc.label)}
+        <li class="cmdk-item">
+          <span>{sc.label}</span>
+          <span class="cmdk-item-key">{sc.keys}</span>
+        </li>
+      {/each}
+    </ul>
+  {/if}
+  {#if !filtered.length && !shortcuts.length}
     <p class="cmdk-empty">nada encontrado.</p>
   {/if}
 </dialog>

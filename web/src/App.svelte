@@ -3,6 +3,7 @@
   import { route, navigate } from './lib/router/router.svelte';
   import { auth, loadMe } from './lib/stores/auth.svelte';
   import CommandPalette from './lib/ui/CommandPalette.svelte';
+  import { TRIAGE_SHORTCUTS, type Command } from './lib/commands';
   import Button from './lib/ui/Button.svelte';
   import Login from './routes/Login.svelte';
   import Feed from './routes/Feed.svelte';
@@ -16,6 +17,12 @@
     { path: '/watches', label: 'buscas' },
     { path: '/clients', label: 'clientes' },
     { path: '/digests', label: 'boletins' },
+  ];
+  // Routes first, then the triage keys: the palette is where a shortcut is
+  // found, so it carries both registers in one list.
+  const COMMANDS: Command[] = [
+    ...NAV_ROUTES.map((r) => ({ kind: 'route' as const, ...r })),
+    ...TRIAGE_SHORTCUTS,
   ];
 
   let palette: CommandPalette | undefined = $state();
@@ -55,7 +62,7 @@
         <Button variant="ghost" onclick={() => auth.logout().then(() => navigate('/login'))}>sair</Button>
       </div>
     </nav>
-    <CommandPalette bind:this={palette} routes={NAV_ROUTES} />
+    <CommandPalette bind:this={palette} commands={COMMANDS} />
   {/if}
   <Router
     routes={{ '/login': login, '/feed': feed, '/watches': watchesRoute, '/clients': clientsRoute, '/digests': digestsRoute }}

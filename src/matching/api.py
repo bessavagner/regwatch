@@ -1,3 +1,4 @@
+from django.http import Http404
 from rest_framework import serializers, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -92,3 +93,45 @@ class MatchViewSet(WorkspaceScopedQuerysetMixin, viewsets.ReadOnlyModelViewSet):
     @action(detail=True, methods=["post"])
     def dismiss(self, request, pk=None):
         return self._set_state("dismissed")
+
+    @action(detail=False, methods=["post"])
+    def bulk_dismiss(self, request):
+        """Dismiss many matches at once: an explicit id list, or one agency.
+
+        Both forms are narrowed by get_queryset(), so a bulk mutation can never
+        reach further than the list the caller is looking at, nor outside their
+        workspace.
+
+        There is deliberately no "dismiss everything currently filtered" form.
+        A mutation over hundreds of rows driven only by a re-parsed query string
+        is how someone dismisses a day they meant to read, and the undo for that
+        is reconstructing which rows were already dismissed beforehand.
+        """
+        ids = request.data.get("ids")
+        agency = request.data.get("agency")
+
+        if (ids is None) == (agency is None):
+            raise serializers.ValidationError(
+                "informe exatamente um de: ids ou agency"
+            )
+
+        qs = self.get_queryset()
+
+        if ids is not None:
+            if not isinstance(ids, list) or not all(isinstance(i, int) for i in ids):
+                raise serializers.ValidationError("ids precisa ser uma lista de inteiros")
+            qs = qs.filter(pk__in=ids)
+            # All-or-nothing. Silently dismissing the visible subset would
+            # report a number the caller cannot act on, and would answer
+            # "does this id exist elsewhere?" for rows they cannot see.
+            if qs.count() != len(set(ids)):
+                raise Http404("uma ou mais ocorrências não foram encontradas")
+        else:
+            if not isinstance(agency, str) or not agency.strip():
+                raise serializers.ValidationError("agency não pode ficar vazio")
+            qs = qs.filter(act__agency=agency)
+
+        # update() rather than a save() loop: one statement, and the count it
+        # returns is the number of rows that actually changed.
+        dismissed = qs.update(state="dismissed")
+        return Response({"dismissed": dismissed})

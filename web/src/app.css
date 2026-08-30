@@ -239,6 +239,63 @@ dialog.cmdk-dialog::backdrop { background: oklch(10% 0.01 265 / 0.55); }
 }
 .rows > .row:last-child { border-bottom: none; }
 
+/* Keyboard triage: the focused row carries the brass rule and a brighter
+   emission than hover, so the cursor is findable without hunting. Selection is
+   the coral register (accent-2), never brass — the two must stay tellable apart
+   when a row is both. */
+.row { position: relative; }
+.row.is-focused {
+  background: radial-gradient(120% 100% at 0% 0%, color-mix(in oklch, var(--color-accent) 14%, transparent) 0%, transparent 60%);
+  box-shadow: inset 3px 0 0 var(--color-accent);
+}
+.row.is-selected { box-shadow: inset 3px 0 0 var(--color-accent-2); }
+.row.is-focused.is-selected {
+  box-shadow: inset 3px 0 0 var(--color-accent), inset 6px 0 0 var(--color-accent-2);
+}
+/* Feed rows only: a two-column row (checkbox, card). The other lists keep the
+   plain block .row -- MatchCard's own root is a flex container, so a float here
+   would sit on top of it rather than beside it. */
+.row--triage { display: flex; align-items: flex-start; gap: var(--space-sm); }
+.row--triage > .row__content { flex: 1; min-width: 0; }
+.row__select {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  min-width: 44px;
+  flex: none;
+}
+
+.bulk-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-sm);
+  margin-bottom: var(--space-sm);
+  padding: var(--space-sm) var(--space-md);
+  border: 1px solid var(--color-rule);
+  border-radius: var(--radius-card);
+  background: radial-gradient(120% 100% at 0% 0%, var(--color-paper-emit) 0%, transparent 60%);
+}
+.bulk-bar__label {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--color-ink-2);
+}
+
+/* Shortcut rows in the command palette — mono register, like every other key cap. */
+.cmdk-group {
+  border-top: 1px solid var(--color-rule);
+  padding: var(--space-sm) var(--space-md) var(--space-xs);
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-muted);
+}
+
 /* Standalone panel (create/edit forms) — hairline + inner emission, no hover lift (not itself hoverable) */
 .panel {
   border-radius: var(--radius-card);

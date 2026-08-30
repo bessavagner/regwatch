@@ -335,3 +335,156 @@ def test_dismissed_matches_are_still_reachable_by_asking_for_them(triaged_feed):
 def test_an_explicit_state_filter_is_unaffected(triaged_feed):
     rows = triaged_feed.get("/api/matches?state=new").data["results"]
     assert [r["state"] for r in rows] == ["new"]
+
+
+# --- Bulk dismiss (TASK-024 / D7) -------------------------------------------
+#
+# The most damaging thing in the feed: a mutation over many rows at once. The
+# scoping is tested before the ergonomics, deliberately.
+
+def _match_with_agency(ws, agency, *, date=datetime.date(2026, 7, 1), state="new"):
+    match = _match(ws, date=date, state=state)
+    match.act.agency = agency
+    match.act.save(update_fields=["agency"])
+    return match
+
+
+def _api(user):
+    api = APIClient()
+    api.force_authenticate(user=user)
+    return api
+
+
+@pytest.mark.django_db
+def test_bulk_dismiss_takes_an_explicit_id_list_and_reports_the_count(firm_a):
+    ws, user = firm_a
+    a = _match_with_agency(ws, "Ministério da Saúde")
+    b = _match_with_agency(ws, "Ministério da Saúde")
+    untouched = _match_with_agency(ws, "Ministério da Saúde")
+
+    resp = _api(user).post("/api/matches/bulk_dismiss", {"ids": [a.id, b.id]}, format="json")
+
+    assert resp.status_code == 200
+    assert resp.data["dismissed"] == 2
+    a.refresh_from_db(); b.refresh_from_db(); untouched.refresh_from_db()
+    assert a.state == "dismissed" and b.state == "dismissed"
+    assert untouched.state == "new"
+
+
+@pytest.mark.django_db
+def test_bulk_dismiss_refuses_to_cross_a_workspace_boundary(firm_a, firm_b):
+    ws_a, user_a = firm_a
+    ws_b, _ = firm_b
+    mine = _match_with_agency(ws_a, "Org")
+    theirs = _match_with_agency(ws_b, "Org")
+
+    resp = _api(user_a).post(
+        "/api/matches/bulk_dismiss", {"ids": [mine.id, theirs.id]}, format="json")
+
+    # All-or-nothing: a partial apply would report a number the caller cannot
+    # act on, and would leak the existence of the other workspace's row.
+    assert resp.status_code == 404
+    mine.refresh_from_db(); theirs.refresh_from_db()
+    assert mine.state == "new"
+    assert theirs.state == "new"
+
+
+@pytest.mark.django_db
+def test_bulk_dismiss_by_agency_only_touches_that_agency(firm_a):
+    ws, user = firm_a
+    hit_a = _match_with_agency(ws, "Ministério da Saúde")
+    hit_b = _match_with_agency(ws, "Ministério da Saúde")
+    other = _match_with_agency(ws, "Ministério da Educação")
+
+    resp = _api(user).post(
+        "/api/matches/bulk_dismiss", {"agency": "Ministério da Saúde"}, format="json")
+
+    assert resp.status_code == 200
+    assert resp.data["dismissed"] == 2
+    hit_a.refresh_from_db(); hit_b.refresh_from_db(); other.refresh_from_db()
+    assert hit_a.state == "dismissed" and hit_b.state == "dismissed"
+    assert other.state == "new"
+
+
+@pytest.mark.django_db
+def test_bulk_dismiss_by_agency_stays_inside_the_workspace(firm_a, firm_b):
+    ws_a, user_a = firm_a
+    ws_b, _ = firm_b
+    mine = _match_with_agency(ws_a, "Org")
+    theirs = _match_with_agency(ws_b, "Org")
+
+    resp = _api(user_a).post("/api/matches/bulk_dismiss", {"agency": "Org"}, format="json")
+
+    assert resp.data["dismissed"] == 1
+    theirs.refresh_from_db()
+    assert theirs.state == "new"
+    mine.refresh_from_db()
+    assert mine.state == "dismissed"
+
+
+@pytest.mark.django_db
+def test_bulk_dismiss_by_agency_honours_the_callers_other_filters(firm_a):
+    ws, user = firm_a
+    in_range = _match_with_agency(ws, "Org", date=datetime.date(2026, 7, 5))
+    out_of_range = _match_with_agency(ws, "Org", date=datetime.date(2026, 7, 20))
+
+    # Same query string the feed is showing, so the button cannot mean something
+    # different from the list it sits above.
+    resp = _api(user).post(
+        "/api/matches/bulk_dismiss?date_from=2026-07-01&date_to=2026-07-10",
+        {"agency": "Org"}, format="json")
+
+    assert resp.data["dismissed"] == 1
+    in_range.refresh_from_db(); out_of_range.refresh_from_db()
+    assert in_range.state == "dismissed"
+    assert out_of_range.state == "new"
+
+
+@pytest.mark.django_db
+def test_bulk_dismiss_needs_an_explicit_target(firm_a):
+    ws, user = firm_a
+    match = _match_with_agency(ws, "Org")
+
+    resp = _api(user).post("/api/matches/bulk_dismiss", {}, format="json")
+
+    # Never "everything currently filtered" by default: that is how someone
+    # dismisses 700 rows they meant to read.
+    assert resp.status_code == 400
+    match.refresh_from_db()
+    assert match.state == "new"
+
+
+@pytest.mark.django_db
+def test_bulk_dismiss_refuses_an_ambiguous_request(firm_a):
+    ws, user = firm_a
+    match = _match_with_agency(ws, "Org")
+
+    resp = _api(user).post(
+        "/api/matches/bulk_dismiss",
+        {"ids": [match.id], "agency": "Org"}, format="json")
+
+    assert resp.status_code == 400
+    match.refresh_from_db()
+    assert match.state == "new"
+
+
+@pytest.mark.django_db
+def test_bulk_dismiss_does_not_recount_rows_already_dismissed(firm_a):
+    ws, user = firm_a
+    _match_with_agency(ws, "Org", state="dismissed")
+    live = _match_with_agency(ws, "Org")
+
+    resp = _api(user).post("/api/matches/bulk_dismiss", {"agency": "Org"}, format="json")
+
+    # get_queryset() excludes dismissed when no state filter is given, so the
+    # number reported is the number of rows that actually changed.
+    assert resp.data["dismissed"] == 1
+    live.refresh_from_db()
+    assert live.state == "dismissed"
+
+
+@pytest.mark.django_db
+def test_bulk_dismiss_rejects_a_non_list_of_ids(firm_a):
+    _ws, user = firm_a
+    resp = _api(user).post("/api/matches/bulk_dismiss", {"ids": "1,2,3"}, format="json")
+    assert resp.status_code == 400

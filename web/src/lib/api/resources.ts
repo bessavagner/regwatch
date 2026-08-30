@@ -32,6 +32,14 @@ export const listDigests = (client?: string) =>
 export const markRelevant = (id: number) => api.post<Match>(`/api/matches/${id}/relevant`);
 export const dismissMatch = (id: number) => api.post<Match>(`/api/matches/${id}/dismiss`);
 
+// One of `ids` or `agency`, never both: the server refuses an ambiguous request
+// and has no "dismiss everything currently filtered" form on purpose. `params`
+// carries the feed's current filters so the server narrows the same way the
+// visible list does.
+export type BulkDismissBody = { ids: number[] } | { agency: string };
+export const bulkDismiss = (body: BulkDismissBody, params: MatchParams = {}) =>
+  api.post<{ dismissed: number }>(`/api/matches/bulk_dismiss${qs({ ...params, page: undefined })}`, body);
+
 export interface WatchBody {
   client: number;
   groups: WatchGroup[];

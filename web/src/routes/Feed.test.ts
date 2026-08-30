@@ -348,3 +348,173 @@ test('dismissing a match removes it from the default feed and lowers the count',
   expect(screen.getByText('snip-2')).toBeInTheDocument();
   expect(screen.getByText('1 ocorrência')).toBeInTheDocument();
 });
+
+// --- Keyboard triage and bulk dismiss (TASK-024 / D7) ----------------------
+//
+// The point of D7: triage has to be a two-minute habit, which means the hands
+// never leave the keyboard and a whole agency can go in one action.
+
+const withAgency = (id: number, agency: string, state: Match['state'] = 'new'): Match => ({
+  ...m(id, state),
+  act_detail: { ...m(id).act_detail, agency },
+});
+
+function renderFeed(matches: Match[], count = matches.length) {
+  vi.spyOn(resources, 'listClients').mockResolvedValue({ count: 0, next: null, previous: null, results: [] });
+  vi.spyOn(resources, 'listMatches').mockResolvedValue(page(matches, count));
+  render(Feed);
+}
+
+const focusedRow = () => document.querySelector('li[aria-current="true"]');
+
+test('j moves the focus down the list and k moves it back up', async () => {
+  const user = userEvent.setup();
+  renderFeed([m(1), m(2)]);
+  await waitFor(() => expect(screen.getByText('snip-1')).toBeInTheDocument());
+
+  await user.keyboard('j');
+  await waitFor(() => expect(focusedRow()).toHaveTextContent('snip-1'));
+
+  await user.keyboard('j');
+  await waitFor(() => expect(focusedRow()).toHaveTextContent('snip-2'));
+
+  await user.keyboard('k');
+  await waitFor(() => expect(focusedRow()).toHaveTextContent('snip-1'));
+});
+
+test('the focus stops at the ends instead of wrapping', async () => {
+  const user = userEvent.setup();
+  renderFeed([m(1), m(2)]);
+  await waitFor(() => expect(screen.getByText('snip-1')).toBeInTheDocument());
+
+  await user.keyboard('k');
+  await waitFor(() => expect(focusedRow()).toHaveTextContent('snip-1'));
+
+  await user.keyboard('jjjj');
+  await waitFor(() => expect(focusedRow()).toHaveTextContent('snip-2'));
+});
+
+test('r marks the focused match relevant', async () => {
+  const user = userEvent.setup();
+  const spy = vi.spyOn(resources, 'markRelevant').mockResolvedValue({ ...m(2), state: 'relevant' });
+  renderFeed([m(1), m(2)]);
+  await waitFor(() => expect(screen.getByText('snip-1')).toBeInTheDocument());
+
+  await user.keyboard('jj');
+  await waitFor(() => expect(focusedRow()).toHaveTextContent('snip-2'));
+  await user.keyboard('r');
+
+  await waitFor(() => expect(spy).toHaveBeenCalledWith(2));
+});
+
+test('d dismisses the focused match', async () => {
+  const user = userEvent.setup();
+  const spy = vi.spyOn(resources, 'dismissMatch').mockResolvedValue({ ...m(1), state: 'dismissed' });
+  renderFeed([m(1), m(2)]);
+  await waitFor(() => expect(screen.getByText('snip-1')).toBeInTheDocument());
+
+  await user.keyboard('j');
+  await user.keyboard('d');
+
+  await waitFor(() => expect(spy).toHaveBeenCalledWith(1));
+});
+
+test('the shortcuts do nothing while typing in a filter control', async () => {
+  const user = userEvent.setup();
+  const relevant = vi.spyOn(resources, 'markRelevant');
+  const dismiss = vi.spyOn(resources, 'dismissMatch');
+  renderFeed([m(1)]);
+  await waitFor(() => expect(screen.getByText('snip-1')).toBeInTheDocument());
+  await user.keyboard('j');
+
+  // A date field takes literal characters; a select takes them as type-ahead.
+  // Either way the feed must not treat them as verdicts.
+  const dateField = screen.getByLabelText(/^de$/i);
+  await user.click(dateField);
+  await user.keyboard('rdjk');
+
+  expect(relevant).not.toHaveBeenCalled();
+  expect(dismiss).not.toHaveBeenCalled();
+});
+
+test('a modified key is left to the browser', async () => {
+  const user = userEvent.setup();
+  const dismiss = vi.spyOn(resources, 'dismissMatch');
+  renderFeed([m(1)]);
+  await waitFor(() => expect(screen.getByText('snip-1')).toBeInTheDocument());
+  await user.keyboard('j');
+
+  await user.keyboard('{Control>}d{/Control}');
+
+  expect(dismiss).not.toHaveBeenCalled();
+});
+
+test('x selects the focused row and the bar counts the selection', async () => {
+  const user = userEvent.setup();
+  renderFeed([m(1), m(2)]);
+  await waitFor(() => expect(screen.getByText('snip-1')).toBeInTheDocument());
+
+  await user.keyboard('jx');
+
+  await waitFor(() => expect(screen.getByText(/1 selecionada/i)).toBeInTheDocument());
+  await user.keyboard('jx');
+  await waitFor(() => expect(screen.getByText(/2 selecionadas/i)).toBeInTheDocument());
+});
+
+test('dismissing the selection asks for confirmation before it fires', async () => {
+  const user = userEvent.setup();
+  const spy = vi.spyOn(resources, 'bulkDismiss').mockResolvedValue({ dismissed: 2 });
+  renderFeed([m(1), m(2)]);
+  await waitFor(() => expect(screen.getByText('snip-1')).toBeInTheDocument());
+  await user.keyboard('jxjx');
+
+  await user.click(screen.getByRole('button', { name: /descartar selecionadas/i }));
+  // First click only arms it — nothing has been dismissed yet.
+  expect(spy).not.toHaveBeenCalled();
+
+  await user.click(screen.getByRole('button', { name: /confirmar/i }));
+  await waitFor(() =>
+    expect(spy).toHaveBeenCalledWith({ ids: [1, 2] }, expect.anything()),
+  );
+});
+
+test('dismissing a whole agency names it and confirms first', async () => {
+  const user = userEvent.setup();
+  const spy = vi.spyOn(resources, 'bulkDismiss').mockResolvedValue({ dismissed: 3 });
+  renderFeed([withAgency(1, 'Ministério da Saúde'), withAgency(2, 'Ministério da Saúde')]);
+  await waitFor(() => expect(screen.getByText('snip-1')).toBeInTheDocument());
+  await user.keyboard('j');
+
+  const button = screen.getByRole('button', { name: /descartar todas desta origem/i });
+  await user.click(button);
+  expect(spy).not.toHaveBeenCalled();
+
+  await user.click(screen.getByRole('button', { name: /confirmar/i }));
+  await waitFor(() =>
+    expect(spy).toHaveBeenCalledWith({ agency: 'Ministério da Saúde' }, expect.anything()),
+  );
+});
+
+test('a bulk dismiss removes the rows and lowers the count', async () => {
+  const user = userEvent.setup();
+  vi.spyOn(resources, 'bulkDismiss').mockResolvedValue({ dismissed: 1 });
+  renderFeed([m(1), m(2)], 2);
+  await waitFor(() => expect(screen.getByText('snip-1')).toBeInTheDocument());
+  expect(screen.getByText('2 ocorrências')).toBeInTheDocument();
+
+  await user.keyboard('jx');
+  await user.click(screen.getByRole('button', { name: /descartar selecionadas/i }));
+  await user.click(screen.getByRole('button', { name: /confirmar/i }));
+
+  await waitFor(() => expect(screen.queryByText('snip-1')).not.toBeInTheDocument());
+  expect(screen.getByText('1 ocorrência')).toBeInTheDocument();
+});
+
+test('there is no agency action when the focused act names no agency', async () => {
+  const user = userEvent.setup();
+  renderFeed([m(1)]);
+  await waitFor(() => expect(screen.getByText('snip-1')).toBeInTheDocument());
+  await user.keyboard('j');
+
+  expect(screen.queryByRole('button', { name: /desta origem/i })).not.toBeInTheDocument();
+});

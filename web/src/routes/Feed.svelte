@@ -1,5 +1,8 @@
 <script lang="ts">
-  import { listMatches, listClients, listWatches, sendDigest, type MatchParams } from '../lib/api/resources';
+  import {
+    listMatches, listClients, listWatches, sendDigest, markRelevant, dismissMatch,
+    bulkDismiss, type MatchParams, type BulkDismissBody,
+  } from '../lib/api/resources';
   import type { Client, Match } from '../lib/api/types';
   import { ApiError } from '../lib/api/client';
   import { STATES, SECTIONS } from '../lib/constants';
@@ -32,6 +35,16 @@
   let watchesCount = $state(0);
   let actionError = $state('');
   let digestStatus = $state<'idle' | 'sending' | 'sent' | 'error'>('idle');
+
+  // Keyboard triage. focused is an index into the rendered page, not a match id:
+  // the list is re-fetched under it, so an id would go stale on every reload.
+  let focused = $state(-1);
+  // An array, not a Set: the order the operator picked in is the order the
+  // request is sent in, which makes the confirmation legible.
+  let selected = $state<number[]>([]);
+  let pendingBulk = $state<
+    { body: BulkDismissBody; visibleIds: number[]; label: string } | null
+  >(null);
 
   let filters = $state<MatchParams>(initialView.filters);
 
@@ -133,6 +146,114 @@
     }
   }
 
+  let focusedMatch = $derived(
+    focused >= 0 && focused < matches.length ? matches[focused] : undefined,
+  );
+  let focusedAgency = $derived(focusedMatch?.act_detail.agency ?? '');
+
+  // A checkbox is not a typing target: blocking the shortcuts after a click on
+  // one would strand the hands between mouse and keyboard, which is the habit
+  // this whole feature exists to remove.
+  function isTypingTarget(target: EventTarget | null): boolean {
+    const el = target as HTMLElement | null;
+    if (!el || !el.tagName) return false;
+    if (el.tagName === 'INPUT') return (el as HTMLInputElement).type !== 'checkbox';
+    return el.tagName === 'TEXTAREA' || el.tagName === 'SELECT' || el.isContentEditable;
+  }
+
+  async function judge(fn: (id: number) => Promise<import('../lib/api/types').Match>) {
+    const target = focusedMatch;
+    if (!target) return;
+    try {
+      applyUpdate(await fn(target.id));
+      // applyUpdate may have dropped the row; keep the cursor on the page.
+      focused = Math.min(focused, matches.length - 1);
+    } catch (err) {
+      actionError = err instanceof ApiError ? err.detail : 'não foi possível concluir a ação';
+    }
+  }
+
+  function toggleSelected(id: number) {
+    selected = selected.includes(id) ? selected.filter((n) => n !== id) : [...selected, id];
+    pendingBulk = null;
+  }
+
+  function onKeydown(e: KeyboardEvent) {
+    // Leave the browser's own bindings alone, and let a text field have its letters.
+    if (e.metaKey || e.ctrlKey || e.altKey) return;
+    if (isTypingTarget(e.target)) return;
+    // The command palette is a modal: while it is up it owns the keyboard.
+    if (document.querySelector('dialog[open]')) return;
+    const key = e.key.toLowerCase();
+    if (!['j', 'k', 'r', 'd', 'x'].includes(key)) return;
+    if (matches.length === 0) return;
+    e.preventDefault();
+    if (key === 'j') focused = Math.min(focused + 1, matches.length - 1);
+    else if (key === 'k') focused = Math.max(focused - 1, 0);
+    else if (key === 'r') judge(markRelevant);
+    else if (key === 'd') judge(dismissMatch);
+    else if (key === 'x' && focusedMatch) toggleSelected(focusedMatch.id);
+  }
+
+  $effect(() => {
+    window.addEventListener('keydown', onKeydown);
+    return () => window.removeEventListener('keydown', onKeydown);
+  });
+
+  // Keep the focused row on screen. Optional call: jsdom has no scrollIntoView.
+  $effect(() => {
+    if (focused < 0) return;
+    const el = document.querySelector(`li[data-row="${focused}"]`) as HTMLElement | null;
+    el?.scrollIntoView?.({ block: 'nearest' });
+  });
+
+  function armSelectionDismiss() {
+    const ids = [...selected];
+    pendingBulk = {
+      body: { ids },
+      visibleIds: ids,
+      label: `descartar ${ids.length} ocorrência${ids.length === 1 ? '' : 's'}`,
+    };
+  }
+
+  function armAgencyDismiss() {
+    const agency = focusedAgency;
+    if (!agency) return;
+    pendingBulk = {
+      body: { agency },
+      visibleIds: matches.filter((m) => m.act_detail.agency === agency).map((m) => m.id),
+      label: `descartar todas de ${agency}`,
+    };
+  }
+
+  async function confirmBulk() {
+    const pending = pendingBulk;
+    if (!pending) return;
+    try {
+      const { dismissed } = await bulkDismiss(pending.body, filters);
+      applyBulkRemoval(pending.visibleIds, dismissed);
+    } catch (err) {
+      actionError = err instanceof ApiError ? err.detail : 'não foi possível descartar';
+    } finally {
+      pendingBulk = null;
+    }
+  }
+
+  // The bulk twin of applyUpdate. The server may have dismissed rows that are
+  // not on this page, so the visible rows and the count move by different
+  // numbers: the rows we can see, and the total the server actually changed.
+  function applyBulkRemoval(visibleIds: number[], dismissed: number) {
+    selected = [];
+    const leavesTheSet = filters.state ? filters.state !== 'dismissed' : true;
+    if (leavesTheSet) {
+      const gone = new Set(visibleIds);
+      matches = matches.filter((m) => !gone.has(m.id));
+      count = Math.max(0, count - dismissed);
+    }
+    focused = Math.min(focused, matches.length - 1);
+    if (matches.length === 0) advanceAfterEmptying();
+  }
+
   function writeView(mode: 'push' | 'replace') {
     const url = `${window.location.pathname}${queryFromView({ filters, page })}`;
     if (mode === 'push') window.history.pushState({}, '', url);
@@ -228,6 +349,27 @@
 
   {#if actionError}<p role="alert" class="mb-2 text-sm text-danger">{actionError}</p>{/if}
 
+  {#if pendingBulk}
+    <div class="bulk-bar" role="group" aria-label="confirmar descarte em lote">
+      <span class="bulk-bar__label">{pendingBulk.label}?</span>
+      <Button variant="primary" onclick={confirmBulk}>confirmar</Button>
+      <Button variant="ghost" onclick={() => (pendingBulk = null)}>cancelar</Button>
+    </div>
+  {:else if selected.length || focusedAgency}
+    <div class="bulk-bar" role="group" aria-label="ações em lote">
+      {#if selected.length}
+        <span class="bulk-bar__label">
+          {selected.length} selecionada{selected.length === 1 ? '' : 's'}
+        </span>
+        <Button variant="ghost" onclick={armSelectionDismiss}>descartar selecionadas</Button>
+        <Button variant="ghost" onclick={() => (selected = [])}>limpar seleção</Button>
+      {/if}
+      {#if focusedAgency}
+        <Button variant="ghost" onclick={armAgencyDismiss}>descartar todas desta origem</Button>
+      {/if}
+    </div>
+  {/if}
+
   {#if canSendDigest}
     <div class="mb-3">
       <Button variant="ghost" disabled={digestStatus === 'sending'} onclick={sendDigestForDate}>
@@ -240,12 +382,30 @@
     {#snippet loaded()}
       <ul class="rows">
         {#each matches as match, i (match.id)}
-          <li class="row reveal" style="--i: {i}">
-            <MatchCard {match}>
-              {#snippet children()}
-                <TriageActions {match} onchange={applyUpdate} onerror={(m) => (actionError = m)} />
-              {/snippet}
-            </MatchCard>
+          <li
+            class="row row--triage reveal"
+            class:is-focused={i === focused}
+            class:is-selected={selected.includes(match.id)}
+            style="--i: {i}"
+            data-row={i}
+            aria-current={i === focused ? 'true' : undefined}
+          >
+            <label class="row__select">
+              <input
+                type="checkbox"
+                class="accent-accent"
+                checked={selected.includes(match.id)}
+                onchange={() => toggleSelected(match.id)}
+              />
+              <span class="sr-only">selecionar {match.act_detail.title}</span>
+            </label>
+            <div class="row__content">
+              <MatchCard {match}>
+                {#snippet children()}
+                  <TriageActions {match} onchange={applyUpdate} onerror={(m) => (actionError = m)} />
+                {/snippet}
+              </MatchCard>
+            </div>
           </li>
         {/each}
       </ul>
