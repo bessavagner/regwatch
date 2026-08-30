@@ -151,3 +151,105 @@ def test_runlog_separates_this_run_from_the_date_total(firm, monkeypatch):
     # The day still holds exactly one match, and both rows report that.
     assert morning.matches == midday.matches == 1
     assert midday.status == "success"
+
+
+# --- Quiet days and delivery alerting (TASK-012 / TASK-028) ------------------
+
+
+def _quiet_edition():
+    """An edition that publishes, but matches nobody's watch."""
+    return RawEdition(
+        date=DATE, section="DO1", source_url="https://x/DO1",
+        items=(RawItem("q1", "Portaria 9", "Min X", "Assunto irrelevante.", "#q1"),),
+    )
+
+
+def _wire(monkeypatch, sender, editions):
+    monkeypatch.setattr("pipeline.management.commands.run_daily.fetch_editions",
+                        lambda date: editions)
+    monkeypatch.setattr("pipeline.management.commands.run_daily.get_llm_client",
+                        lambda: FakeLLMClient(Summary("ok", "grant")))
+    monkeypatch.setattr("pipeline.management.commands.run_daily.get_email_sender",
+                        lambda: sender)
+
+
+@pytest.mark.django_db
+def test_a_quiet_day_still_counts_as_a_delivered_digest(firm, monkeypatch):
+    # The accounting has to include quiet digests, because that is precisely
+    # what lets check_heartbeat see a delivery that failed on a day with
+    # nothing to report.
+    sender = FakeEmailSender()
+    _wire(monkeypatch, sender, [_quiet_edition()])
+
+    call_command("run_daily", date="2026-06-26")
+
+    log = RunLog.objects.get(date=DATE)
+    assert log.matches == 0
+    assert log.digests == 1 and log.digests_sent == 1
+    assert log.status == "success"
+    assert log.errors == ""
+    assert "não encontraram nada" in Digest.objects.get(date=DATE).body
+
+
+@pytest.mark.django_db
+def test_a_failed_quiet_delivery_makes_the_run_partial(firm, monkeypatch):
+    _wire(monkeypatch, RaisingEmailSender("mailbox full"), [_quiet_edition()])
+
+    call_command("run_daily", date="2026-06-26")
+
+    log = RunLog.objects.get(date=DATE)
+    assert log.status == "partial"
+    assert "1 digests not sent" in log.errors
+
+
+class _PartlyFailingSender:
+    """Rejects one recipient the way a provider rejects an unverified sender."""
+
+    def __init__(self, failing):
+        self.failing = failing
+        self.sent = []
+
+    def send(self, to, subject, body):
+        if to == self.failing:
+            raise RuntimeError(f"403 Forbidden for {to}")
+        self.sent.append((to, subject, body))
+
+
+@pytest.mark.django_db
+def test_a_digest_failing_for_one_client_alerts_without_failing_the_run(firm, monkeypatch):
+    """TASK-028 (G1), end to end.
+
+    The 2026-08-11 failure mode: the run exits 0 while a client's digest goes
+    undelivered. Both halves matter -- the run must not abort (one rejected
+    recipient cannot cost the others their digest), and the dead-man's switch
+    must nonetheless refuse to call the day healthy.
+    """
+    from django.core.management.base import CommandError
+
+    other = Client.objects.create(
+        workspace=firm.workspace, name="Gama", email="gama@example.test")
+    Watch.objects.create(
+        client=other, groups=[{"terms": [{"text": "beta corp", "kind": "entity"}]}])
+
+    sender = _PartlyFailingSender(failing="beta@example.test")
+    _wire(monkeypatch, sender, [_edition()])
+
+    # Exits 0: no exception escapes the command.
+    call_command("run_daily", date="2026-06-26")
+
+    # The healthy client was still served.
+    assert [s[0] for s in sender.sent] == ["gama@example.test"]
+
+    log = RunLog.objects.get(date=DATE)
+    assert log.status == "partial"
+    assert log.digests == 2 and log.digests_sent == 1
+
+    # And the heartbeat -- which is what policy-heartbeat-failed.json pages on
+    # -- refuses to pass the date, naming the shortfall.
+    with pytest.raises(CommandError) as excinfo:
+        call_command("check_heartbeat", "--date", DATE.isoformat())
+    assert "1 digests not sent" in str(excinfo.value)
+
+    failed = Digest.objects.get(client=firm, date=DATE)
+    assert failed.sent is False
+    assert "403 Forbidden" in failed.send_error

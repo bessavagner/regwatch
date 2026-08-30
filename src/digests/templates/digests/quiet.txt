@@ -1,0 +1,8 @@
+{% autoescape off %}RegWatch — {{ client.name }} — {{ date }}
+
+Suas buscas foram executadas e não encontraram nada hoje.
+
+Nenhuma ação é necessária. Este aviso existe para que o silêncio não seja
+confundido com uma falha: enquanto o RegWatch estiver funcionando, você recebe
+uma mensagem em todo dia em que o Diário Oficial da União publicar.
+{% endautoescape %}

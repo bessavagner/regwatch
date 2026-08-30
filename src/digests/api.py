@@ -25,10 +25,10 @@ class SendDigestRequestSerializer(serializers.Serializer):
 class _LazyEmailSender:
     """Defers get_email_sender() until an email actually needs sending.
 
-    build_and_send_digests() only calls sender.send() when there is a
-    matched client to notify. Resolving the real sender eagerly would
-    require a configured email provider even for a request that ends up
-    finding no matches (and thus 404s) for that client+date.
+    build_and_send_digests() only calls sender.send() when it has a digest
+    to deliver. Resolving the real sender eagerly would require a configured
+    email provider even for a request that ends up building nothing (and thus
+    404s) for that client+date.
     """
 
     def send(self, to: str, subject: str, body: str) -> None:
@@ -61,5 +61,5 @@ class DigestViewSet(WorkspaceScopedQuerysetMixin, viewsets.ReadOnlyModelViewSet)
             serializer.validated_data["date"], _LazyEmailSender(), client=client,
         )
         if not digests:
-            raise Http404("no matches for this client on this date")
+            raise Http404("nothing to send: the DOU published no edition on this date")
         return Response(DigestSerializer(digests[0]).data)

@@ -74,13 +74,40 @@ def test_send_digest_404s_for_a_client_outside_the_callers_workspace(firm_a, fir
 
 
 @pytest.mark.django_db
-def test_send_digest_404s_when_there_are_no_matches_for_that_date(firm_a):
+def test_send_digest_404s_when_that_date_published_nothing(firm_a):
+    # Since decision-007 an empty result means the DOU did not publish, not
+    # "nothing matched" -- a client with a live watch now gets a quiet digest
+    # instead. No edition is ingested here, so there is genuinely nothing.
     ws, user = firm_a
-    client = WatchClient.objects.create(workspace=ws, name="Beta")
+    client = WatchClient.objects.create(workspace=ws, name="Beta", email="beta@example.test")
+    Watch.objects.create(client=client, groups=[{"terms": [{"text": "beta corp", "kind": "entity"}]}])
     api = APIClient()
     api.force_authenticate(user=user)
     resp = api.post("/api/digests/send", {"client": client.id, "date": "2026-07-01"}, format="json")
     assert resp.status_code == 404
+
+
+@pytest.mark.django_db
+def test_send_digest_sends_a_quiet_digest_when_nothing_matched(firm_a, monkeypatch):
+    ws, user = firm_a
+    client = WatchClient.objects.create(workspace=ws, name="Beta", email="beta@example.test")
+    Watch.objects.create(
+        client=client, groups=[{"terms": [{"text": "nao aparece", "kind": "entity"}]}])
+    ingest_edition(RawEdition(
+        date=DATE, section="DO1", source_url="https://x.test/quiet",
+        items=(RawItem("q1", "Portaria 9", "Org", "Assunto irrelevante.", "#q1"),),
+    ))
+    sender = FakeEmailSender()
+    monkeypatch.setattr("digests.api.get_email_sender", lambda: sender)
+    api = APIClient()
+    api.force_authenticate(user=user)
+
+    resp = api.post("/api/digests/send", {"client": client.id, "date": "2026-07-01"}, format="json")
+
+    assert resp.status_code == 200
+    assert resp.data["sent"] is True
+    assert "não encontraram nada" in resp.data["body"]
+    assert len(sender.sent) == 1
 
 
 @pytest.mark.django_db

@@ -1,5 +1,7 @@
 {% load vocabulary %}{% autoescape off %}RegWatch — {{ client.name }} — {{ date }}
 
+O que suas buscas encontraram hoje:
+
 {% for m in matches %}- [{{ m.category|category_label }}] {{ m.ai_summary|default:m.snippet }}
   {{ m.act.title }} ({{ m.act.agency }})
 {% if m.matched_terms %}  encontrado por: {{ m.matched_terms|join:", " }}

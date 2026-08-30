@@ -642,6 +642,74 @@ going quiet. Note the growth rate above (~14.7 MB/day) counts act text only —
 measured against the whole database, including the trigram and GIN indexes over
 that text, it is closer to **32 MB per publication day**.
 
+## Tell a quiet day from a broken pipeline
+
+Since v0.28.0 a client hears from RegWatch on **every day the DOU publishes**,
+whether or not anything matched. Silence used to mean two things at once —
+"nothing concerned you" and "RegWatch is down" — and the reader had no way to
+tell which. It now means exactly one thing: **nothing ran.**
+
+**What the reader gets on an empty day**
+
+Subject line is unchanged (`RegWatch — 26 de junho de 2026`). The body is the
+`digests/quiet.txt` template:
+
+```
+RegWatch — Cactarus — 26 de junho de 2026
+
+Suas buscas foram executadas e não encontraram nada hoje.
+
+Nenhuma ação é necessária. Este aviso existe para que o silêncio não seja
+confundido com uma falha: enquanto o RegWatch estiver funcionando, você recebe
+uma mensagem em todo dia em que o Diário Oficial da União publicar.
+```
+
+A digest with matches now leads with `O que suas buscas encontraram hoje:`
+before the list. That header is the quickest way to tell the two apart at a
+glance, and it is what the tests assert on.
+
+**Three days, not two** (`backlog/decisions/decision-007`)
+
+| Day | What is sent |
+|---|---|
+| DOU published, something matched | the match digest |
+| DOU published, nothing matched | the quiet message |
+| DOU did not publish (weekend, holiday) | **nothing at all** |
+
+A quiet message is only built for a client that has at least one **active**
+watch *and* an email address. A client with no email gets no quiet row on
+purpose: it could never be delivered, so it would sit `sent=False` for ever and
+fail `check_heartbeat` every single day, destroying the switch this behaviour
+exists to feed.
+
+**Diagnosing "I got nothing today"**
+
+Work down this list; the first one that is true is the answer.
+
+```bash
+# 1. Did the DOU publish at all? No editions == nothing is wrong.
+gcloud run jobs execute regwatch-run-daily --region=us-east4 --wait \
+  --args=shell_plus,-c,"from gazette.models import Edition; print(Edition.objects.filter(date='2026-06-26').count())"
+
+# 2. Did the run happen, and what did it conclude?
+gcloud run jobs execute regwatch-heartbeat --region=us-east4 --wait \
+  --args=check_heartbeat,--date,2026-06-26
+```
+
+- **`heartbeat OK: ... delivered 1`** and still no mail → the message was sent
+  and the problem is downstream (spam folder, forwarding). Check
+  `Digest.sent=True` for the date, then the Gmail SMTP section above.
+- **`heartbeat: N undelivered digest(s)`** → it was built but not delivered.
+  Read `Digest.send_error`, then `resend_digests`.
+- **`heartbeat: no completed scheduled RunLog`** → nothing ran. Both the 08:05
+  and the 13:00 runs missed. See the next section.
+- **The date has zero editions** → a holiday or a weekend. Correct behaviour;
+  nothing to fix.
+
+**Common failure:** reading a *quiet* message as a broken pipeline. It is the
+opposite — it is the pipeline reporting for duty. The failure mode to worry
+about is now receiving *nothing* on a weekday.
+
 ## What the heartbeat now asserts
 
 `check_heartbeat` used to pass whenever a `status="success"` row existed for the

@@ -394,3 +394,167 @@ def test_digest_leads_with_the_act_carrying_the_most_signals():
 
     body = build_and_send_digests(DATE, FakeEmailSender())[0].body
     assert body.index("Revisao tarifaria") < body.index("Autorizacao rotineira")
+
+
+# --- Quiet days (TASK-012 / decision-007) -----------------------------------
+#
+# Silence used to mean two things at once: "the DOU published and nothing
+# concerned you" and "RegWatch is broken". These pin the difference.
+
+
+def _quiet_client(name="Quieta", *, email=None, active=True):
+    """A client whose watch will not match the day's edition."""
+    ws = Workspace.objects.create(name=f"WS {name}")
+    client = Client.objects.create(
+        workspace=ws,
+        name=name,
+        email=f"{name.lower()}@example.test" if email is None else email,
+    )
+    Watch.objects.create(
+        client=client,
+        groups=[{"terms": [{"text": "termo que nao aparece", "kind": "entity"}]}],
+        active=active,
+    )
+    return client
+
+
+def _publish_an_edition(identifier="q1"):
+    """Ingest an edition for DATE that matches none of the quiet watches."""
+    edition = ingest_edition(RawEdition(
+        date=DATE, section="1", source_url=f"https://x.test/{identifier}",
+        items=(RawItem(identifier, "Portaria 99", "Org", "Assunto irrelevante.", f"#{identifier}"),),
+    ))
+    match_edition(edition)
+    return edition
+
+
+@pytest.mark.django_db
+def test_a_client_with_no_matches_still_hears_from_us_on_a_publication_day(db):
+    client = _quiet_client()
+    _publish_an_edition()
+
+    sender = FakeEmailSender()
+    digests = build_and_send_digests(DATE, sender)
+
+    assert len(digests) == 1
+    assert digests[0].client == client
+    assert digests[0].sent is True
+    assert [s[0] for s in sender.sent] == ["quieta@example.test"]
+
+
+@pytest.mark.django_db
+def test_no_message_at_all_when_the_dou_did_not_publish(db):
+    # A weekend or a national holiday: there are no editions, so there is
+    # nothing to report and nothing to reassure anyone about. Sending "nothing
+    # matched today" here teaches the reader to ignore the message.
+    _quiet_client()
+
+    sender = FakeEmailSender()
+    digests = build_and_send_digests(DATE, sender)
+
+    assert digests == []
+    assert sender.sent == []
+    assert Digest.objects.count() == 0
+
+
+@pytest.mark.django_db
+def test_a_client_with_no_email_gets_no_quiet_digest(db):
+    # A row we can never deliver would sit sent=False forever and fail
+    # check_heartbeat every day, destroying the dead-man's switch.
+    _quiet_client(email="")
+    _publish_an_edition()
+
+    digests = build_and_send_digests(DATE, FakeEmailSender())
+
+    assert digests == []
+    assert Digest.objects.count() == 0
+
+
+@pytest.mark.django_db
+def test_a_client_with_matches_and_no_email_is_still_built_and_left_unsent(matched):
+    # Unchanged behaviour: this one is a fault worth surfacing, not a quiet day.
+    matched.email = ""
+    matched.save()
+
+    digests = build_and_send_digests(DATE, FakeEmailSender())
+
+    assert len(digests) == 1
+    assert digests[0].sent is False
+    digests[0].refresh_from_db()
+    assert digests[0].send_error == "no email address on the client"
+
+
+@pytest.mark.django_db
+def test_a_client_with_no_active_watch_hears_nothing(db):
+    # Nothing ran, so "your watches ran and found nothing" would be a lie.
+    _quiet_client(active=False)
+    _publish_an_edition()
+
+    digests = build_and_send_digests(DATE, FakeEmailSender())
+
+    assert digests == []
+    assert Digest.objects.count() == 0
+
+
+@pytest.mark.django_db
+def test_the_quiet_message_is_visibly_different_from_a_digest(db):
+    _quiet_client()
+    _publish_an_edition()
+
+    body = build_and_send_digests(DATE, FakeEmailSender())[0].body
+
+    # It says plainly, in the language the reader reads, that the watches ran
+    # and found nothing.
+    assert "Suas buscas foram executadas" in body
+    assert "não encontraram nada" in body
+    # And it carries none of the furniture of a match list.
+    assert "O que suas buscas encontraram hoje" not in body
+    assert "encontrado por" not in body
+
+
+@pytest.mark.django_db
+def test_a_digest_with_matches_still_leads_with_its_list_header(matched):
+    body = build_and_send_digests(DATE, FakeEmailSender())[0].body
+    assert "O que suas buscas encontraram hoje" in body
+    assert "Suas buscas foram executadas" not in body
+
+
+@pytest.mark.django_db
+def test_quiet_digests_are_idempotent(db):
+    _quiet_client()
+    _publish_an_edition()
+    sender = FakeEmailSender()
+
+    build_and_send_digests(DATE, sender)
+    build_and_send_digests(DATE, sender)
+
+    assert Digest.objects.count() == 1
+    assert len(sender.sent) == 1
+
+
+@pytest.mark.django_db
+def test_the_client_filter_still_scopes_a_quiet_day(db):
+    wanted = _quiet_client("Alfa")
+    _quiet_client("Gama")
+    _publish_an_edition()
+
+    digests = build_and_send_digests(DATE, FakeEmailSender(), client=wanted)
+
+    assert len(digests) == 1
+    assert digests[0].client == wanted
+    assert Digest.objects.count() == 1
+
+
+@pytest.mark.django_db
+def test_a_quiet_client_and_a_matched_client_are_served_in_the_same_run(matched):
+    quiet = _quiet_client()
+    _publish_an_edition()
+
+    sender = FakeEmailSender()
+    digests = build_and_send_digests(DATE, sender)
+
+    by_client = {d.client_id: d for d in digests}
+    assert set(by_client) == {matched.pk, quiet.pk}
+    assert "BETA CORP" in by_client[matched.pk].body
+    assert "não encontraram nada" in by_client[quiet.pk].body
+    assert len(sender.sent) == 2
