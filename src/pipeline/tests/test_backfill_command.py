@@ -1,4 +1,5 @@
 import datetime
+import re
 from io import StringIO
 
 import pytest
@@ -113,7 +114,9 @@ def test_it_clears_matches_the_current_terms_would_no_longer_make(firm, monkeypa
                 "--date-to", "2026-06-26", "--apply")
     assert Match.objects.filter(watch=hit).count() == 0
     assert "stale" in out
-    assert f"watch {hit.pk}     0 match(es)" in out
+    # Columns are padded for alignment, so match on the fields rather than on
+    # the exact run of spaces between them.
+    assert re.search(rf"watch {hit.pk}\s+0 match\(es\)", out)
 
 
 @pytest.mark.django_db
