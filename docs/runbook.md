@@ -642,6 +642,48 @@ going quiet. Note the growth rate above (~14.7 MB/day) counts act text only —
 measured against the whole database, including the trigram and GIN indexes over
 that text, it is closer to **32 MB per publication day**.
 
+## Build a labelling corpus from past editions
+
+The problem this solves: measuring whether the ranking works needs human
+labels, and labels arrive at the speed the DOU publishes — about 30 matches a
+weekday. Waiting a fortnight for a corpus is not necessary. `backfill_watches`
+re-fetches past editions from INlabs and re-runs the current watches over them,
+so weeks of labelling material can be produced in minutes.
+
+```bash
+source scripts/prod-env.sh          # from the repo root; loads .env safely
+uv run python manage.py backfill_watches \
+  --client 7 --date-from 2026-06-24 --date-to 2026-06-26        # dry run
+uv run python manage.py backfill_watches \
+  --client 7 --date-from 2026-06-24 --date-to 2026-06-26 --apply
+```
+
+Measured on 2026-08-30, three dates: **11,252 acts ingested, 98 new matches,
+3m52s wall clock, +105 MB of database**. That is roughly 33 matches and 35 MB
+per date. Budget both before choosing a range — the Supabase Free tier caps at
+500 MB.
+
+**The ordering that matters.** `--max-enrich 0` is the default and sends
+nothing to the provider, which is free but leaves every new match at
+`signal_score = 0`, because the score is written by the enricher
+(`enrichment/enricher.py`), not the matcher. If the review is going to ask
+whether `signal_score` predicts relevance, those matches must be enriched —
+and enrichment reads `act.raw_text`, which `prune_act_text` strips past its
+retention window. So:
+
+1. `backfill_watches --apply`
+2. `reenrich_matches --date-from … --date-to … --client 7 --limit 100 --apply`
+3. `prune_act_text --days 7 --apply --reclaim`
+
+Do it in any other order and the backfilled matches can never be scored
+without fetching the whole range again.
+
+**Common failure:** `no client with id 7`. `scripts/prod-env.sh` was not
+sourced, or was sourced from outside the repo root, so `SUPABASE_DB_URL` was
+never set and Django fell back to the local database. The script now refuses to
+load rather than let that happen silently — if you see this, check you are in
+the repo root.
+
 ## Back up the database to this machine
 
 The Supabase project is on the Free plan: **no Point-in-Time Recovery, no
