@@ -70,10 +70,10 @@
     </p>
   {/if}
 
-  {#if showForm}
+  {#if showForm && !editing}
     <div class="mb-3">
       <Card>
-        <WatchForm {clients} watch={editing} {onsaved} />
+        <WatchForm {clients} {onsaved} />
       </Card>
     </div>
   {/if}
@@ -105,6 +105,13 @@
                 <Button variant="ghost" onclick={() => (backfillingWatch = backfillingWatch === w ? undefined : w)}>rodar em edições anteriores</Button>
               </div>
             </div>
+            {#if showForm && editing === w}
+              <div class="mt-2">
+                <Card>
+                  <WatchForm {clients} watch={editing} {onsaved} />
+                </Card>
+              </div>
+            {/if}
             {#if backfillingWatch === w}
               <div class="mt-2">
                 <BackfillForm watch={w} oncancel={() => (backfillingWatch = undefined)} />

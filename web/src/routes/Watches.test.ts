@@ -94,3 +94,39 @@ test('with zero clients, "New watch" is disabled with a link to Clients', async 
   await waitFor(() => expect(screen.getByRole('button', { name: /nova busca/i })).toBeDisabled());
   expect(screen.getByRole('link', { name: /clientes/i })).toHaveAttribute('href', '/clients');
 });
+
+test('clicking editar opens the form populated with that watch', async () => {
+  const user = userEvent.setup();
+  vi.spyOn(resources, 'listClients').mockResolvedValue({ count: 1, next: null, previous: null, results: clients });
+  vi.spyOn(resources, 'listWatches').mockResolvedValue({ count: 1, next: null, previous: null, results: [watch] });
+  render(Watches);
+  await waitFor(() => expect(screen.getByRole('button', { name: /editar/i })).toBeInTheDocument());
+
+  await user.click(screen.getByRole('button', { name: /editar/i }));
+
+  // The form is open and seeded from the row that was clicked.
+  await waitFor(() =>
+    expect(screen.getByRole('button', { name: /salvar/i })).toBeInTheDocument(),
+  );
+  const aliases = screen.getByLabelText(/variações do grupo 1/i) as HTMLTextAreaElement;
+  expect(aliases.value).toContain('sebrae');
+});
+
+test('the edit form opens next to the row, not off at the top of the page', async () => {
+  // "I clicked editar and nothing happened": with several watches the form
+  // rendered above the list, out of view from the row that opened it.
+  const user = userEvent.setup();
+  const many = [1, 2, 3, 4, 5, 6].map((id) => ({ ...watch, id, client_name: `C${id}` }));
+  vi.spyOn(resources, 'listClients').mockResolvedValue({ count: 1, next: null, previous: null, results: clients });
+  vi.spyOn(resources, 'listWatches').mockResolvedValue({ count: 6, next: null, previous: null, results: many });
+  render(Watches);
+  await waitFor(() => expect(screen.getAllByRole('button', { name: /editar/i })).toHaveLength(6));
+
+  await user.click(screen.getAllByRole('button', { name: /editar/i })[4]);
+
+  const form = screen.getByRole('button', { name: /salvar/i }).closest('form');
+  expect(form).not.toBeNull();
+  // The form must live inside the row it is editing.
+  const row = screen.getAllByRole('listitem')[4];
+  expect(row.contains(form!)).toBe(true);
+});

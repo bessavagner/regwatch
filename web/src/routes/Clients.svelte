@@ -40,10 +40,10 @@
     <Button onclick={() => { editing = undefined; showForm = true; }}>novo cliente</Button>
   </div>
 
-  {#if showForm}
+  {#if showForm && !editing}
     <div class="mb-3">
       <Card>
-        <ClientForm client={editing} {onsaved} />
+        <ClientForm {onsaved} />
       </Card>
     </div>
   {/if}
@@ -63,6 +63,13 @@
                 <Button variant="ghost" onclick={() => { editing = c; showForm = true; }}>editar</Button>
               </div>
             </div>
+            {#if showForm && editing === c}
+              <div class="mt-2">
+                <Card>
+                  <ClientForm client={editing} {onsaved} />
+                </Card>
+              </div>
+            {/if}
           </li>
         {/each}
       </ul>

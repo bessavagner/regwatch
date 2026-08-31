@@ -38,3 +38,18 @@ test('a load failure surfaces an error', async () => {
   render(Clients);
   await waitFor(() => expect(screen.getByRole('alert')).toBeInTheDocument());
 });
+
+test('the edit form opens next to the client row, not at the top of the page', async () => {
+  const user = userEvent.setup();
+  const many = [1, 2, 3, 4, 5, 6].map((id) => ({ id, name: `Cliente ${id}`, email: '', is_house: false }));
+  vi.spyOn(resources, 'listClients').mockResolvedValue({ count: 6, next: null, previous: null, results: many });
+  render(Clients);
+  await waitFor(() => expect(screen.getAllByRole('button', { name: /editar/i })).toHaveLength(6));
+
+  await user.click(screen.getAllByRole('button', { name: /editar/i })[4]);
+
+  const form = screen.getByRole('button', { name: /salvar/i }).closest('form');
+  expect(form).not.toBeNull();
+  const row = screen.getAllByRole('listitem')[4];
+  expect(row.contains(form!)).toBe(true);
+});
